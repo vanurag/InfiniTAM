@@ -1,4 +1,4 @@
-// Copyright 2014 Isis Innovation Limited and the authors of InfiniTAM
+// Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #pragma once
 
@@ -9,24 +9,23 @@ namespace ITMLib
 	namespace Engine
 	{
 		template<class TVoxel, class TIndex>
-		class ITMSwappingEngine_CUDA : public ITMSwappingEngine<TVoxel,TIndex>
+		class ITMSwappingEngine_CUDA : public ITMSwappingEngine < TVoxel, TIndex >
 		{
 		public:
-			void IntegrateGlobalIntoLocal(ITMScene<TVoxel,TIndex> *scene, ITMView *view) {}
-			void SaveToGlobalMemory(ITMScene<TVoxel,TIndex> *scene, ITMView *view) {}
+			void IntegrateGlobalIntoLocal(ITMScene<TVoxel, TIndex> *scene, ITMRenderState *renderState) {}
+			void SaveToGlobalMemory(ITMScene<TVoxel, TIndex> *scene, ITMRenderState *renderState) {}
 		};
 
 		template<class TVoxel>
-		class ITMSwappingEngine_CUDA<TVoxel,ITMVoxelBlockHash> : public ITMSwappingEngine<TVoxel,ITMVoxelBlockHash>
+		class ITMSwappingEngine_CUDA<TVoxel, ITMVoxelBlockHash> : public ITMSwappingEngine < TVoxel, ITMVoxelBlockHash >
 		{
 		private:
 			int *noNeededEntries_device, *noAllocatedVoxelEntries_device;
-		protected:
-			int DownloadFromGlobalMemory(ITMScene<TVoxel,ITMVoxelBlockHash> *scene, ITMView *view);
+			int LoadFromGlobalMemory(ITMScene<TVoxel, ITMVoxelBlockHash> *scene);
 
 		public:
-			void IntegrateGlobalIntoLocal(ITMScene<TVoxel,ITMVoxelBlockHash> *scene, ITMView *view);
-			void SaveToGlobalMemory(ITMScene<TVoxel,ITMVoxelBlockHash> *scene, ITMView *view);
+			void IntegrateGlobalIntoLocal(ITMScene<TVoxel, ITMVoxelBlockHash> *scene, ITMRenderState *renderState);
+			void SaveToGlobalMemory(ITMScene<TVoxel, ITMVoxelBlockHash> *scene, ITMRenderState *renderState);
 
 			ITMSwappingEngine_CUDA(void);
 			~ITMSwappingEngine_CUDA(void);

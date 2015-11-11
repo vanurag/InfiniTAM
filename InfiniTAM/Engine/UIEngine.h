@@ -1,4 +1,4 @@
-// Copyright 2014 Isis Innovation Limited and the authors of InfiniTAM
+// Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #pragma once
 
@@ -8,6 +8,9 @@
 #include "../Utils/NVTimer.h"
 
 #include "ImageSourceEngine.h"
+#include "IMUSourceEngine.h"
+
+#include <vector>
 
 namespace InfiniTAM
 {
@@ -22,12 +25,23 @@ namespace InfiniTAM
 				PROCESS_PAUSED, PROCESS_FRAME, PROCESS_VIDEO, EXIT, SAVE_TO_DISK
 			}mainLoopAction;
 
+			struct UIColourMode {
+				const char *name;
+				ITMMainEngine::GetImageType type;
+				UIColourMode(const char *_name, ITMMainEngine::GetImageType _type)
+				 : name(_name), type(_type)
+				{}
+			};
+			std::vector<UIColourMode> colourModes;
+			int currentColourMode;
 
 			ITMLibSettings internalSettings;
 			ImageSourceEngine *imageSource;
+			IMUSourceEngine *imuSource;
 			ITMMainEngine *mainEngine;
 
-			StopWatchInterface *timer;
+			StopWatchInterface *timer_instant;
+			StopWatchInterface *timer_average;
 
 		private: // For UI layout
 			static const int NUM_WIN = 3;
@@ -37,8 +51,10 @@ namespace InfiniTAM
 			ITMUChar4Image *outImage[NUM_WIN];
 			ITMMainEngine::GetImageType outImageType[NUM_WIN];
 
+			ITMUChar4Image *inputRGBImage; ITMShortImage *inputRawDepthImage;
+			ITMIMUMeasurement *inputIMUMeasurement;
+
 			bool freeviewActive;
-			bool colourActive;
 			bool intergrationActive;
 			ITMPose freeviewPose;
 			ITMIntrinsics freeviewIntrinsics;
@@ -69,14 +85,16 @@ namespace InfiniTAM
 			bool needsRefresh;
 			ITMUChar4Image *saveImage;
 
-			void Initialise(int & argc, char** argv, ImageSourceEngine *imageSource, ITMMainEngine *mainEngine, const char *outFolder);
+			void Initialise(int & argc, char** argv, ImageSourceEngine *imageSource, IMUSourceEngine *imuSource, ITMMainEngine *mainEngine,
+				const char *outFolder, ITMLibSettings::DeviceType deviceType);
 			void Shutdown();
 
 			void Run();
 			void ProcessFrame();
-
+			
 			void GetScreenshot(ITMUChar4Image *dest) const;
 			void SaveScreenshot(const char *filename) const;
+			void SaveSceneToMesh(const char *filename) const;
 		};
 	}
 }

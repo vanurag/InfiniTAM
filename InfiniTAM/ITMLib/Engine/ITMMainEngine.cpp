@@ -1,178 +1,196 @@
-// Copyright 2014 Isis Innovation Limited and the authors of InfiniTAM
+// Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #include "ITMMainEngine.h"
 
-#include "ITMTrackerFactory.h"
 using namespace ITMLib::Engine;
 
 ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib *calib, Vector2i imgSize_rgb, Vector2i imgSize_d)
 {
+	// create all the things required for marching cubes and mesh extraction
+	// - uses additional memory (lots!)
+	static const bool createMeshingEngine = true;
+
 	if ((imgSize_d.x == -1) || (imgSize_d.y == -1)) imgSize_d = imgSize_rgb;
 
-	this->settings = new ITMLibSettings(*settings);
+	this->settings = settings;
 
-	this->scene = new ITMScene<ITMVoxel,ITMVoxelIndex>(&(settings->sceneParams), settings->useSwapping, settings->useGPU);
+	this->scene = new ITMScene<ITMVoxel, ITMVoxelIndex>(&(settings->sceneParams), settings->useSwapping, 
+		settings->deviceType == ITMLibSettings::DEVICE_CUDA ? MEMORYDEVICE_CUDA : MEMORYDEVICE_CPU);
 
-	this->trackingState = ITMTrackerFactory::MakeTrackingState(*settings, imgSize_rgb, imgSize_d);
-	trackingState->pose_d->SetFrom(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f); 
-
-	this->view = new ITMView(*calib, imgSize_rgb, imgSize_d, settings->useGPU);
-
-	if (settings->useGPU)
+	meshingEngine = NULL;
+	switch (settings->deviceType)
 	{
+	case ITMLibSettings::DEVICE_CPU:
+		lowLevelEngine = new ITMLowLevelEngine_CPU();
+		viewBuilder = new ITMViewBuilder_CPU(calib);
+		visualisationEngine = new ITMVisualisationEngine_CPU<ITMVoxel, ITMVoxelIndex>(scene);
+		if (createMeshingEngine) meshingEngine = new ITMMeshingEngine_CPU<ITMVoxel, ITMVoxelIndex>();
+		break;
+	case ITMLibSettings::DEVICE_CUDA:
 #ifndef COMPILE_WITHOUT_CUDA
 		lowLevelEngine = new ITMLowLevelEngine_CUDA();
-		sceneRecoEngine = new ITMSceneReconstructionEngine_CUDA<ITMVoxel,ITMVoxelIndex>();
-		if (settings->useSwapping) swappingEngine = new ITMSwappingEngine_CUDA<ITMVoxel,ITMVoxelIndex>();
-		visualisationEngine = new ITMVisualisationEngine_CUDA<ITMVoxel,ITMVoxelIndex>();
+		viewBuilder = new ITMViewBuilder_CUDA(calib);
+		visualisationEngine = new ITMVisualisationEngine_CUDA<ITMVoxel, ITMVoxelIndex>(scene);
+		if (createMeshingEngine) meshingEngine = new ITMMeshingEngine_CUDA<ITMVoxel, ITMVoxelIndex>();
 #endif
+		break;
+	case ITMLibSettings::DEVICE_METAL:
+#ifdef COMPILE_WITH_METAL
+		lowLevelEngine = new ITMLowLevelEngine_Metal();
+		viewBuilder = new ITMViewBuilder_Metal(calib);
+		visualisationEngine = new ITMVisualisationEngine_Metal<ITMVoxel, ITMVoxelIndex>(scene);
+		if (createMeshingEngine) meshingEngine = new ITMMeshingEngine_CPU<ITMVoxel, ITMVoxelIndex>();
+#endif
+		break;
 	}
-	else
-	{
-		lowLevelEngine = new ITMLowLevelEngine_CPU();
-		sceneRecoEngine = new ITMSceneReconstructionEngine_CPU<ITMVoxel,ITMVoxelIndex>();
-		if (settings->useSwapping) swappingEngine = new ITMSwappingEngine_CPU<ITMVoxel,ITMVoxelIndex>();
-		visualisationEngine = new ITMVisualisationEngine_CPU<ITMVoxel,ITMVoxelIndex>();
-	}
 
-	trackerPrimary = ITMTrackerFactory::MakePrimaryTracker(*settings, imgSize_rgb, imgSize_d, lowLevelEngine);
-	trackerSecondary = ITMTrackerFactory::MakeSecondaryTracker<ITMVoxel,ITMVoxelIndex>(*settings, imgSize_rgb, imgSize_d, lowLevelEngine, scene);
+	mesh = NULL;
+	if (createMeshingEngine) mesh = new ITMMesh(settings->deviceType == ITMLibSettings::DEVICE_CUDA ? MEMORYDEVICE_CUDA : MEMORYDEVICE_CPU);
 
-	visualisationState = NULL;
+	Vector2i trackedImageSize = ITMTrackingController::GetTrackedImageSize(settings, imgSize_rgb, imgSize_d);
 
-	hasStartedObjectReconstruction = false;
+	renderState_live = visualisationEngine->CreateRenderState(trackedImageSize);
+	renderState_freeview = NULL; //will be created by the visualisation engine
+
+	denseMapper = new ITMDenseMapper<ITMVoxel, ITMVoxelIndex>(settings);
+	denseMapper->ResetScene(scene);
+
+	imuCalibrator = new ITMIMUCalibrator_iPad();
+	tracker = ITMTrackerFactory<ITMVoxel, ITMVoxelIndex>::Instance().Make(trackedImageSize, settings, lowLevelEngine, imuCalibrator, scene);
+	trackingController = new ITMTrackingController(tracker, visualisationEngine, lowLevelEngine, settings);
+
+	trackingState = trackingController->BuildTrackingState(trackedImageSize);
+	tracker->UpdateInitialPose(trackingState);
+
+	view = NULL; // will be allocated by the view builder
+
 	fusionActive = true;
+	mainProcessingActive = true;
 }
 
 ITMMainEngine::~ITMMainEngine()
 {
-	delete sceneRecoEngine;
-	if (trackerPrimary != NULL) delete trackerPrimary;
-	if (trackerSecondary != NULL) delete trackerSecondary;
-	delete visualisationEngine;
-	delete lowLevelEngine;
+	delete renderState_live;
+	if (renderState_freeview!=NULL) delete renderState_freeview;
 
-	if (settings->useSwapping) delete swappingEngine;
+	delete scene;
+
+	delete denseMapper;
+	delete trackingController;
+
+	delete tracker;
+	delete imuCalibrator;
+
+	delete lowLevelEngine;
+	delete viewBuilder;
 
 	delete trackingState;
-	delete scene;
-	delete view;
+	if (view != NULL) delete view;
 
-	delete settings;
+	delete visualisationEngine;
+
+	if (meshingEngine != NULL) delete meshingEngine;
+
+	if (mesh != NULL) delete mesh;
 }
 
-void ITMMainEngine::ProcessFrame(void)
+ITMMesh* ITMMainEngine::UpdateMesh(void)
 {
-	bool useGPU = settings->useGPU;
-	bool useSwapping = settings->useSwapping;
+	if (mesh != NULL) meshingEngine->MeshScene(mesh, scene);
+	return mesh;
+}
 
-	// prepare image and move it to GPU, if required
-	if (useGPU)
-	{
-		view->rgb->UpdateDeviceFromHost();
+void ITMMainEngine::SaveSceneToMesh(const char *objFileName)
+{
+	if (mesh == NULL) return;
+	meshingEngine->MeshScene(mesh, scene);
+	mesh->WriteSTL(objFileName);
+}
 
-		switch (view->inputImageType)
-		{
-		case ITMView::InfiniTAM_FLOAT_DEPTH_IMAGE: view->depth->UpdateDeviceFromHost(); break;
-		case ITMView::InfiniTAM_SHORT_DEPTH_IMAGE:
-		case ITMView::InfiniTAM_DISPARITY_IMAGE: view->rawDepth->UpdateDeviceFromHost(); break;
-		}
-	}
-
+void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage, ITMIMUMeasurement *imuMeasurement)
+{
 	// prepare image and turn it into a depth image
-	if (view->inputImageType == ITMView::InfiniTAM_DISPARITY_IMAGE)
-	{
-		lowLevelEngine->ConvertDisparityToDepth(view->depth, view->rawDepth, &(view->calib->intrinsics_d), &(view->calib->disparityCalib));
-	}
-	else if (view->inputImageType == ITMView::InfiniTAM_SHORT_DEPTH_IMAGE)
-	{
-		lowLevelEngine->ConvertDepthMMToFloat(view->depth, view->rawDepth);
-	}
+	if (imuMeasurement==NULL) viewBuilder->UpdateView(&view, rgbImage, rawDepthImage, settings->useBilateralFilter,settings->modelSensorNoise);
+	else viewBuilder->UpdateView(&view, rgbImage, rawDepthImage, settings->useBilateralFilter, imuMeasurement);
+
+	if (!mainProcessingActive) return;
 
 	// tracking
-	if (hasStartedObjectReconstruction)
-	{
-		if (trackerPrimary != NULL) trackerPrimary->TrackCamera(trackingState, view);
-		if (trackerSecondary != NULL) trackerSecondary->TrackCamera(trackingState, view);
+	trackingController->Track(trackingState, view);
 
-	}
+	// fusion
+	if (fusionActive) denseMapper->ProcessFrame(view, trackingState, scene, renderState_live);
 
-	// allocation
-	sceneRecoEngine->AllocateSceneFromDepth(scene, view, trackingState->pose_d);
-
-	// integration
-	if (fusionActive) sceneRecoEngine->IntegrateIntoScene(scene, view, trackingState->pose_d);
-
-
-	if (useSwapping) {
-		// swapping: CPU -> GPU
-		swappingEngine->IntegrateGlobalIntoLocal(scene, view);
-		// swapping: GPU -> CPU
-		swappingEngine->SaveToGlobalMemory(scene, view);
-	}
-
-	switch (settings->trackerType)
-	{
-	case ITMLibSettings::TRACKER_ICP:
-	case ITMLibSettings::TRACKER_REN:
-		// raycasting
-		visualisationEngine->CreateExpectedDepths(scene, trackingState->pose_d, &(view->calib->intrinsics_d), trackingState->renderingRangeImage);
-		visualisationEngine->CreateICPMaps(scene, view, trackingState);
-		break;
-	case ITMLibSettings::TRACKER_COLOR:
-		// raycasting
-		ITMPose pose_rgb(view->calib->trafo_rgb_to_depth.calib_inv * trackingState->pose_d->M);
-		visualisationEngine->CreateExpectedDepths(scene, &pose_rgb, &(view->calib->intrinsics_rgb), trackingState->renderingRangeImage);
-		visualisationEngine->CreatePointCloud(scene, view, trackingState, settings->skipPoints);
-		break;
-	}
-
-	hasStartedObjectReconstruction = true;
+	// raycast to renderState_live for tracking and free visualisation
+	trackingController->Prepare(trackingState, view, renderState_live);
 }
 
-void ITMMainEngine::GetImage(ITMUChar4Image *out, GetImageType getImageType, bool useColour, ITMPose *pose, ITMIntrinsics *intrinsics)
+Vector2i ITMMainEngine::GetImageSize(void) const
 {
+	return renderState_live->raycastImage->noDims;
+}
+
+void ITMMainEngine::GetImage(ITMUChar4Image *out, GetImageType getImageType, ITMPose *pose, ITMIntrinsics *intrinsics)
+{
+	if (view == NULL) return;
+
 	out->Clear();
 
 	switch (getImageType)
 	{
 	case ITMMainEngine::InfiniTAM_IMAGE_ORIGINAL_RGB:
-		if (settings->useGPU) view->rgb->UpdateHostFromDevice();
 		out->ChangeDims(view->rgb->noDims);
-		out->SetFrom(view->rgb);
+		if (settings->deviceType == ITMLibSettings::DEVICE_CUDA) 
+			out->SetFrom(view->rgb, ORUtils::MemoryBlock<Vector4u>::CUDA_TO_CPU);
+		else out->SetFrom(view->rgb, ORUtils::MemoryBlock<Vector4u>::CPU_TO_CPU);
 		break;
 	case ITMMainEngine::InfiniTAM_IMAGE_ORIGINAL_DEPTH:
-		if (settings->useGPU) view->depth->UpdateHostFromDevice();
 		out->ChangeDims(view->depth->noDims);
-		ITMVisualisationEngine<ITMVoxel,ITMVoxelIndex>::DepthToUchar4(out, view->depth);
+		if (settings->trackerType==ITMLib::Objects::ITMLibSettings::TRACKER_WICP)
+		{
+			if (settings->deviceType == ITMLibSettings::DEVICE_CUDA) view->depthUncertainty->UpdateHostFromDevice();
+			ITMVisualisationEngine<ITMVoxel, ITMVoxelIndex>::WeightToUchar4(out, view->depthUncertainty);
+		}
+		else
+		{
+			if (settings->deviceType == ITMLibSettings::DEVICE_CUDA) view->depth->UpdateHostFromDevice();
+			ITMVisualisationEngine<ITMVoxel, ITMVoxelIndex>::DepthToUchar4(out, view->depth);
+		}
+
 		break;
 	case ITMMainEngine::InfiniTAM_IMAGE_SCENERAYCAST:
-		if (settings->useGPU) trackingState->rendering->UpdateHostFromDevice();
-		out->ChangeDims(trackingState->rendering->noDims);
-		out->SetFrom(trackingState->rendering);
+	{
+		ORUtils::Image<Vector4u> *srcImage = renderState_live->raycastImage;
+		out->ChangeDims(srcImage->noDims);
+		if (settings->deviceType == ITMLibSettings::DEVICE_CUDA)
+			out->SetFrom(srcImage, ORUtils::MemoryBlock<Vector4u>::CUDA_TO_CPU);
+		else out->SetFrom(srcImage, ORUtils::MemoryBlock<Vector4u>::CPU_TO_CPU);	
 		break;
-	case ITMMainEngine::InfiniTAM_IMAGE_SCENERAYCAST_FREECAMERA:
-		if (pose != NULL && intrinsics != NULL)
-		{
-			if (visualisationState == NULL) visualisationState = visualisationEngine->allocateInternalState(out->noDims);
+	}
+	case ITMMainEngine::InfiniTAM_IMAGE_FREECAMERA_SHADED:
+	case ITMMainEngine::InfiniTAM_IMAGE_FREECAMERA_COLOUR_FROM_VOLUME:
+	case ITMMainEngine::InfiniTAM_IMAGE_FREECAMERA_COLOUR_FROM_NORMAL:
+	{
+		IITMVisualisationEngine::RenderImageType type = IITMVisualisationEngine::RENDER_SHADED_GREYSCALE;
+		if (getImageType == ITMMainEngine::InfiniTAM_IMAGE_FREECAMERA_COLOUR_FROM_VOLUME) type = IITMVisualisationEngine::RENDER_COLOUR_FROM_VOLUME;
+		else if (getImageType == ITMMainEngine::InfiniTAM_IMAGE_FREECAMERA_COLOUR_FROM_NORMAL) type = IITMVisualisationEngine::RENDER_COLOUR_FROM_NORMAL;
+		if (renderState_freeview == NULL) renderState_freeview = visualisationEngine->CreateRenderState(out->noDims);
 
-			visualisationEngine->FindVisibleBlocks(scene, pose, intrinsics, visualisationState);
-			visualisationEngine->CreateExpectedDepths(scene, pose, intrinsics, visualisationState->minmaxImage, visualisationState);
-			visualisationEngine->RenderImage(scene, pose, intrinsics, visualisationState, visualisationState->outputImage, useColour);
+		visualisationEngine->FindVisibleBlocks(pose, intrinsics, renderState_freeview);
+		visualisationEngine->CreateExpectedDepths(pose, intrinsics, renderState_freeview);
+		visualisationEngine->RenderImage(pose, intrinsics, renderState_freeview, renderState_freeview->raycastImage, type);
 
-			if (settings->useGPU) visualisationState->outputImage->UpdateHostFromDevice();
-			out->SetFrom(visualisationState->outputImage);
-		}
+		if (settings->deviceType == ITMLibSettings::DEVICE_CUDA)
+			out->SetFrom(renderState_freeview->raycastImage, ORUtils::MemoryBlock<Vector4u>::CUDA_TO_CPU);
+		else out->SetFrom(renderState_freeview->raycastImage, ORUtils::MemoryBlock<Vector4u>::CPU_TO_CPU);
+		break;
+	}
+	case ITMMainEngine::InfiniTAM_IMAGE_UNKNOWN:
 		break;
 	};
 }
 
-void ITMMainEngine::turnOnIntegration()
-{
-	fusionActive = true;
-}
-
-void ITMMainEngine::turnOffIntegration()
-{
-	fusionActive = false;
-}
+void ITMMainEngine::turnOnIntegration() { fusionActive = true; }
+void ITMMainEngine::turnOffIntegration() { fusionActive = false; }
+void ITMMainEngine::turnOnMainProcessing() { mainProcessingActive = true; }
+void ITMMainEngine::turnOffMainProcessing() { mainProcessingActive = false; }

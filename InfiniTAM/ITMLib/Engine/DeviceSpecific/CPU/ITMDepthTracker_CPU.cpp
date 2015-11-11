@@ -1,60 +1,79 @@
-// Copyright 2014 Isis Innovation Limited and the authors of InfiniTAM
+// Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #include "ITMDepthTracker_CPU.h"
 #include "../../DeviceAgnostic/ITMDepthTracker.h"
 
 using namespace ITMLib::Engine;
 
-ITMDepthTracker_CPU::ITMDepthTracker_CPU(Vector2i imgSize, int noHierarchyLevels, int noRotationOnlyLevels, int noICPRunTillLevel, float distThresh, ITMLowLevelEngine *lowLevelEngine)
-	:ITMDepthTracker(imgSize, noHierarchyLevels, noRotationOnlyLevels, noICPRunTillLevel, distThresh, lowLevelEngine, false) { }
+ITMDepthTracker_CPU::ITMDepthTracker_CPU(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels, int noICPRunTillLevel,
+	float distThresh, float terminationThreshold, const ITMLowLevelEngine *lowLevelEngine) :ITMDepthTracker(imgSize, trackingRegime, noHierarchyLevels,
+	noICPRunTillLevel, distThresh, terminationThreshold, lowLevelEngine, MEMORYDEVICE_CPU) { }
 
 ITMDepthTracker_CPU::~ITMDepthTracker_CPU(void) { }
 
-void ITMDepthTracker_CPU::ChangeIgnorePixelToZero(ITMFloatImage *image)
+int ITMDepthTracker_CPU::ComputeGandH(float &f, float *nabla, float *hessian, Matrix4f approxInvPose)
 {
-	Vector2i dims = image->noDims;
-	float *imageData = image->GetData(false);
-
-	for (int i = 0; i < dims.x * dims.y; i++) if (imageData[i] < 0.0f) imageData[i] = 0.0f;
-}
-
-int ITMDepthTracker_CPU::ComputeGandH(ITMSceneHierarchyLevel *sceneHierarchyLevel, ITMTemplatedHierarchyLevel<ITMFloatImage> *viewHierarchyLevel,
-	Matrix4f approxInvPose, Matrix4f scenePose, bool rotationOnly)
-{
-	int noValidPoints;
-
-	Vector4f *pointsMap = sceneHierarchyLevel->pointsMap->GetData(false);
-	Vector4f *normalsMap = sceneHierarchyLevel->normalsMap->GetData(false);
+	Vector4f *pointsMap = sceneHierarchyLevel->pointsMap->GetData(MEMORYDEVICE_CPU);
+	Vector4f *normalsMap = sceneHierarchyLevel->normalsMap->GetData(MEMORYDEVICE_CPU);
 	Vector4f sceneIntrinsics = sceneHierarchyLevel->intrinsics;
 	Vector2i sceneImageSize = sceneHierarchyLevel->pointsMap->noDims;
 
-	float *depth = viewHierarchyLevel->depth->GetData(false);
+	float *depth = viewHierarchyLevel->depth->GetData(MEMORYDEVICE_CPU);
 	Vector4f viewIntrinsics = viewHierarchyLevel->intrinsics;
 	Vector2i viewImageSize = viewHierarchyLevel->depth->noDims;
 
-	float packedATA[6 * 6];
-	int noPara = rotationOnly ? 3 : 6, noParaSQ = rotationOnly ? 3 + 2 + 1 : 6 + 5 + 4 + 3 + 2 + 1;
+	if (iterationType == TRACKER_ITERATION_NONE) return 0;
 
-	noValidPoints = 0; memset(ATA_host, 0, sizeof(float) * 6 * 6); memset(ATb_host, 0, sizeof(float) * 6);
-	memset(packedATA, 0, sizeof(float) * noParaSQ);
+	bool shortIteration = (iterationType == TRACKER_ITERATION_ROTATION) || (iterationType == TRACKER_ITERATION_TRANSLATION);
+
+	float sumHessian[6 * 6], sumNabla[6], sumF; int noValidPoints;
+	int noPara = shortIteration ? 3 : 6, noParaSQ = shortIteration ? 3 + 2 + 1 : 6 + 5 + 4 + 3 + 2 + 1;
+
+	noValidPoints = 0; sumF = 0.0f;
+	memset(sumHessian, 0, sizeof(float) * noParaSQ);
+	memset(sumNabla, 0, sizeof(float) * noPara);
 
 	for (int y = 0; y < viewImageSize.y; y++) for (int x = 0; x < viewImageSize.x; x++)
 	{
-		float localHessian[6 + 5 + 4 + 3 + 2 + 1], localNabla[6];
+		float localHessian[6 + 5 + 4 + 3 + 2 + 1], localNabla[6], localF = 0;
 
 		for (int i = 0; i < noPara; i++) localNabla[i] = 0.0f;
 		for (int i = 0; i < noParaSQ; i++) localHessian[i] = 0.0f;
 
-		bool isValidPoint = computePerPointGH_Depth(localNabla, localHessian, x, y, depth, viewImageSize, viewIntrinsics, sceneImageSize, sceneIntrinsics,
-			approxInvPose, scenePose, pointsMap, normalsMap, distThresh, rotationOnly, noPara);
+		bool isValidPoint;
+        
+		switch (iterationType)
+		{
+		case TRACKER_ITERATION_ROTATION:
+			isValidPoint = computePerPointGH_Depth<true, true>(localNabla, localHessian, localF, x, y, depth[x + y * viewImageSize.x], viewImageSize,
+				viewIntrinsics, sceneImageSize, sceneIntrinsics, approxInvPose, scenePose, pointsMap, normalsMap, distThresh[levelId]);
+			break;
+		case TRACKER_ITERATION_TRANSLATION:
+			isValidPoint = computePerPointGH_Depth<true, false>(localNabla, localHessian, localF, x, y, depth[x + y * viewImageSize.x], viewImageSize,
+				viewIntrinsics, sceneImageSize, sceneIntrinsics, approxInvPose, scenePose, pointsMap, normalsMap, distThresh[levelId]);
+			break;
+		case TRACKER_ITERATION_BOTH:
+			isValidPoint = computePerPointGH_Depth<false, false>(localNabla, localHessian, localF, x, y, depth[x + y * viewImageSize.x], viewImageSize,
+				viewIntrinsics, sceneImageSize, sceneIntrinsics, approxInvPose, scenePose, pointsMap, normalsMap, distThresh[levelId]);
+			break;
+		default:
+			isValidPoint = false;
+			break;
+		}
 
-		noValidPoints += (int)isValidPoint;
-		for (int i = 0; i < noPara; i++) ATb_host[i] += localNabla[i];
-		for (int i = 0; i < noParaSQ; i++) packedATA[i] += localHessian[i];
+		if (isValidPoint)
+		{
+			noValidPoints++; sumF += localF;
+			for (int i = 0; i < noPara; i++) sumNabla[i] += localNabla[i];
+			for (int i = 0; i < noParaSQ; i++) sumHessian[i] += localHessian[i];
+		}
 	}
 
-	for (int r = 0, counter = 0; r < noPara; r++) for (int c = 0; c <= r; c++, counter++) ATA_host[r + c * 6] = packedATA[counter];
-	for (int r = 0; r < noPara; ++r) for (int c = r + 1; c < noPara; c++) ATA_host[r + c * 6] = ATA_host[c + r * 6];
+	for (int r = 0, counter = 0; r < noPara; r++) for (int c = 0; c <= r; c++, counter++) hessian[r + c * 6] = sumHessian[counter];
+	for (int r = 0; r < noPara; ++r) for (int c = r + 1; c < noPara; c++) hessian[r + c * 6] = hessian[c + r * 6];
+	
+	memcpy(nabla, sumNabla, noPara * sizeof(float));
+	f = (noValidPoints > 100) ? sqrt(sumF) / noValidPoints : 1e5f;
 
 	return noValidPoints;
 }

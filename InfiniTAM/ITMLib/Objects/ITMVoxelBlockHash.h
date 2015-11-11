@@ -1,29 +1,28 @@
-// Copyright 2014 Isis Innovation Limited and the authors of InfiniTAM
+// Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #pragma once
 
+#ifndef __METALC__
 #include <stdlib.h>
-
-#include "../Utils/ITMLibDefines.h"
-#ifndef COMPILE_WITHOUT_CUDA
-#include "../Engine/DeviceSpecific/CUDA/ITMCUDADefines.h"
 #endif
 
-#include "ITMHashTable.h"
+#include "../Utils/ITMLibDefines.h"
+
+#include "../../ORUtils/MemoryBlock.h"
 
 namespace ITMLib
 {
 	namespace Objects
 	{
 		/** \brief
-		    This is the central class for the voxel block hash
-		    implementation. It contains all the data needed on the CPU
-		    and a pointer to the data structure on the GPU.
+		This is the central class for the voxel block hash
+		implementation. It contains all the data needed on the CPU
+		and a pointer to the data structure on the GPU.
 		*/
 		class ITMVoxelBlockHash
 		{
-			public:
-			typedef ITMHashTable IndexData;
+		public:
+			typedef ITMHashEntry IndexData;
 
 			struct IndexCache {
 				Vector3i blockPos;
@@ -32,66 +31,61 @@ namespace ITMLib
 			};
 
 			/** Maximum number of total entries. */
-			static const int noVoxelBlocks = IndexData::noTotalEntries;
-			static const int voxelBlockSize = SDF_BLOCK_SIZE * SDF_BLOCK_SIZE * SDF_BLOCK_SIZE;
-            
-			private:
-			IndexData *hashData;
-			bool dataIsOnGPU;
+			static const CONSTPTR(int) noTotalEntries = SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE;
+			static const CONSTPTR(int) voxelBlockSize = SDF_BLOCK_SIZE * SDF_BLOCK_SIZE * SDF_BLOCK_SIZE;
 
-			public:
-			/** Number of entries in the live list. */
-			int noLiveEntries;
-
+#ifndef __METALC__
+		private:
 			int lastFreeExcessListId;
 
-			ITMVoxelBlockHash(bool allocateGPU)
+			/** The actual data in the hash table. */
+			ORUtils::MemoryBlock<ITMHashEntry> *hashEntries;
+
+			/** Identifies which entries of the overflow
+			list are allocated. This is used if too
+			many hash collisions caused the buckets to
+			overflow.
+			*/
+			ORUtils::MemoryBlock<int> *excessAllocationList;
+        
+			MemoryDeviceType memoryType;
+
+		public:
+			ITMVoxelBlockHash(MemoryDeviceType memoryType)
 			{
-				this->dataIsOnGPU = allocateGPU;
-
-				IndexData *hashData_host = new IndexData;
-				hashData_host->ResetData();
-
-				if (allocateGPU)
-				{
-#ifndef COMPILE_WITHOUT_CUDA
-					ITMSafeCall(cudaMalloc((void**)&hashData, sizeof(IndexData)));
-					ITMSafeCall(cudaMemcpy(hashData, hashData_host, sizeof(IndexData), cudaMemcpyHostToDevice));
-#endif
-					delete hashData_host;
-				}
-				else hashData = hashData_host;
-				lastFreeExcessListId = SDF_EXCESS_LIST_SIZE - 1;
+				this->memoryType = memoryType;
+				hashEntries = new ORUtils::MemoryBlock<ITMHashEntry>(noTotalEntries, memoryType);
+				excessAllocationList = new ORUtils::MemoryBlock<int>(SDF_EXCESS_LIST_SIZE, memoryType);
 			}
 
-			~ITMVoxelBlockHash(void)	
+			~ITMVoxelBlockHash(void)
 			{
-				if (!dataIsOnGPU) delete hashData;
-#ifndef COMPILE_WITHOUT_CUDA
-				else ITMSafeCall(cudaFree(hashData));
-#endif
+				delete hashEntries;
+				delete excessAllocationList;
 			}
 
 			/** Get the list of actual entries in the hash table. */
-			_CPU_AND_GPU_CODE_ const ITMHashEntry *GetEntries(void) const { return hashData->entries_all; }
-			_CPU_AND_GPU_CODE_ ITMHashEntry *GetEntries(void) { return hashData->entries_all; }
-			/** Get the list that identifies which entries of the
-			    overflow list are allocated. This is used if too
-			    many hash collisions caused the buckets to overflow.
-			*/
-			const int *GetExcessAllocationList(void) const { return hashData->excessAllocationList; }
-			int *GetExcessAllocationList(void) { return hashData->excessAllocationList; }
-			/** Get the list of "live entries", that are currently
-			    processed by integration and tracker.
-			*/
-			const int *GetLiveEntryIDs(void) const { return hashData->liveEntryIDs; }
-			int *GetLiveEntryIDs(void) { return hashData->liveEntryIDs; }
-			/** Get the list of "visible entries", that are
-			    currently processed by integration and tracker.
-			*/
-			uchar *GetEntriesVisibleType(void) { return hashData->entriesVisibleType; }
+			const ITMHashEntry *GetEntries(void) const { return hashEntries->GetData(memoryType); }
+			ITMHashEntry *GetEntries(void) { return hashEntries->GetData(memoryType); }
 
-			_CPU_AND_GPU_CODE_ inline const IndexData* getIndexData(void) const { return hashData; }
+			const IndexData *getIndexData(void) const { return hashEntries->GetData(memoryType); }
+			IndexData *getIndexData(void) { return hashEntries->GetData(memoryType); }
+
+			/** Get the list that identifies which entries of the
+			overflow list are allocated. This is used if too
+			many hash collisions caused the buckets to overflow.
+			*/
+			const int *GetExcessAllocationList(void) const { return excessAllocationList->GetData(memoryType); }
+			int *GetExcessAllocationList(void) { return excessAllocationList->GetData(memoryType); }
+
+			int GetLastFreeExcessListId(void) { return lastFreeExcessListId; }
+			void SetLastFreeExcessListId(int lastFreeExcessListId) { this->lastFreeExcessListId = lastFreeExcessListId; }
+
+#ifdef COMPILE_WITH_METAL
+			const void* GetEntries_MB(void) { return hashEntries->GetMetalBuffer(); }
+			const void* GetExcessAllocationList_MB(void) { return excessAllocationList->GetMetalBuffer(); }
+			const void* getIndexData_MB(void) const { return hashEntries->GetMetalBuffer(); }
+#endif
 
 			/** Maximum number of total entries. */
 			int getNumAllocatedVoxelBlocks(void) { return SDF_LOCAL_BLOCK_NUM; }
@@ -99,7 +93,8 @@ namespace ITMLib
 
 			// Suppress the default copy constructor and assignment operator
 			ITMVoxelBlockHash(const ITMVoxelBlockHash&);
-			ITMVoxelBlockHash& operator=(const ITMVoxelBlockHash&);           
+			ITMVoxelBlockHash& operator=(const ITMVoxelBlockHash&);
+#endif
 		};
 	}
 }

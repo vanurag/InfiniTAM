@@ -1,4 +1,4 @@
-// Copyright 2014 Isis Innovation Limited and the authors of InfiniTAM
+// Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #pragma once
 
@@ -7,7 +7,7 @@
 
 #include "../Utils/ITMLibDefines.h"
 #ifndef COMPILE_WITHOUT_CUDA
-#include "../Engine/DeviceSpecific/CUDA/ITMCUDADefines.h"
+#include "../../ORUtils/CUDADefines.h"
 #endif
 
 namespace ITMLib
@@ -20,7 +20,7 @@ namespace ITMLib
 		private:
 			bool *hasStoredData;
 			TVoxel *storedVoxelBlocks;
-			ITMHashCacheState *cacheStates_host, *cacheStates_device;
+			ITMHashSwapState *swapStates_host, *swapStates_device;
 
 			bool *hasSyncedData_host, *hasSyncedData_device;
 			TVoxel *syncedVoxelBlocks_host, *syncedVoxelBlocks_device;
@@ -38,27 +38,27 @@ namespace ITMLib
 			bool *GetHasSyncedData(bool useGPU) const { return useGPU ? hasSyncedData_device : hasSyncedData_host; }
 			TVoxel *GetSyncedVoxelBlocks(bool useGPU) const { return useGPU ? syncedVoxelBlocks_device : syncedVoxelBlocks_host; }
 
-			ITMHashCacheState *GetCacheStates(bool useGPU) { return useGPU ? cacheStates_device : cacheStates_host; }
+			ITMHashSwapState *GetSwapStates(bool useGPU) { return useGPU ? swapStates_device : swapStates_host; }
 			int *GetNeededEntryIDs(bool useGPU) { return useGPU ? neededEntryIDs_device : neededEntryIDs_host; }
 
 			int noTotalEntries; 
 
-			ITMGlobalCache() : noTotalEntries(SDF_BUCKET_NUM * SDF_ENTRY_NUM_PER_BUCKET + SDF_EXCESS_LIST_SIZE)
+			ITMGlobalCache() : noTotalEntries(SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE)
 			{	
 				hasStoredData = (bool*)malloc(noTotalEntries * sizeof(bool));
 				storedVoxelBlocks = (TVoxel*)malloc(noTotalEntries * sizeof(TVoxel) * SDF_BLOCK_SIZE3);
 				memset(hasStoredData, 0, noTotalEntries);
 
-				cacheStates_host = (ITMHashCacheState *)malloc(noTotalEntries * sizeof(ITMHashCacheState));
-				memset(cacheStates_host, 0, sizeof(ITMHashCacheState) * noTotalEntries);
+				swapStates_host = (ITMHashSwapState *)malloc(noTotalEntries * sizeof(ITMHashSwapState));
+				memset(swapStates_host, 0, sizeof(ITMHashSwapState) * noTotalEntries);
 
 #ifndef COMPILE_WITHOUT_CUDA
 				ITMSafeCall(cudaMallocHost((void**)&syncedVoxelBlocks_host, SDF_TRANSFER_BLOCK_NUM * sizeof(TVoxel) * SDF_BLOCK_SIZE3));
 				ITMSafeCall(cudaMallocHost((void**)&hasSyncedData_host, SDF_TRANSFER_BLOCK_NUM * sizeof(bool)));
 				ITMSafeCall(cudaMallocHost((void**)&neededEntryIDs_host, SDF_TRANSFER_BLOCK_NUM * sizeof(int)));
 
-				ITMSafeCall(cudaMalloc((void**)&cacheStates_device, noTotalEntries * sizeof(ITMHashCacheState)));
-				ITMSafeCall(cudaMemset(cacheStates_device, 0, noTotalEntries * sizeof(ITMHashCacheState)));
+				ITMSafeCall(cudaMalloc((void**)&swapStates_device, noTotalEntries * sizeof(ITMHashSwapState)));
+				ITMSafeCall(cudaMemset(swapStates_device, 0, noTotalEntries * sizeof(ITMHashSwapState)));
 
 				ITMSafeCall(cudaMalloc((void**)&syncedVoxelBlocks_device, SDF_TRANSFER_BLOCK_NUM * sizeof(TVoxel) * SDF_BLOCK_SIZE3));
 				ITMSafeCall(cudaMalloc((void**)&hasSyncedData_device, SDF_TRANSFER_BLOCK_NUM * sizeof(bool)));
@@ -92,11 +92,13 @@ namespace ITMLib
 				TVoxel *storedData = storedVoxelBlocks;
 				FILE *f = fopen(fileName, "rb");
 
-				fread(hasStoredData, sizeof(bool), noTotalEntries, f);
-				for (int i = 0; i < noTotalEntries; i++)
-				{
-					fread(storedData, sizeof(TVoxel) * SDF_BLOCK_SIZE3, 1, f);
-					storedData += SDF_BLOCK_SIZE3;
+				size_t tmp = fread(hasStoredData, sizeof(bool), noTotalEntries, f);
+				if (tmp == (size_t)noTotalEntries) {
+					for (int i = 0; i < noTotalEntries; i++)
+					{
+						fread(storedData, sizeof(TVoxel) * SDF_BLOCK_SIZE3, 1, f);
+						storedData += SDF_BLOCK_SIZE3;
+					}
 				}
 
 				fclose(f);
@@ -107,14 +109,14 @@ namespace ITMLib
 				free(hasStoredData);
 				free(storedVoxelBlocks);
 
-				free(cacheStates_host);
+				free(swapStates_host);
 
 #ifndef COMPILE_WITHOUT_CUDA
 				ITMSafeCall(cudaFreeHost(hasSyncedData_host));
 				ITMSafeCall(cudaFreeHost(syncedVoxelBlocks_host));
 				ITMSafeCall(cudaFreeHost(neededEntryIDs_host));
 
-				ITMSafeCall(cudaFree(cacheStates_device));
+				ITMSafeCall(cudaFree(swapStates_device));
 				ITMSafeCall(cudaFree(syncedVoxelBlocks_device));
 				ITMSafeCall(cudaFree(hasSyncedData_device));
 				ITMSafeCall(cudaFree(neededEntryIDs_device));

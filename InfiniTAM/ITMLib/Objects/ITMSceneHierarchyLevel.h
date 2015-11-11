@@ -1,8 +1,8 @@
-// Copyright 2014 Isis Innovation Limited and the authors of InfiniTAM
+// Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #pragma once
 
-#include "../Objects/ITMImage.h"
+#include "../Utils/ITMLibDefines.h"
 
 namespace ITMLib
 {
@@ -13,19 +13,24 @@ namespace ITMLib
 		public:
 			int levelId;
 
-			bool rotationOnly;
+			TrackerIterationType iterationType;
 
 			ITMFloat4Image *pointsMap;
 			ITMFloat4Image *normalsMap;
 			Vector4f intrinsics;
 
-			ITMSceneHierarchyLevel(Vector2i imgSize, int levelId, bool rotationOnly, bool useGPU)
-			{
-				this->levelId = levelId;
-				this->rotationOnly = rotationOnly;
+			bool manageData;
 
-				this->pointsMap = new ITMFloat4Image(imgSize, useGPU);
-				this->normalsMap = new ITMFloat4Image(imgSize, useGPU);
+			ITMSceneHierarchyLevel(Vector2i imgSize, int levelId, TrackerIterationType iterationType, MemoryDeviceType memoryType, bool skipAllocation = false)
+			{
+				this->manageData = !skipAllocation;
+				this->levelId = levelId;
+				this->iterationType = iterationType;
+
+				if (!skipAllocation) {
+					this->pointsMap = new ITMFloat4Image(imgSize, memoryType);
+					this->normalsMap = new ITMFloat4Image(imgSize, memoryType);
+				}
 			}
 
 			void UpdateHostFromDevice()
@@ -42,8 +47,10 @@ namespace ITMLib
 
 			~ITMSceneHierarchyLevel(void)
 			{
-				delete pointsMap;
-				delete normalsMap;
+				if (manageData) {
+					delete pointsMap;
+					delete normalsMap;
+				}
 			}
 
 			// Suppress the default copy constructor and assignment operator

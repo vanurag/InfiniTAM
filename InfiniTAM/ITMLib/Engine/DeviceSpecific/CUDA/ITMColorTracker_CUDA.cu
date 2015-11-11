@@ -1,9 +1,9 @@
-// Copyright 2014 Isis Innovation Limited and the authors of InfiniTAM
+// Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #include "ITMColorTracker_CUDA.h"
 #include "ITMCUDAUtils.h"
 #include "../../DeviceAgnostic/ITMColorTracker.h"
-#include "../../../Utils/ITMPixelUtils.h"
+#include "../../DeviceAgnostic/ITMPixelUtils.h"
 
 using namespace ITMLib::Engine;
 
@@ -17,8 +17,8 @@ __global__ void colorTrackerOneLevel_g_ro_device(float *g_out, float *h_out, Vec
 
 // host methods
 
-ITMColorTracker_CUDA::ITMColorTracker_CUDA(Vector2i imgSize, int noHierarchyLevels, int noRotationOnlyLevels, ITMLowLevelEngine *lowLevelEngine) 
-	:ITMColorTracker(imgSize, noHierarchyLevels, noRotationOnlyLevels, lowLevelEngine, true)
+ITMColorTracker_CUDA::ITMColorTracker_CUDA(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels, const ITMLowLevelEngine *lowLevelEngine)
+	:ITMColorTracker(imgSize, trackingRegime, noHierarchyLevels, lowLevelEngine, MEMORYDEVICE_CUDA)
 { 
 	int dim_g = 6;
 	int dim_h = 6 + 5 + 4 + 3 + 2 + 1;
@@ -51,15 +51,15 @@ void ITMColorTracker_CUDA::F_oneLevel(float *f, ITMPose *pose)
 	projParams.x /= 1 << levelId; projParams.y /= 1 << levelId;
 	projParams.z /= 1 << levelId; projParams.w /= 1 << levelId;
 
-	Matrix4f M = pose->M;
+	Matrix4f M = pose->GetM();
 
 	Vector2i imgSize = viewHierarchy->levels[levelId]->rgb->noDims;
 
 	float scaleForOcclusions, final_f;
 
-	Vector4f *locations = trackingState->pointCloud->locations->GetData(true);
-	Vector4f *colours = trackingState->pointCloud->colours->GetData(true);
-	Vector4u *rgb = viewHierarchy->levels[levelId]->rgb->GetData(true);
+	Vector4f *locations = trackingState->pointCloud->locations->GetData(MEMORYDEVICE_CUDA);
+	Vector4f *colours = trackingState->pointCloud->colours->GetData(MEMORYDEVICE_CUDA);
+	Vector4u *rgb = viewHierarchy->levels[levelId]->rgb->GetData(MEMORYDEVICE_CUDA);
 
 	dim3 blockSize(128, 1);
 	dim3 gridSize((int)ceil((float)noTotalPoints / (float)blockSize.x), 1);
@@ -87,23 +87,24 @@ void ITMColorTracker_CUDA::G_oneLevel(float *gradient, float *hessian, ITMPose *
 	projParams.x /= 1 << levelId; projParams.y /= 1 << levelId;
 	projParams.z /= 1 << levelId; projParams.w /= 1 << levelId;
 
-	Matrix4f M = pose->M;
+	Matrix4f M = pose->GetM();
 
 	Vector2i imgSize = viewHierarchy->levels[levelId]->rgb->noDims;
 
 	float scaleForOcclusions;
 
+	bool rotationOnly = iterationType == TRACKER_ITERATION_ROTATION;
 	int numPara = rotationOnly ? 3 : 6, numParaSQ = rotationOnly ? 3 + 2 + 1 : 6 + 5 + 4 + 3 + 2 + 1;
 
 	float globalGradient[6], globalHessian[21];
 	for (int i = 0; i < numPara; i++) globalGradient[i] = 0.0f;
 	for (int i = 0; i < numParaSQ; i++) globalHessian[i] = 0.0f;
 
-	Vector4f *locations = trackingState->pointCloud->locations->GetData(true);
-	Vector4f *colours = trackingState->pointCloud->colours->GetData(true);
-	Vector4u *rgb = viewHierarchy->levels[levelId]->rgb->GetData(true);
-	Vector4s *gx = viewHierarchy->levels[levelId]->gradientX_rgb->GetData(true);
-	Vector4s *gy = viewHierarchy->levels[levelId]->gradientY_rgb->GetData(true);
+	Vector4f *locations = trackingState->pointCloud->locations->GetData(MEMORYDEVICE_CUDA);
+	Vector4f *colours = trackingState->pointCloud->colours->GetData(MEMORYDEVICE_CUDA);
+	Vector4u *rgb = viewHierarchy->levels[levelId]->rgb->GetData(MEMORYDEVICE_CUDA);
+	Vector4s *gx = viewHierarchy->levels[levelId]->gradientX_rgb->GetData(MEMORYDEVICE_CUDA);
+	Vector4s *gy = viewHierarchy->levels[levelId]->gradientY_rgb->GetData(MEMORYDEVICE_CUDA);
 
 	dim3 blockSize(128, 1);
 	dim3 gridSize((int)ceil((float)noTotalPoints / (float)blockSize.x), 1);
@@ -155,7 +156,7 @@ __global__ void colorTrackerOneLevel_f_device(Vector2f *out, Vector4f *locations
 {
 	int locId_global = threadIdx.x + blockIdx.x * blockDim.x, locId_local = threadIdx.x;
 
-	__shared__ ITMLib::Vector2_<float> out_shared[128];
+	__shared__ ORUtils::Vector2_<float> out_shared[128];
 
 	out_shared[locId_local].x = 0; out_shared[locId_local].y = 0;
 	__syncthreads();

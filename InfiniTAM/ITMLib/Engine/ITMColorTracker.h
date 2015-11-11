@@ -1,4 +1,4 @@
-// Copyright 2014 Isis Innovation Limited and the authors of InfiniTAM
+// Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #pragma once
 
@@ -24,12 +24,12 @@ namespace ITMLib
 		class ITMColorTracker : public ITMTracker
 		{
 		private:
-			ITMLowLevelEngine *lowLevelEngine;
+			const ITMLowLevelEngine *lowLevelEngine;
 
 			void PrepareForEvaluation(const ITMView *view);
 
 		protected: 
-			bool rotationOnly;
+			TrackerIterationType iterationType;
 			ITMTrackingState *trackingState; const ITMView *view;
 			ITMImageHierarchy<ITMViewHierarchyLevel> *viewHierarchy;
 			int levelId;
@@ -69,17 +69,17 @@ namespace ITMLib
 				return new EvaluationPoint(para, this);
 			}
 
-			int numParameters(void) const { return rotationOnly ? 3 : 6; }
+			int numParameters(void) const { return (iterationType == TRACKER_ITERATION_ROTATION) ? 3 : 6; }
 
 			virtual void F_oneLevel(float *f, ITMPose *pose) = 0;
 			virtual void G_oneLevel(float *gradient, float *hessian, ITMPose *pose) const = 0;
 
-			void applyDelta(const ITMPose & para_old, const float *delta, ITMPose & para_new) const;
+			void ApplyDelta(const ITMPose & para_old, const float *delta, ITMPose & para_new) const;
 
 			void TrackCamera(ITMTrackingState *trackingState, const ITMView *view);
 
-			ITMColorTracker(Vector2i imgSize, int noHierarchyLevels, int noRotationOnlyLevels,
-				ITMLowLevelEngine *lowLevelEngine, bool useGPU);
+			ITMColorTracker(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels,
+				const ITMLowLevelEngine *lowLevelEngine, MemoryDeviceType memoryType);
 			virtual ~ITMColorTracker(void);
 		};
 	}

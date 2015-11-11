@@ -1,8 +1,6 @@
-// Copyright 2014 Isis Innovation Limited and the authors of InfiniTAM
+// Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #pragma once
-
-#include "../Objects/ITMImage.h"
 
 namespace ITMLib
 {
@@ -14,17 +12,20 @@ namespace ITMLib
 		public:
 			int levelId;
 
-			bool rotationOnly;
+			TrackerIterationType iterationType;
 
 			ImageType *depth;
 			Vector4f intrinsics;
+			bool manageData;
 
-			ITMTemplatedHierarchyLevel(Vector2i imgSize, int levelId, bool rotationOnly, bool useGPU)
+			ITMTemplatedHierarchyLevel(Vector2i imgSize, int levelId, TrackerIterationType iterationType, 
+				MemoryDeviceType memoryType, bool skipAllocation = false)
 			{
+				this->manageData = !skipAllocation;
 				this->levelId = levelId;
-				this->rotationOnly = rotationOnly;
+				this->iterationType = iterationType;
 
-				this->depth = new ImageType(imgSize, useGPU);
+				if (!skipAllocation) this->depth = new ImageType(imgSize, memoryType);
 			}
 
 			void UpdateHostFromDevice()
@@ -39,7 +40,7 @@ namespace ITMLib
 
 			~ITMTemplatedHierarchyLevel(void)
 			{
-				delete depth;
+				if (manageData) delete depth;
 			}
 
 			// Suppress the default copy constructor and assignment operator

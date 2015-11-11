@@ -1,4 +1,4 @@
-// Copyright 2014 Isis Innovation Limited and the authors of InfiniTAM
+// Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #pragma once
 
@@ -25,8 +25,13 @@ namespace ITMLib
 			*/
 			virtual void TrackCamera(ITMTrackingState *trackingState, const ITMView *view) = 0;
 
+			/** Updates the initial pose of the depth camera in the scene.
+			    This can be used to make the scene up vector correspond
+			    to the real world's up direction.
+			*/
+			virtual void UpdateInitialPose(ITMTrackingState *trackingState) {}
+
 			virtual ~ITMTracker(void) {}
 		};
 	}
 }
-

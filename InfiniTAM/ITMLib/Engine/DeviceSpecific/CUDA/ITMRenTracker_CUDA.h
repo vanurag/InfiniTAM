@@ -1,4 +1,4 @@
-// Copyright 2014 Isis Innovation Limited and the authors of InfiniTAM
+// Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #pragma once
 
@@ -21,7 +21,10 @@ namespace ITMLib
 			void UnprojectDepthToCam(ITMFloatImage *depth, ITMFloat4Image *upPtCloud, const Vector4f &intrinsic);
 
 		public:
-			ITMRenTracker_CUDA(Vector2i imgSize, int noHierarchyLevels, ITMLowLevelEngine *lowLevelEngine, ITMScene<TVoxel,TIndex> *scene);
+
+			ITMRenTracker_CUDA(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels, const ITMLowLevelEngine *lowLevelEngine,
+				const ITMScene<TVoxel, TIndex> *scene);
+
 			~ITMRenTracker_CUDA(void);
 		};
 	}

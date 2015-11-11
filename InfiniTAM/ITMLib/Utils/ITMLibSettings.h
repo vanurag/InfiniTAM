@@ -1,8 +1,9 @@
-// Copyright 2014 Isis Innovation Limited and the authors of InfiniTAM
+// Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #pragma once
 
 #include "../Objects/ITMSceneParams.h"
+#include "../Engine/ITMTracker.h"
 
 namespace ITMLib
 {
@@ -11,11 +12,24 @@ namespace ITMLib
 		class ITMLibSettings
 		{
 		public:
-			/// Use GPU or run the code on the CPU instead.
-			bool useGPU;
+			/// The device used to run the DeviceAgnostic code
+			typedef enum {
+				DEVICE_CPU,
+				DEVICE_CUDA,
+				DEVICE_METAL
+			} DeviceType;
+
+			/// Select the type of device to use
+			DeviceType deviceType;
 
 			/// Enables swapping between host and device.
 			bool useSwapping;
+
+			bool useApproximateRaycast;
+
+			bool useBilateralFilter;
+
+			bool modelSensorNoise;
 
 			/// Tracker types
 			typedef enum {
@@ -24,16 +38,21 @@ namespace ITMLib
 				//! Identifies a tracker based on depth image
 				TRACKER_ICP,
 				//! Identifies a tracker based on depth image (Ren et al, 2012)
-				TRACKER_REN
+				TRACKER_REN,
+				//! Identifies a tracker based on depth image and IMU measurement
+				TRACKER_IMU,
+				//! Identifies a tracker that use weighted ICP only on depth image
+				TRACKER_WICP
 			} TrackerType;
+
 			/// Select the type of tracker to use
 			TrackerType trackerType;
 
-			/// Number of resolution levels for the tracker.
-			int noHierarchyLevels;
+			/// The tracking regime used by the tracking controller
+			TrackerIterationType *trackingRegime;
 
-			/// Number of resolution levels to track only rotation instead of full SE3.
-			int noRotationOnlyLevels;
+			/// The number of levels in the trackingRegime
+			int noHierarchyLevels;
 			
 			/// Run ICP till # Hierarchy level, then switch to ITMRenTracker for local refinement.
 			int noICPRunTillLevel;
@@ -44,11 +63,18 @@ namespace ITMLib
 			/// For ITMDepthTracker: ICP distance threshold
 			float depthTrackerICPThreshold;
 
+			/// For ITMDepthTracker: ICP iteration termination threshold
+			float depthTrackerTerminationThreshold;
+
 			/// Further, scene specific parameters such as voxel size
 			ITMLib::Objects::ITMSceneParams sceneParams;
 
 			ITMLibSettings(void);
-			~ITMLibSettings(void) { }
+			~ITMLibSettings(void);
+
+			// Suppress the default copy constructor and assignment operator
+			ITMLibSettings(const ITMLibSettings&);
+			ITMLibSettings& operator=(const ITMLibSettings&);
 		};
 	}
 }

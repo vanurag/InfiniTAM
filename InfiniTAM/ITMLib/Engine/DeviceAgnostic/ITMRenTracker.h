@@ -1,16 +1,15 @@
-// Copyright 2014 Isis Innovation Limited and the authors of InfiniTAM
+// Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #pragma once
 
 #include "../../Utils/ITMLibDefines.h"
-#include "../../Utils/ITMPixelUtils.h"
+#include "ITMPixelUtils.h"
 #include "ITMSceneReconstructionEngine.h"
-#include <iostream>
 
 // sigma that controls the basin of attraction
 #define DTUNE 6.0f
 
-_CPU_AND_GPU_CODE_ inline void unprojectPtWithIntrinsic(const Vector4f &intrinsic, const Vector3f &inpt, Vector4f &outpt)
+_CPU_AND_GPU_CODE_ inline void unprojectPtWithIntrinsic(const THREADPTR(Vector4f) &intrinsic, const THREADPTR(Vector3f) &inpt, THREADPTR(Vector4f) &outpt)
 {
 	outpt.x = intrinsic.x * inpt.x + intrinsic.z * inpt.z;
 	outpt.y = intrinsic.y * inpt.y + intrinsic.w * inpt.z;
@@ -19,28 +18,34 @@ _CPU_AND_GPU_CODE_ inline void unprojectPtWithIntrinsic(const Vector4f &intrinsi
 }
 
 template<class TVoxel, class TIndex>
-_CPU_AND_GPU_CODE_ inline float computePerPixelEnergy(const Vector4f &inpt, const TVoxel *voxelBlocks, const typename TIndex::IndexData *index,
-	float oneOverVoxelSize, Matrix4f invM)
+_CPU_AND_GPU_CODE_ inline float computePerPixelEnergy(const THREADPTR(Vector4f) &inpt, const CONSTPTR(TVoxel) *voxelBlocks,
+	const CONSTPTR(typename TIndex::IndexData) *index, float oneOverVoxelSize, Matrix4f invM)
 {
 	Vector3f pt; bool dtIsFound;
-	pt = (invM * inpt * oneOverVoxelSize).toVector3();
+	pt = TO_VECTOR3(invM * inpt) * oneOverVoxelSize;
+
+	// faster but theoretically worse
 	float dt = readFromSDF_float_uninterpolated(voxelBlocks, index, pt, dtIsFound);
+
+	//typename TIndex::IndexCache cache;
+	//float dt = readFromSDF_float_interpolated(voxelBlocks, index, pt, dtIsFound, cache);
 
 	if (dt == 1.0f) return 0.0f;
 
-	float expdt = expf(-dt * DTUNE);
+	float expdt = exp(-dt * DTUNE);
 	return 4.0f * expdt / ((expdt + 1.0f)*(expdt + 1.0f));
 }
 
 template<class TVoxel, class TIndex>
-_CPU_AND_GPU_CODE_ inline Vector3f computeDDT(const Vector3f &pt_f, const TVoxel *voxelBlocks, const typename TIndex::IndexData *index,
-	float oneOverVoxelSize, bool &ddtFound)
+_CPU_AND_GPU_CODE_ inline Vector3f computeDDT(const CONSTPTR(Vector3f) &pt_f, const THREADPTR(TVoxel) *voxelBlocks,
+	const THREADPTR(typename TIndex::IndexData) *index, float oneOverVoxelSize, DEVICEPTR(bool) &ddtFound)
 {
+	
 	Vector3f ddt;
-	
-	Vector3i pt = pt_f.toIntRound();
-	
-	bool isFound; float dt1, dt2;	
+
+	Vector3i pt = TO_INT_ROUND3(pt_f);
+
+	bool isFound; float dt1, dt2;
 
 	dt1 = TVoxel::SDF_valueToFloat(readVoxel(voxelBlocks, index, pt + Vector3i(1, 0, 0), isFound).sdf);
 	if (!isFound || dt1 == 1.0f) { ddtFound = false; return Vector3f(0.0f); }
@@ -64,20 +69,22 @@ _CPU_AND_GPU_CODE_ inline Vector3f computeDDT(const Vector3f &pt_f, const TVoxel
 }
 
 template<class TVoxel, class TIndex>
-_CPU_AND_GPU_CODE_ inline bool computePerPixelJacobian(float *jacobian, const Vector4f &inpt, const TVoxel *voxelBlocks, const typename TIndex::IndexData *index,
-	float oneOverVoxelSize, Matrix4f invM)
+_CPU_AND_GPU_CODE_ inline bool computePerPixelJacobian(THREADPTR(float) *jacobian, const THREADPTR(Vector4f) &inpt, 
+	const CONSTPTR(TVoxel) *voxelBlocks, const CONSTPTR(typename TIndex::IndexData) *index, float oneOverVoxelSize, Matrix4f invM)
 {
-	float dt;
 
 	bool isFound;
 
 	Vector3f cPt, dDt, pt;
 
-	cPt = (invM * inpt).toVector3();
+	cPt = TO_VECTOR3(invM * inpt);
 
 	pt = cPt * oneOverVoxelSize;
 
-	dt = readFromSDF_float_uninterpolated(voxelBlocks, index, pt, isFound);
+	//typename TIndex::IndexCache cache;
+	//float dt = readFromSDF_float_interpolated(voxelBlocks, index, pt, isFound, cache);
+
+	float dt = readFromSDF_float_uninterpolated(voxelBlocks, index, pt, isFound);
 
 	if (dt == 1.0f || !isFound) return false;
 
@@ -85,10 +92,10 @@ _CPU_AND_GPU_CODE_ inline bool computePerPixelJacobian(float *jacobian, const Ve
 	dDt = computeDDT<TVoxel, TIndex>(pt, voxelBlocks, index, oneOverVoxelSize, isFound);
 	if (!isFound) return false;
 
-	float expdt = expf(-dt * DTUNE);
+	float expdt = exp(-dt * DTUNE);
 	float deto = expdt + 1;
 
-	float prefix = 4.0f * DTUNE * (2.0f * expf(-dt * 2.0f * DTUNE) / (deto * deto * deto) - expdt / (deto * deto));
+	float prefix = 4.0f * DTUNE * (2.0f * exp(-dt * 2.0f * DTUNE) / (deto * deto * deto) - expdt / (deto * deto));
 
 	dDt *= prefix;
 

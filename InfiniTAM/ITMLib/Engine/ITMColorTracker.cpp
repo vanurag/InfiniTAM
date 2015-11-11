@@ -1,7 +1,7 @@
-// Copyright 2014 Isis Innovation Limited and the authors of InfiniTAM
+// Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #include "ITMColorTracker.h"
-#include "../Utils/ITMCholesky.h"
+#include "../../ORUtils/Cholesky.h"
 
 #include <math.h>
 
@@ -9,10 +9,10 @@ using namespace ITMLib::Engine;
 
 static inline bool minimizeLM(const ITMColorTracker & tracker, ITMPose & initialization);
 
-ITMColorTracker::ITMColorTracker(Vector2i imgSize, int noHierarchyLevels, int noRotationOnlyLevels,
-	ITMLowLevelEngine *lowLevelEngine, bool useGPU)
+ITMColorTracker::ITMColorTracker(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels,
+	const ITMLowLevelEngine *lowLevelEngine, MemoryDeviceType memoryType)
 {
-	viewHierarchy = new ITMImageHierarchy<ITMViewHierarchyLevel>(imgSize, noHierarchyLevels, noRotationOnlyLevels, useGPU);
+	viewHierarchy = new ITMImageHierarchy<ITMViewHierarchyLevel>(imgSize, trackingRegime, noHierarchyLevels, memoryType);
 
 	this->lowLevelEngine = lowLevelEngine;
 }
@@ -28,18 +28,20 @@ void ITMColorTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 
 	this->PrepareForEvaluation(view);
 
-	ITMPose currentPara(view->calib->trafo_rgb_to_depth.calib_inv * trackingState->pose_d->M);
+	ITMPose currentPara(view->calib->trafo_rgb_to_depth.calib_inv * trackingState->pose_d->GetM());
 	for (int levelId = viewHierarchy->noLevels - 1; levelId >= 0; levelId--)
 	{
 		this->levelId = levelId;
-		this->rotationOnly = viewHierarchy->levels[levelId]->rotationOnly;
+		this->iterationType = viewHierarchy->levels[levelId]->iterationType;
 
 		minimizeLM(*this, currentPara);
 	}
 
 	// these following will coerce the result back into the chosen
 	// parameterization for rotations
-	trackingState->pose_d->SetFrom(view->calib->trafo_rgb_to_depth.calib * currentPara.M);
+	trackingState->pose_d->SetM(view->calib->trafo_rgb_to_depth.calib * currentPara.GetM());
+
+	trackingState->pose_d->Coerce();
 
 	//printf(">> %f %f %f %f %f %f\n", scene->pose->params.each.rx, scene->pose->params.each.ry, scene->pose->params.each.rz,
 	//	scene->pose->params.each.tx, scene->pose->params.each.ty, scene->pose->params.each.tz);
@@ -66,21 +68,28 @@ void ITMColorTracker::PrepareForEvaluation(const ITMView *view)
 	}
 }
 
-void ITMColorTracker::applyDelta(const ITMPose & para_old, const float *delta, ITMPose & para_new) const
+void ITMColorTracker::ApplyDelta(const ITMPose & para_old, const float *delta, ITMPose & para_new) const
 {
 	float paramVector[6];
 
-	if (rotationOnly)
+	switch (iterationType)
 	{
+	case TRACKER_ITERATION_ROTATION:
 		paramVector[0] = 0.0f; paramVector[1] = 0.0f; paramVector[2] = 0.0f;
 		paramVector[3] = (float)(delta[0]); paramVector[4] = (float)(delta[1]); paramVector[5] = (float)(delta[2]);
-	}
-	else
-	{
+		break;
+	case TRACKER_ITERATION_TRANSLATION:
+		paramVector[0] = (float)(delta[0]); paramVector[1] = (float)(delta[1]); paramVector[2] = (float)(delta[2]);
+		paramVector[3] = 0.0f; paramVector[4] = 0.0f; paramVector[5] = 0.0f;
+		break;
+	case TRACKER_ITERATION_BOTH:
 		paramVector[0] = (float)(delta[0]); paramVector[1] = (float)(delta[1]); paramVector[2] = (float)(delta[2]);
 		paramVector[3] = (float)(delta[3]); paramVector[4] = (float)(delta[4]); paramVector[5] = (float)(delta[5]);
+		break;
+	default: break;
 	}
-	para_new.SetFrom(paramVector); para_new.SetModelViewFromParams();
+
+	para_new.SetFrom(paramVector);
 	para_new.MultiplyWith(&(para_old));
 }
 
@@ -165,7 +174,7 @@ static inline bool minimizeLM(const ITMColorTracker & tracker, ITMPose & initial
 				if (!(fabs(ele) < 1e-15f)) ele *= (1.0f + lambda); else ele = lambda*1e-10f;
 			}
 
-			ITMLib::Utils::ITMCholesky cholA(A, numPara);
+			ORUtils::Cholesky cholA(A, numPara);
 
 			cholA.Backsub(&(d[0]), grad);
 			// TODO: if Cholesky failed, set success to false!
@@ -184,7 +193,7 @@ static inline bool minimizeLM(const ITMColorTracker & tracker, ITMPose & initial
 
 			// make step
 			ITMPose *tmp_para = new ITMPose(x->getParameter());
-			tracker.applyDelta(x->getParameter(), &(d[0]), *tmp_para);
+			tracker.ApplyDelta(x->getParameter(), &(d[0]), *tmp_para);
 
 			// check whether step reduces error function and
 			// compute a new value of lambda

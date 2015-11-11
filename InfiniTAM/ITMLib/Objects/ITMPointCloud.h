@@ -1,8 +1,9 @@
-// Copyright 2014 Isis Innovation Limited and the authors of InfiniTAM
+// Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #pragma once
 
 #include "../Utils/ITMLibDefines.h"
+#include "../../ORUtils/Image.h"
 
 #include <stdlib.h>
 
@@ -15,14 +16,14 @@ namespace ITMLib
 		public:
 			uint noTotalPoints;
 
-			ITMFloat4Image *locations, *colours;
+			ORUtils::Image<Vector4f> *locations, *colours;
 
-			explicit ITMPointCloud(Vector2i imgSize, bool useGPU)
+			explicit ITMPointCloud(Vector2i imgSize, MemoryDeviceType memoryType)
 			{
 				this->noTotalPoints = 0;
 
-				locations = new ITMFloat4Image(imgSize, useGPU);
-				colours = new ITMFloat4Image(imgSize, useGPU);
+				locations = new ORUtils::Image<Vector4f>(imgSize, memoryType);
+				colours = new ORUtils::Image<Vector4f>(imgSize, memoryType);
 			}
 
 			void UpdateHostFromDevice()

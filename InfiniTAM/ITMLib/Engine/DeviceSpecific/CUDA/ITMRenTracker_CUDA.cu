@@ -1,6 +1,9 @@
+// Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
+
 #include "ITMRenTracker_CUDA.h"
 #include "ITMCUDAUtils.h"
 
+#include "../../../../ORUtils/CUDADefines.h"
 #include "../../DeviceAgnostic/ITMRenTracker.h"
 #include "../../DeviceAgnostic/ITMRepresentationAccess.h" 
 
@@ -19,8 +22,8 @@ __global__ void renTrackerOneLevel_g_device(float *g_device, float *h_device, Ve
 // host functions
 
 template<class TVoxel, class TIndex>
-ITMRenTracker_CUDA<TVoxel, TIndex>::ITMRenTracker_CUDA(Vector2i imgSize, int noHierarchyLevels, ITMLowLevelEngine *lowLevelEngine, ITMScene<TVoxel,TIndex> *scene) 
-	: ITMRenTracker<TVoxel, TIndex>(imgSize, noHierarchyLevels, lowLevelEngine, scene, true)
+ITMRenTracker_CUDA<TVoxel, TIndex>::ITMRenTracker_CUDA(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels, const ITMLowLevelEngine *lowLevelEngine, const ITMScene<TVoxel, TIndex> *scene)
+	: ITMRenTracker<TVoxel, TIndex>(imgSize,trackingRegime,noHierarchyLevels,lowLevelEngine,scene, MEMORYDEVICE_CUDA)
 { 
 	int dim_f = 1, dim_g = 6, dim_h = 6 + 5 + 4 + 3 + 2 + 1;
 
@@ -50,7 +53,7 @@ ITMRenTracker_CUDA<TVoxel,TIndex>::~ITMRenTracker_CUDA(void)
 template<class TVoxel, class TIndex>
 void ITMRenTracker_CUDA<TVoxel,TIndex>::F_oneLevel(float *f, Matrix4f invM)
 {
-	int count = this->viewHierarchy->levels[this->levelId]->depth->dataSize;
+	int count = static_cast<int>(this->viewHierarchy->levels[this->levelId]->depth->dataSize);
 
 	dim3 blockSize(256, 1);
 	dim3 gridSize((int)ceil((float)count / (float)blockSize.x), 1);
@@ -61,8 +64,8 @@ void ITMRenTracker_CUDA<TVoxel,TIndex>::F_oneLevel(float *f, Matrix4f invM)
 
 	ITMSafeCall(cudaMemset(f_device, 0, sizeof(float) * gridSize.x));
 
-	renTrackerOneLevel_f_device<TVoxel,TIndex> << <gridSize, blockSize >> >(f_device, this->viewHierarchy->levels[this->levelId]->depth->GetData(true), 
-		this->viewHierarchy->levels[this->levelId]->depth->dataSize, voxelBlocks, index, oneOverVoxelSize, invM);
+	renTrackerOneLevel_f_device<TVoxel,TIndex> << <gridSize, blockSize >> >(f_device, this->viewHierarchy->levels[this->levelId]->depth->GetData(MEMORYDEVICE_CUDA), 
+		count, voxelBlocks, index, oneOverVoxelSize, invM);
 
 	ITMSafeCall(cudaMemcpy(f_host, f_device, sizeof(float)* gridSize.x, cudaMemcpyDeviceToHost));
 
@@ -75,8 +78,8 @@ void ITMRenTracker_CUDA<TVoxel,TIndex>::F_oneLevel(float *f, Matrix4f invM)
 template<class TVoxel, class TIndex>
 void ITMRenTracker_CUDA<TVoxel,TIndex>::G_oneLevel(float *gradient, float *hessian, Matrix4f invM) const
 {
-	int count = this->viewHierarchy->levels[this->levelId]->depth->dataSize;
-	Vector4f *ptList = this->viewHierarchy->levels[this->levelId]->depth->GetData(true);
+	int count = static_cast<int>(this->viewHierarchy->levels[this->levelId]->depth->dataSize);
+	Vector4f *ptList = this->viewHierarchy->levels[this->levelId]->depth->GetData(MEMORYDEVICE_CUDA);
 
 	const TVoxel *voxelBlocks = this->scene->localVBA.GetVoxelBlocks();
 	const typename TIndex::IndexData *index = this->scene->index.getIndexData();
@@ -121,8 +124,8 @@ void ITMRenTracker_CUDA<TVoxel,TIndex>::G_oneLevel(float *gradient, float *hessi
 template<class TVoxel, class TIndex>
 void ITMRenTracker_CUDA<TVoxel,TIndex>::UnprojectDepthToCam(ITMFloatImage *depth, ITMFloat4Image *upPtCloud, const Vector4f &intrinsic)
 {
-	float *depthMap = depth->GetData(true);
-	Vector4f *camPoints = upPtCloud->GetData(true);
+	float *depthMap = depth->GetData(MEMORYDEVICE_CUDA);
+	Vector4f *camPoints = upPtCloud->GetData(MEMORYDEVICE_CUDA);
 
 	Vector4f ooIntrinsics;
 	ooIntrinsics.x = 1.0f / intrinsic.x; ooIntrinsics.y = 1.0f / intrinsic.y;

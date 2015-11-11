@@ -1,20 +1,23 @@
-// Copyright 2014 Isis Innovation Limited and the authors of InfiniTAM
+// Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #pragma once
 
+#ifndef __METALC__
 #include <stdlib.h>
+#endif
 
 #include "../Utils/ITMLibDefines.h"
+#include "../../ORUtils/MemoryBlock.h"
 
 namespace ITMLib
 {
 	namespace Objects
 	{
 		/** \brief
-			This is the central class for the original fixed size volume
-			representation. It contains the data needed on the CPU and
-			a pointer to the data structure on the GPU.
-			*/
+		This is the central class for the original fixed size volume
+		representation. It contains the data needed on the CPU and
+		a pointer to the data structure on the GPU.
+		*/
 		class ITMPlainVoxelArray
 		{
 		public:
@@ -37,46 +40,49 @@ namespace ITMLib
 			struct IndexCache {};
 
 		private:
-			IndexData *indexData_device;
-			IndexData indexData_host;
+			DEVICEPTR(ORUtils::MemoryBlock<IndexData>) *indexData;
 
-			bool dataIsOnGPU;
+			MemoryDeviceType memoryType;
 
+#ifndef __METALC__
 		public:
-			ITMPlainVoxelArray(bool allocateGPU)
+			ITMPlainVoxelArray(MemoryDeviceType memoryType)
 			{
-				dataIsOnGPU = allocateGPU;
+				this->memoryType = memoryType;
 
-				if (allocateGPU)
-				{
-#ifndef COMPILE_WITHOUT_CUDA
-					ITMSafeCall(cudaMalloc((void**)&indexData_device, sizeof(IndexData)));
-					ITMSafeCall(cudaMemcpy(indexData_device, &indexData_host, sizeof(IndexData), cudaMemcpyHostToDevice));
-#endif
-				}
-				else indexData_device = NULL;
+				if (memoryType == MEMORYDEVICE_CUDA) indexData = new ORUtils::MemoryBlock<IndexData>(1, true, true);
+				else indexData = new ORUtils::MemoryBlock<IndexData>(1, true, false);
+
+				indexData->GetData(MEMORYDEVICE_CPU)[0] = IndexData();
+				indexData->UpdateDeviceFromHost();
 			}
 
 			~ITMPlainVoxelArray(void)
 			{
-				if (indexData_device != NULL) {
-#ifndef COMPILE_WITHOUT_CUDA
-					ITMSafeCall(cudaFree(indexData_device));
-#endif
-				}
+				delete indexData;
 			}
 
 			/** Maximum number of total entries. */
 			int getNumAllocatedVoxelBlocks(void) { return 1; }
-			int getVoxelBlockSize(void) { return indexData_host.size.x * indexData_host.size.y * indexData_host.size.z; }
+			int getVoxelBlockSize(void) 
+			{ 
+				return indexData->GetData(MEMORYDEVICE_CPU)->size.x * 
+					indexData->GetData(MEMORYDEVICE_CPU)->size.y * 
+					indexData->GetData(MEMORYDEVICE_CPU)->size.z;
+			}
 
-			const Vector3i getVolumeSize(void) { return indexData_host.size; }
+			const Vector3i getVolumeSize(void) { return indexData->GetData(MEMORYDEVICE_CPU)->size; }
 
-			const IndexData* getIndexData(void) const { if (dataIsOnGPU) return indexData_device; else return &indexData_host; }
+			const IndexData* getIndexData(void) const { return indexData->GetData(memoryType); }
+
+#ifdef COMPILE_WITH_METAL
+			const void *getIndexData_MB() const { return indexData->GetMetalBuffer(); }
+#endif
 
 			// Suppress the default copy constructor and assignment operator
 			ITMPlainVoxelArray(const ITMPlainVoxelArray&);
 			ITMPlainVoxelArray& operator=(const ITMPlainVoxelArray&);
+#endif
 		};
 	}
 }

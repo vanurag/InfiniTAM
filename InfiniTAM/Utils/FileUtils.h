@@ -1,8 +1,10 @@
-// Copyright 2014 Isis Innovation Limited and the authors of InfiniTAM
+// Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #pragma once
 
-#include "../ITMLib/ITMLib.h"
+#include <stdio.h>
+
+#include "../ITMLib/Utils/ITMLibDefines.h"
 
 void SaveImageToFile(const ITMUChar4Image* image, const char* fileName, bool flipVertical = false);
 void SaveImageToFile(const ITMShortImage* image, const char* fileName);

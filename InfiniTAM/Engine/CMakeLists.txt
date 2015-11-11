@@ -29,15 +29,26 @@ ELSE(freenect2_FOUND)
   add_definitions(-DCOMPILE_WITHOUT_freenect2)
 ENDIF(freenect2_FOUND)
 
+IF(DEFINED libuvc_INCLUDE_DIRS)
+  include_directories(${libuvc_INCLUDE_DIRS})
+  add_definitions(-DCOMPILE_WITH_LibUVC)
+ENDIF()
+
 add_library(Engine
 ImageSourceEngine.cpp
 ImageSourceEngine.h
+IMUSourceEngine.cpp
+IMUSourceEngine.h
 Kinect2Engine.cpp
 Kinect2Engine.h
 OpenNIEngine.cpp
 OpenNIEngine.h
+LibUVCEngine.cpp
+LibUVCEngine.h
 UIEngine.cpp
 UIEngine.h
+CLIEngine.cpp
+CLIEngine.h
 )
 
 target_link_libraries(Engine ${GLUT_LIBRARIES})
@@ -53,4 +64,8 @@ IF(freenect2_FOUND)
 	target_link_libraries(Engine ${freenect2_LIBRARY})
 	set(OpenCV_LIBS opencv_core opencv_features2d)
 	target_link_libraries(Engine ${OpenCV_LIBS})
+ENDIF()
+
+IF(DEFINED libuvc_LIBRARIES)
+  target_link_libraries(Engine ${libuvc_LIBRARIES})
 ENDIF()

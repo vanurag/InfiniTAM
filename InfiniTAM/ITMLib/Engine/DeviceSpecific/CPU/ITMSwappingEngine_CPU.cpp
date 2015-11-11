@@ -1,7 +1,8 @@
-// Copyright 2014 Isis Innovation Limited and the authors of InfiniTAM
+// Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #include "ITMSwappingEngine_CPU.h"
 #include "../../DeviceAgnostic/ITMSwappingEngine.h"
+#include "../../../Objects/ITMRenderState_VH.h"
 
 using namespace ITMLib::Engine;
 
@@ -16,11 +17,11 @@ ITMSwappingEngine_CPU<TVoxel,ITMVoxelBlockHash>::~ITMSwappingEngine_CPU(void)
 }
 
 template<class TVoxel>
-int ITMSwappingEngine_CPU<TVoxel,ITMVoxelBlockHash>::DownloadFromGlobalMemory(ITMScene<TVoxel,ITMVoxelBlockHash> *scene, ITMView *view)
+int ITMSwappingEngine_CPU<TVoxel, ITMVoxelBlockHash>::LoadFromGlobalMemory(ITMScene<TVoxel, ITMVoxelBlockHash> *scene)
 {
 	ITMGlobalCache<TVoxel> *globalCache = scene->globalCache;
 
-	ITMHashCacheState *cacheStates = globalCache->GetCacheStates(false);
+	ITMHashSwapState *swapStates = globalCache->GetSwapStates(false);
 
 	int *neededEntryIDs_local = globalCache->GetNeededEntryIDs(false);
 
@@ -34,7 +35,7 @@ int ITMSwappingEngine_CPU<TVoxel,ITMVoxelBlockHash>::DownloadFromGlobalMemory(IT
 	for (int entryId = 0; entryId < noTotalEntries; entryId++)
 	{
 		if (noNeededEntries >= SDF_TRANSFER_BLOCK_NUM) break;
-		if (cacheStates[entryId].cacheFromHost == 1)
+		if (swapStates[entryId].state == 1)
 		{
 			neededEntryIDs_local[noNeededEntries] = entryId;
 			noNeededEntries++;
@@ -65,13 +66,13 @@ int ITMSwappingEngine_CPU<TVoxel,ITMVoxelBlockHash>::DownloadFromGlobalMemory(IT
 }
 
 template<class TVoxel>
-void ITMSwappingEngine_CPU<TVoxel,ITMVoxelBlockHash>::IntegrateGlobalIntoLocal(ITMScene<TVoxel,ITMVoxelBlockHash> *scene, ITMView *view)
+void ITMSwappingEngine_CPU<TVoxel, ITMVoxelBlockHash>::IntegrateGlobalIntoLocal(ITMScene<TVoxel, ITMVoxelBlockHash> *scene, ITMRenderState *renderState)
 {
 	ITMGlobalCache<TVoxel> *globalCache = scene->globalCache;
 
 	ITMHashEntry *hashTable = scene->index.GetEntries();
 
-	ITMHashCacheState *cacheStates = globalCache->GetCacheStates(false);
+	ITMHashSwapState *swapStates = globalCache->GetSwapStates(false);
 
 	TVoxel *syncedVoxelBlocks_local = globalCache->GetSyncedVoxelBlocks(false);
 	bool *hasSyncedData_local = globalCache->GetHasSyncedData(false);
@@ -79,7 +80,7 @@ void ITMSwappingEngine_CPU<TVoxel,ITMVoxelBlockHash>::IntegrateGlobalIntoLocal(I
 
 	TVoxel *localVBA = scene->localVBA.GetVoxelBlocks();
 
-	int noNeededEntries = this->DownloadFromGlobalMemory(scene, view);
+	int noNeededEntries = this->LoadFromGlobalMemory(scene);
 
 	int maxW = scene->sceneParams->maxW;
 
@@ -98,19 +99,19 @@ void ITMSwappingEngine_CPU<TVoxel,ITMVoxelBlockHash>::IntegrateGlobalIntoLocal(I
 			}
 		}
 
-		cacheStates[entryDestId].cacheFromHost = 2;
+		swapStates[entryDestId].state = 2;
 	}
 }
 
 template<class TVoxel>
-void ITMSwappingEngine_CPU<TVoxel,ITMVoxelBlockHash>::SaveToGlobalMemory(ITMScene<TVoxel,ITMVoxelBlockHash> *scene, ITMView *view)
+void ITMSwappingEngine_CPU<TVoxel, ITMVoxelBlockHash>::SaveToGlobalMemory(ITMScene<TVoxel, ITMVoxelBlockHash> *scene, ITMRenderState *renderState)
 {
 	ITMGlobalCache<TVoxel> *globalCache = scene->globalCache;
 
-	ITMHashCacheState *cacheStates = globalCache->GetCacheStates(false);
+	ITMHashSwapState *swapStates = globalCache->GetSwapStates(false);
 
 	ITMHashEntry *hashTable = scene->index.GetEntries();
-	uchar *entriesVisibleType = scene->index.GetEntriesVisibleType();
+	uchar *entriesVisibleType = ((ITMRenderState_VH*)renderState)->GetEntriesVisibleType();
 
 	TVoxel *syncedVoxelBlocks_local = globalCache->GetSyncedVoxelBlocks(false);
 	bool *hasSyncedData_local = globalCache->GetHasSyncedData(false);
@@ -133,9 +134,9 @@ void ITMSwappingEngine_CPU<TVoxel,ITMVoxelBlockHash>::SaveToGlobalMemory(ITMScen
 		if (noNeededEntries >= SDF_TRANSFER_BLOCK_NUM) break;
 
 		int localPtr = hashTable[entryDestId].ptr;
-		ITMHashCacheState &cacheState = cacheStates[entryDestId];
+		ITMHashSwapState &swapState = swapStates[entryDestId];
 
-		if (cacheState.cacheFromHost == 2 && localPtr >= 0 && entriesVisibleType[entryDestId] == 0)
+		if (swapState.state == 2 && localPtr >= 0 && entriesVisibleType[entryDestId] == 0)
 		{
 			TVoxel *localVBALocation = localVBA + localPtr * SDF_BLOCK_SIZE3;
 
@@ -144,7 +145,7 @@ void ITMSwappingEngine_CPU<TVoxel,ITMVoxelBlockHash>::SaveToGlobalMemory(ITMScen
 			hasSyncedData_local[noNeededEntries] = true;
 			memcpy(syncedVoxelBlocks_local + noNeededEntries * SDF_BLOCK_SIZE3, localVBALocation, SDF_BLOCK_SIZE3 * sizeof(TVoxel));
 
-			cacheStates[entryDestId].cacheFromHost = 0;
+			swapStates[entryDestId].state = 0;
 
 			int vbaIdx = noAllocatedVoxelEntries;
 			if (vbaIdx < SDF_BUCKET_NUM - 1)

@@ -1,7 +1,8 @@
-// Copyright 2014 Isis Innovation Limited and the authors of InfiniTAM
+// Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #pragma once
 
+#ifndef __METALC__
 #ifdef NDEBUG
 #undef NDEBUG
 #include <assert.h>
@@ -9,6 +10,7 @@
 #else
 #include <assert.h>
 #endif // NDEBUG
+#endif
 
 /// Kinect2 support is disabled by default (to not add the Kinect2 SDK dependency)
 #ifndef COMPILE_WITHOUT_Kinect2
@@ -17,15 +19,15 @@
 
 #ifndef COMPILE_WITHOUT_CUDA
 #include <cuda_runtime.h>
+
+#ifndef ITMSafeCall
+#define ITMSafeCall ORcudaSafeCall
 #endif
 
-#if defined(__CUDACC__) && defined(__CUDA_ARCH__)
-#define _CPU_AND_GPU_CODE_ __device__	// for CUDA device code
-#else
-#define _CPU_AND_GPU_CODE_ 
 #endif
 
-#include "../Utils/ITMMath.h" 
+#include "../../ORUtils/PlatformIndependence.h"
+#include "ITMMath.h"
 
 //////////////////////////////////////////////////////////////////////////
 // Voxel Hashing definition and helper functions
@@ -33,12 +35,11 @@
 
 #define SDF_BLOCK_SIZE 8				// SDF block size
 #define SDF_BLOCK_SIZE3 512				// SDF_BLOCK_SIZE3 = SDF_BLOCK_SIZE * SDF_BLOCK_SIZE * SDF_BLOCK_SIZE
-#define SDF_LOCAL_BLOCK_NUM 0x40000		// Number of locally stored blocks, currently 2^18
+#define SDF_LOCAL_BLOCK_NUM 0x40000		// Number of locally stored blocks, currently 2^17
 
-#define SDF_GLOBAL_BLOCK_NUM 0x120000	// Number of globally stored blocks: SDF_BUCKET_NUM * SDF_ENTRY_NUM_PER_BUCKET + SDF_EXCESS_LIST_SIZE
+#define SDF_GLOBAL_BLOCK_NUM 0x120000	// Number of globally stored blocks: SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE
 #define SDF_TRANSFER_BLOCK_NUM 0x1000	// Maximum number of blocks transfered in one swap operation
 
-#define SDF_ENTRY_NUM_PER_BUCKET 1		// Number of entries in each Hash Bucket
 #define SDF_BUCKET_NUM 0x100000			// Number of Hash Bucket, should be 2^n and bigger than SDF_LOCAL_BLOCK_NUM, SDF_HASH_MASK = SDF_BUCKET_NUM - 1
 #define SDF_HASH_MASK 0xfffff			// Used for get hashing value of the bucket index,  SDF_HASH_MASK = SDF_BUCKET_NUM - 1
 #define SDF_EXCESS_LIST_SIZE 0x20000	// 0x20000 Size of excess list, used to handle collisions. Also max offset (unsigned short) value.
@@ -64,9 +65,15 @@ struct ITMHashEntry
 	int ptr;
 };
 
-struct ITMHashCacheState
+struct ITMHashSwapState
 {
-	uchar cacheFromHost;	// 0 - don't do anything, 1 - should cache from host, 2 - has cached from host
+	/// 0 - most recent data is on host, data not currently in active
+	///     memory
+	/// 1 - data both on host and in active memory, information has not
+	///     yet been combined
+	/// 2 - most recent data is in active memory, should save this data
+	///     back to host at some point
+	uchar state;
 };
 
 #include "../Objects/ITMVoxelBlockHash.h"
@@ -81,7 +88,7 @@ struct ITMVoxel_f_rgb
 	_CPU_AND_GPU_CODE_ static float SDF_valueToFloat(float x) { return x; }
 	_CPU_AND_GPU_CODE_ static float SDF_floatToValue(float x) { return x; }
 
-	static const bool hasColorInformation = true;
+	static const CONSTPTR(bool) hasColorInformation = true;
 
 	/** Value of the truncated signed distance transformation. */
 	float sdf;
@@ -110,7 +117,7 @@ struct ITMVoxel_s_rgb
 	_CPU_AND_GPU_CODE_ static float SDF_valueToFloat(float x) { return (float)(x) / 32767.0f; }
 	_CPU_AND_GPU_CODE_ static short SDF_floatToValue(float x) { return (short)((x) * 32767.0f); }
 
-	static const bool hasColorInformation = true;
+	static const CONSTPTR(bool) hasColorInformation = true;
 
 	/** Value of the truncated signed distance transformation. */
 	short sdf;
@@ -138,7 +145,7 @@ struct ITMVoxel_s
 	_CPU_AND_GPU_CODE_ static float SDF_valueToFloat(float x) { return (float)(x) / 32767.0f; }
 	_CPU_AND_GPU_CODE_ static short SDF_floatToValue(float x) { return (short)((x) * 32767.0f); }
 
-	static const bool hasColorInformation = false;
+	static const CONSTPTR(bool) hasColorInformation = false;
 
 	/** Value of the truncated signed distance transformation. */
 	short sdf;
@@ -160,7 +167,7 @@ struct ITMVoxel_f
 	_CPU_AND_GPU_CODE_ static float SDF_valueToFloat(float x) { return x; }
 	_CPU_AND_GPU_CODE_ static float SDF_floatToValue(float x) { return x; }
 
-	static const bool hasColorInformation = false;
+	static const CONSTPTR(bool) hasColorInformation = false;
 
 	/** Value of the truncated signed distance transformation. */
 	float sdf;
@@ -187,55 +194,57 @@ typedef ITMVoxel_s ITMVoxel;
 typedef ITMLib::Objects::ITMVoxelBlockHash ITMVoxelIndex;
 //typedef ITMLib::Objects::ITMPlainVoxelArray ITMVoxelIndex;
 
+#include "../../ORUtils/Image.h"
+
 //////////////////////////////////////////////////////////////////////////
 // Do not change below this point
 //////////////////////////////////////////////////////////////////////////
 #ifndef ITMFloatImage
-#define ITMFloatImage ITMImage<float>
+#define ITMFloatImage ORUtils::Image<float>
 #endif
 
 #ifndef ITMFloat2Image
-#define ITMFloat2Image ITMImage<Vector2f>
+#define ITMFloat2Image ORUtils::Image<Vector2f>
 #endif
 
 #ifndef ITMFloat4Image
-#define ITMFloat4Image ITMImage<Vector4f>
+#define ITMFloat4Image ORUtils::Image<Vector4f>
 #endif
 
 #ifndef ITMShortImage
-#define ITMShortImage ITMImage<short>
+#define ITMShortImage ORUtils::Image<short>
 #endif
 
 #ifndef ITMShort3Image
-#define ITMShort3Image ITMImage<Vector3s>
+#define ITMShort3Image ORUtils::Image<Vector3s>
 #endif
 
 #ifndef ITMShort4Image
-#define ITMShort4Image ITMImage<Vector4s>
+#define ITMShort4Image ORUtils::Image<Vector4s>
 #endif
 
 #ifndef ITMUShortImage
-#define ITMUShortImage ITMImage<ushort>
+#define ITMUShortImage ORUtils::Image<ushort>
 #endif
 
 #ifndef ITMUIntImage
-#define ITMUIntImage ITMImage<uint>
+#define ITMUIntImage ORUtils::Image<uint>
 #endif
 
 #ifndef ITMIntImage
-#define ITMIntImage ITMImage<int>
+#define ITMIntImage ORUtils::Image<int>
 #endif
 
 #ifndef ITMUCharImage
-#define ITMUCharImage ITMImage<uchar>
+#define ITMUCharImage ORUtils::Image<uchar>
 #endif
 
 #ifndef ITMUChar4Image
-#define ITMUChar4Image ITMImage<Vector4u>
+#define ITMUChar4Image ORUtils::Image<Vector4u>
 #endif
 
 #ifndef ITMBoolImage
-#define ITMBoolImage ITMImage<bool>
+#define ITMBoolImage ORUtils::Image<bool>
 #endif
 
 //debug
@@ -247,3 +256,14 @@ typedef ITMLib::Objects::ITMVoxelBlockHash ITMVoxelIndex;
 }
 #endif
 
+#ifndef TRACKER_ITERATION_TYPE
+#define TRACKER_ITERATION_TYPE
+/// The tracker iteration type used to define the tracking iteration regime
+typedef enum
+{
+	TRACKER_ITERATION_ROTATION = 1,
+	TRACKER_ITERATION_TRANSLATION = 2,
+	TRACKER_ITERATION_BOTH = 3,
+	TRACKER_ITERATION_NONE = 4
+} TrackerIterationType;
+#endif

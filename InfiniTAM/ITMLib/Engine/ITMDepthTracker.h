@@ -1,4 +1,4 @@
-// Copyright 2014 Isis Innovation Limited and the authors of InfiniTAM
+// Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #pragma once
 
@@ -24,7 +24,7 @@ namespace ITMLib
 		class ITMDepthTracker : public ITMTracker
 		{
 		private:
-			ITMLowLevelEngine *lowLevelEngine;
+			const ITMLowLevelEngine *lowLevelEngine;
 			ITMImageHierarchy<ITMSceneHierarchyLevel> *sceneHierarchy;
 			ITMImageHierarchy<ITMTemplatedHierarchyLevel<ITMFloatImage> > *viewHierarchy;
 
@@ -33,30 +33,33 @@ namespace ITMLib
 			int *noIterationsPerLevel;
 			int noICPLevel;
 
-			int levelId;
-			bool rotationOnly;
+			float terminationThreshold;
 
 			void PrepareForEvaluation();
 			void SetEvaluationParams(int levelId);
 
-			void ComputeSingleStep(float *step, float *ATA, float *ATb, bool rotationOnly);
-			Matrix4f ApplySingleStep(Matrix4f approxInvPose, float *step);
+			void ComputeDelta(float *delta, float *nabla, float *hessian, bool shortIteration) const;
+			void ApplyDelta(const Matrix4f & para_old, const float *delta, Matrix4f & para_new) const;
+			bool HasConverged(float *step) const;
 
 			void SetEvaluationData(ITMTrackingState *trackingState, const ITMView *view);
 		protected:
-			float ATA_host[6 * 6];
-			float ATb_host[6];
-			float step[6];
-			float distThresh;
+			float *distThresh;
 
-			virtual void ChangeIgnorePixelToZero(ITMFloatImage *image) = 0;
-			virtual int ComputeGandH(ITMSceneHierarchyLevel *sceneHierarchyLevel, ITMTemplatedHierarchyLevel<ITMFloatImage> *viewHierarchyLevel,
-				Matrix4f approxInvPose, Matrix4f imagePose, bool rotationOnly) = 0;
+			int levelId;
+			TrackerIterationType iterationType;
+
+			Matrix4f scenePose;
+			ITMSceneHierarchyLevel *sceneHierarchyLevel;
+			ITMTemplatedHierarchyLevel<ITMFloatImage> *viewHierarchyLevel;
+
+			virtual int ComputeGandH(float &f, float *nabla, float *hessian, Matrix4f approxInvPose) = 0;
 
 		public:
 			void TrackCamera(ITMTrackingState *trackingState, const ITMView *view);
 
-			ITMDepthTracker(Vector2i imgSize, int noHierarchyLevels, int noRotationOnlyLevels, int noICPRunTillLevel, float distThresh, ITMLowLevelEngine *lowLevelEngine, bool useGPU);
+			ITMDepthTracker(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels, int noICPRunTillLevel, float distThresh,
+				float terminationThreshold, const ITMLowLevelEngine *lowLevelEngine, MemoryDeviceType memoryType);
 			virtual ~ITMDepthTracker(void);
 		};
 	}

@@ -1,4 +1,4 @@
-// Copyright 2014 Isis Innovation Limited and the authors of InfiniTAM
+// Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #pragma once
 
@@ -11,12 +11,11 @@ namespace ITMLib
 		class ITMDepthTracker_CPU : public ITMDepthTracker
 		{
 		protected:
-			void ChangeIgnorePixelToZero(ITMFloatImage *image);
-			int ComputeGandH(ITMSceneHierarchyLevel *sceneHierarchyLevel, ITMTemplatedHierarchyLevel<ITMFloatImage> *viewHierarchyLevel,
-				Matrix4f approxInvPose, Matrix4f imagePose, bool rotationOnly);
+			int ComputeGandH(float &f, float *nabla, float *hessian, Matrix4f approxInvPose);
 
 		public:
-			ITMDepthTracker_CPU(Vector2i imgSize, int noHierarchyLevels, int noRotationOnlyLevels, int noICPRunTillLevel, float distThresh, ITMLowLevelEngine *lowLevelEngine);
+			ITMDepthTracker_CPU(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels, int noICPRunTillLevel, float distThresh,
+				float terminationThreshold, const ITMLowLevelEngine *lowLevelEngine);
 			~ITMDepthTracker_CPU(void);
 		};
 	}

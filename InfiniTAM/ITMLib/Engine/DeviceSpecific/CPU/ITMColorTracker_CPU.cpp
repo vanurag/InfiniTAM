@@ -1,13 +1,13 @@
-// Copyright 2014 Isis Innovation Limited and the authors of InfiniTAM
+// Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #include "ITMColorTracker_CPU.h"
 #include "../../DeviceAgnostic/ITMColorTracker.h"
-#include "../../../Utils/ITMPixelUtils.h"
+#include "../../DeviceAgnostic/ITMPixelUtils.h"
 
 using namespace ITMLib::Engine;
 
-ITMColorTracker_CPU::ITMColorTracker_CPU(Vector2i imgSize, int noHierarchyLevels, int noRotationOnlyLevels, ITMLowLevelEngine *lowLevelEngine) 
-	: ITMColorTracker(imgSize, noHierarchyLevels, noRotationOnlyLevels, lowLevelEngine, false) {  }
+ITMColorTracker_CPU::ITMColorTracker_CPU(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels, const ITMLowLevelEngine *lowLevelEngine)
+	: ITMColorTracker(imgSize, trackingRegime, noHierarchyLevels, lowLevelEngine, MEMORYDEVICE_CPU) {  }
 
 ITMColorTracker_CPU::~ITMColorTracker_CPU(void) { }
 
@@ -19,15 +19,15 @@ void ITMColorTracker_CPU::F_oneLevel(float *f, ITMPose *pose)
 	projParams.x /= 1 << levelId; projParams.y /= 1 << levelId;
 	projParams.z /= 1 << levelId; projParams.w /= 1 << levelId;
 
-	Matrix4f M = pose->M;
+	Matrix4f M = pose->GetM();
 
 	Vector2i imgSize = viewHierarchy->levels[levelId]->rgb->noDims;
 
 	float scaleForOcclusions, final_f;
 
-	Vector4f *locations = trackingState->pointCloud->locations->GetData(false);
-	Vector4f *colours = trackingState->pointCloud->colours->GetData(false);
-	Vector4u *rgb = viewHierarchy->levels[levelId]->rgb->GetData(false);
+	Vector4f *locations = trackingState->pointCloud->locations->GetData(MEMORYDEVICE_CPU);
+	Vector4f *colours = trackingState->pointCloud->colours->GetData(MEMORYDEVICE_CPU);
+	Vector4u *rgb = viewHierarchy->levels[levelId]->rgb->GetData(MEMORYDEVICE_CPU);
 
 	final_f = 0; countedPoints_valid = 0;
 	for (int locId = 0; locId < noTotalPoints; locId++)
@@ -50,23 +50,24 @@ void ITMColorTracker_CPU::G_oneLevel(float *gradient, float *hessian, ITMPose *p
 	projParams.x /= 1 << levelId; projParams.y /= 1 << levelId;
 	projParams.z /= 1 << levelId; projParams.w /= 1 << levelId;
 
-	Matrix4f M = pose->M;
+	Matrix4f M = pose->GetM();
 
 	Vector2i imgSize = viewHierarchy->levels[levelId]->rgb->noDims;
 
 	float scaleForOcclusions;
 
+	bool rotationOnly = iterationType == TRACKER_ITERATION_ROTATION;
 	int numPara = rotationOnly ? 3 : 6, startPara = rotationOnly ? 3 : 0, numParaSQ = rotationOnly ? 3 + 2 + 1 : 6 + 5 + 4 + 3 + 2 + 1;
 
 	float globalGradient[6], globalHessian[21];
 	for (int i = 0; i < numPara; i++) globalGradient[i] = 0.0f;
 	for (int i = 0; i < numParaSQ; i++) globalHessian[i] = 0.0f;
 
-	Vector4f *locations = trackingState->pointCloud->locations->GetData(false);
-	Vector4f *colours = trackingState->pointCloud->colours->GetData(false);
-	Vector4u *rgb = viewHierarchy->levels[levelId]->rgb->GetData(false);
-	Vector4s *gx = viewHierarchy->levels[levelId]->gradientX_rgb->GetData(false);
-	Vector4s *gy = viewHierarchy->levels[levelId]->gradientY_rgb->GetData(false);
+	Vector4f *locations = trackingState->pointCloud->locations->GetData(MEMORYDEVICE_CPU);
+	Vector4f *colours = trackingState->pointCloud->colours->GetData(MEMORYDEVICE_CPU);
+	Vector4u *rgb = viewHierarchy->levels[levelId]->rgb->GetData(MEMORYDEVICE_CPU);
+	Vector4s *gx = viewHierarchy->levels[levelId]->gradientX_rgb->GetData(MEMORYDEVICE_CPU);
+	Vector4s *gy = viewHierarchy->levels[levelId]->gradientY_rgb->GetData(MEMORYDEVICE_CPU);
 
 	for (int locId = 0; locId < noTotalPoints; locId++)
 	{

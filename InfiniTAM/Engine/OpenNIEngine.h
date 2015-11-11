@@ -1,4 +1,4 @@
-// Copyright 2014 Isis Innovation Limited and the authors of InfiniTAM
+// Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #pragma once
 
@@ -25,7 +25,7 @@ namespace InfiniTAM
 			~OpenNIEngine();
 
 			bool hasMoreImages(void);
-			void getImages(ITMView *out);
+			void getImages(ITMUChar4Image *rgb, ITMShortImage *rawDepth);
 			Vector2i getDepthImageSize(void);
 			Vector2i getRGBImageSize(void);
 		};

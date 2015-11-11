@@ -1,4 +1,4 @@
-// Copyright 2014 Isis Innovation Limited and the authors of InfiniTAM
+// Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #pragma once
 
@@ -48,48 +48,75 @@ namespace ITMLib
 		class ITMMainEngine
 		{
 		private:
-			ITMLibSettings *settings;
+			const ITMLibSettings *settings;
 
-			bool hasStartedObjectReconstruction;
-			bool fusionActive;
+			bool fusionActive, mainProcessingActive;
 
-			ITMSceneReconstructionEngine<ITMVoxel,ITMVoxelIndex> *sceneRecoEngine;
-			ITMTracker *trackerPrimary, *trackerSecondary;
 			ITMLowLevelEngine *lowLevelEngine;
-			ITMSwappingEngine<ITMVoxel,ITMVoxelIndex> *swappingEngine;
-			ITMVisualisationEngine<ITMVoxel,ITMVoxelIndex> *visualisationEngine;
-			ITMVisualisationState *visualisationState;
+			IITMVisualisationEngine *visualisationEngine;
+
+			ITMMeshingEngine<ITMVoxel, ITMVoxelIndex> *meshingEngine;
+			ITMMesh *mesh;
+
+			ITMViewBuilder *viewBuilder;		
+			ITMDenseMapper<ITMVoxel,ITMVoxelIndex> *denseMapper;
+			ITMTrackingController *trackingController;
+
+			ITMTracker *tracker;
+			ITMIMUCalibrator *imuCalibrator;
+
+			ITMView *view;
+			ITMTrackingState *trackingState;
+
+			ITMScene<ITMVoxel, ITMVoxelIndex> *scene;
+			ITMRenderState *renderState_live;
+			ITMRenderState *renderState_freeview;
+
 		public:
 			enum GetImageType
 			{
 				InfiniTAM_IMAGE_ORIGINAL_RGB,
 				InfiniTAM_IMAGE_ORIGINAL_DEPTH,
 				InfiniTAM_IMAGE_SCENERAYCAST,
-				InfiniTAM_IMAGE_SCENERAYCAST_FREECAMERA
+				InfiniTAM_IMAGE_FREECAMERA_SHADED,
+				InfiniTAM_IMAGE_FREECAMERA_COLOUR_FROM_VOLUME,
+				InfiniTAM_IMAGE_FREECAMERA_COLOUR_FROM_NORMAL,
+				InfiniTAM_IMAGE_UNKNOWN
 			};
-
-			/// Pointer to the current model of the 3D scene
-			ITMScene<ITMVoxel,ITMVoxelIndex> *scene;
-			/// Pointer for storing the current input frame
-			ITMView *view;
-			/// Pointer to the current camera pose and additional tracking information
-			ITMTrackingState *trackingState;
 
 			/// Gives access to the current input frame
 			ITMView* GetView() { return view; }
 
-			/// Process the frame accessed with @ref GetView()
-			void ProcessFrame(void);
+			/// Gives access to the current camera pose and additional tracking information
+			ITMTrackingState* GetTrackingState(void) { return trackingState; }
+
+			/// Gives access to the internal world representation
+			ITMScene<ITMVoxel, ITMVoxelIndex>* GetScene(void) { return scene; }
+
+			/// Process a frame with rgb and depth images and optionally a corresponding imu measurement
+			void ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage, ITMIMUMeasurement *imuMeasurement = NULL);
+
+			// Gives access to the data structure used internally to store any created meshes
+			ITMMesh* GetMesh(void) { return mesh; }
+
+			/// Update the internally stored mesh data structure and return a pointer to it
+			ITMMesh* UpdateMesh(void);
+
+			/// Extracts a mesh from the current scene and saves it to the obj file specified by the file name
+			void SaveSceneToMesh(const char *objFileName);
 
 			/// Get a result image as output
-			void GetImage(ITMUChar4Image *out, GetImageType getImageType, bool useColour, ITMPose *pose = NULL, ITMIntrinsics *intrinsics = NULL);
+			Vector2i GetImageSize(void) const;
 
-			void SaveAll();
-
+			void GetImage(ITMUChar4Image *out, GetImageType getImageType, ITMPose *pose = NULL, ITMIntrinsics *intrinsics = NULL);
 
 			/// switch for turning intergration on/off
 			void turnOnIntegration();
 			void turnOffIntegration();
+
+			/// switch for turning main processing on/off
+			void turnOnMainProcessing();
+			void turnOffMainProcessing();
 
 			/** \brief Constructor
 			    Ommitting a separate image size for the depth images

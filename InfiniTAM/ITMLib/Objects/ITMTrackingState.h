@@ -1,11 +1,10 @@
-// Copyright 2014 Isis Innovation Limited and the authors of InfiniTAM
+// Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #pragma once
 
 #include "../Utils/ITMLibDefines.h"
 
 #include "ITMPose.h"
-#include "ITMImage.h"
 #include "ITMPointCloud.h"
 #include "ITMScene.h"
 
@@ -21,25 +20,6 @@ namespace ITMLib
 		{
 		public:
 			/** @brief
-			    Gives the raycasting operations an idea of the
-			    depth range to cover
-
-			    Each pixel contains an expected minimum and maximum
-			    depth. The raycasting step would use this
-			    information to reduce the range for searching an
-			    intersection with the actual surface. Should be
-			    updated by a ITMLib::Engine::ITMVisualisationEngine
-			    before any raycasting operation.
-			*/
-			ITMImage<Vector2f> *renderingRangeImage;
-			/** @brief
-			    Visual rendering output of the scene.
-
-			    This is typically created as a by-product of
-			    raycasting operations.
-			*/
-			ITMUChar4Image *rendering;
-			/** @brief
 			    Excerpt of the scene used by the tracker to align
 			    a new frame.
 
@@ -48,23 +28,55 @@ namespace ITMLib
 			*/
 			ITMPointCloud *pointCloud;
 
+			/// The pose used to generate the point cloud.
+			ITMPose *pose_pointCloud;
+
+			int age_pointCloud;
+
 			/// Current pose of the depth camera.
 			ITMPose *pose_d;
 
-			ITMTrackingState(Vector2i imgSize, bool useGPU)
+			bool requiresFullRendering;
+
+			bool TrackerFarFromPointCloud(void) const
 			{
-				this->rendering = new ITMUChar4Image(imgSize, useGPU);
-				this->renderingRangeImage = new ITMImage<Vector2f>(imgSize, useGPU);
-				this->pointCloud = new ITMPointCloud(imgSize, useGPU);
+				// if no point cloud exists, yet
+				if (age_pointCloud < 0) return true;
+				// if the point cloud is older than n frames
+				if (age_pointCloud > 5) return true;
+
+				Vector3f cameraCenter_pc = -1.0f * (pose_pointCloud->GetR().t() * pose_pointCloud->GetT());
+				Vector3f cameraCenter_live = -1.0f * (pose_d->GetR().t() * pose_d->GetT());
+
+				Vector3f diff3 = cameraCenter_pc - cameraCenter_live;
+
+				float diff = diff3.x * diff3.x + diff3.y * diff3.y + diff3.z * diff3.z;
+
+				// if the camera center has moved by more than a threshold
+				if (diff > 0.0005f) return true;
+
+				return false;
+			}
+
+			ITMTrackingState(Vector2i imgSize, MemoryDeviceType memoryType)
+			{
+				this->pointCloud = new ITMPointCloud(imgSize, memoryType);
+
 				this->pose_d = new ITMPose();
+				this->pose_d->SetFrom(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+
+				this->age_pointCloud = -1;
+				this->pose_pointCloud = new ITMPose();
+				this->pose_pointCloud->SetFrom(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+
+				requiresFullRendering = true;
 			}
 
 			~ITMTrackingState(void)
 			{
 				delete pointCloud;
-				delete renderingRangeImage;
-				delete rendering;
 				delete pose_d;
+				delete pose_pointCloud;
 			}
 
 			// Suppress the default copy constructor and assignment operator

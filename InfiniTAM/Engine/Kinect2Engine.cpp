@@ -1,4 +1,4 @@
-// Copyright 2014 Isis Innovation Limited and the authors of InfiniTAM
+// Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #include "Kinect2Engine.h"
 
@@ -85,44 +85,8 @@
 		SafeRelease(data->kinectSensor);
 	}
 
-	void Kinect2Engine::getImages(ITMView *out)
+	void Kinect2Engine::getImages(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage)
 	{
-		Vector4u *rgb = out->rgb->GetData(false);
-		if (colorAvailable)
-		{
-		}
-		else memset(rgb, 0, out->rgb->dataSize * sizeof(Vector4u));
-
-		float *depth = out->depth->GetData(false);
-		if (depthAvailable)
-		{
-			IDepthFrame* pDepthFrame = NULL;
-			UINT16 *pBuffer = NULL;
-			UINT nBufferSize = 0;
-
-			HRESULT hr = data->depthFrameReader->AcquireLatestFrame(&pDepthFrame);
-
-			if (SUCCEEDED(hr))
-			{
-				if (SUCCEEDED(hr))
-					hr = pDepthFrame->AccessUnderlyingBuffer(&nBufferSize, &pBuffer);
-
-				if (SUCCEEDED(hr))
-				{
-					for (int i = 0; i < imageSize_d.x * imageSize_d.y; i++)
-					{
-						ushort depthPix = pBuffer[i];
-						depth[i] = depthPix == 0 ? -1.0f : (float)depthPix / 1000.0f;
-					}
-				}
-			}
-
-			SafeRelease(pDepthFrame);
-		}
-		else memset(depth, 0, out->depth->dataSize * sizeof(short));
-
-		out->inputImageType = ITMView::InfiniTAM_FLOAT_DEPTH_IMAGE;
-
 		return /*true*/;
 	}
 
@@ -137,7 +101,6 @@
 		#include <opencv2/opencv.hpp>
 		#include <libfreenect2/libfreenect2.hpp>
 		#include <libfreenect2/frame_listener_impl.h>
-		#include <libfreenect2/threading.h>
 		#include <libfreenect2/registration.h>
 
 		using namespace InfiniTAM::Engine;
@@ -202,10 +165,10 @@
 			data->stop();
 		}
 
-		void Kinect2Engine::getImages(ITMView *out)
+		void Kinect2Engine::getImages(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage)
 		{
-			Vector4u *rgb = out->rgb->GetData(false);
-			float *depth = out->depth->GetData(false);
+			Vector4u *rgb = rgbImage->GetData(MEMORYDEVICE_CPU);
+			short *depth = rawDepthImage->GetData(MEMORYDEVICE_CPU);
 			if (colorAvailable&&depthAvailable)	// in libFreenect2, both data are available or neither is available
 			{
 			    data->listener->waitForNewFrame(data->frames);
@@ -235,11 +198,11 @@
 				}
 				data->listener->release(data->frames);
 			}else{
-				memset(depth, 0, out->depth->dataSize * sizeof(short));
-				memset(rgb, 0, out->rgb->dataSize * sizeof(Vector4u));
+				memset(depth, 0, rawDepthImage->dataSize * sizeof(short));
+				memset(rgb, 0, rgbImage->dataSize * sizeof(Vector4u));
 			}
 
-			out->inputImageType = ITMView::InfiniTAM_FLOAT_DEPTH_IMAGE;
+			//out->inputImageType = ITMView::InfiniTAM_FLOAT_DEPTH_IMAGE;
 			return /*true*/;
 		}
 
@@ -257,7 +220,7 @@
 		}
 		Kinect2Engine::~Kinect2Engine()
 		{}
-		void Kinect2Engine::getImages(ITMView *out)
+		void Kinect2Engine::getImages(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage)
 		{ return; }
 		bool Kinect2Engine::hasMoreImages(void)
 		{ return false; }
