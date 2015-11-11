@@ -18,9 +18,9 @@ find_package(CUDA QUIET)
 CANONIFY_BOOL(CUDA_FOUND)
 message(STATUS "CUDA found: " ${CUDA_FOUND})
 
-find_package(OpenNI QUIET)
-CANONIFY_BOOL(OPENNI_FOUND)
-message(STATUS "OpenNI found: " ${OPENNI_FOUND})
+find_package(OpenNI2)
+CANONIFY_BOOL(OPENNI2_FOUND)
+message(STATUS "OpenNI2 found: " ${OPENNI2_FOUND})
 
 find_package(libuvc QUIET)
 CANONIFY_BOOL(libuvc_FOUND)
