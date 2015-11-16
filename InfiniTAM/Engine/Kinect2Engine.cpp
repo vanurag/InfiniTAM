@@ -186,25 +186,17 @@
 
 			    libfreenect2::Frame *depthFrame = data->frames[libfreenect2::Frame::Depth];
 			    cv::Mat depthMat(424, 512, CV_16UC1, depthFrame->data);
-          std::cout << "depth check: " << depthMat.at<short>(100, 100) << std::endl;
-			    cv::Mat depthMatT;
-			    cv::transpose(depthMat, depthMatT);
-			    depthMatT /= 4500.0;
-				for (int i = 0; i < imageSize_d.x; i++)
-				{
-					for (int j = 0; j< imageSize_d.y; j++)
-					{
-						depth[i*imageSize_d.x+j] = depthMatT.at<short>(j,i);
-					}
-					
-				}
+
+        float* depth_pointer = (float*)depthMat.data;
+
+        for (int i = 0; i < imageSize_d.x * imageSize_d.y; ++i) {
+          depth[i] = (short)depth_pointer[i];
+        }
 				data->listener->release(data->frames);
 			}else{
 				memset(depth, 0, rawDepthImage->dataSize * sizeof(short));
 				memset(rgb, 0, rgbImage->dataSize * sizeof(Vector4u));
 			}
-
-			//out->inputImageType = ITMView::InfiniTAM_FLOAT_DEPTH_IMAGE;
 			return /*true*/;
 		}
 

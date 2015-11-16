@@ -16,3 +16,4 @@ x64/
 *.project
 *.settings
 build/
+InfiniTAM/doxygen-html/
