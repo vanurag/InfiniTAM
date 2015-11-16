@@ -171,28 +171,30 @@
 			short *depth = rawDepthImage->GetData(MEMORYDEVICE_CPU);
 			if (colorAvailable&&depthAvailable)	// in libFreenect2, both data are available or neither is available
 			{
+        std::cout << "check: color and depth available..." << std::endl;
 			    data->listener->waitForNewFrame(data->frames);
 			    
 				libfreenect2::Frame *rgbFrame = data->frames[libfreenect2::Frame::Color];
-				for (int i = 0; i < imageSize_rgb.x*imageSize_rgb.y*3; i+=3)
+				for (int i = 0; i < imageSize_rgb.x*imageSize_rgb.y*4; i+=4)
 				{
-					rgb[i/3].b   = rgbFrame->data[i+0];
-					rgb[i/3].g = rgbFrame->data[i+1];
-					rgb[i/3].r = rgbFrame->data[i+2];
-					rgb[i/3].a = 255.0;
+					rgb[i/4].b   = rgbFrame->data[i+0];
+					rgb[i/4].g = rgbFrame->data[i+1];
+					rgb[i/4].r = rgbFrame->data[i+2];
+					rgb[i/4].a = rgbFrame->data[i+3];
 
 				}
 
 			    libfreenect2::Frame *depthFrame = data->frames[libfreenect2::Frame::Depth];
-			    cv::Mat depthMat(424, 512, CV_32FC1, depthFrame->data);
+			    cv::Mat depthMat(424, 512, CV_16UC1, depthFrame->data);
+          std::cout << "depth check: " << depthMat.at<short>(100, 100) << std::endl;
 			    cv::Mat depthMatT;
 			    cv::transpose(depthMat, depthMatT);
-			    depthMatT /= 4500.0f;
+			    depthMatT /= 4500.0;
 				for (int i = 0; i < imageSize_d.x; i++)
 				{
 					for (int j = 0; j< imageSize_d.y; j++)
 					{
-						depth[i*imageSize_d.x+j] = depthMatT.at<float>(j,i);
+						depth[i*imageSize_d.x+j] = depthMatT.at<short>(j,i);
 					}
 					
 				}
