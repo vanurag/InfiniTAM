@@ -1,6 +1,15 @@
 cmake_minimum_required(VERSION 2.8)
 project(InfiniTAM)
 
+find_package(catkin REQUIRED COMPONENTS 
+	            roscpp 
+	            message_generation 
+	            std_msgs
+	            cv_bridge
+	            image_transport)
+	            
+find_package(Boost REQUIRED)
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
 OPTION(ENABLE_CXX11 "Enable C++11 support" ON)

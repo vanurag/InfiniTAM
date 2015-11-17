@@ -55,6 +55,7 @@ CLIEngine.h
 
 target_link_libraries(Engine ${GLUT_LIBRARIES})
 target_link_libraries(Engine ${OPENGL_LIBRARIES})
+target_link_libraries(Engine ${catkin_LIBRARIES})
 target_link_libraries(Engine ITMLib)
 IF(WITH_CUDA)
   target_link_libraries(Engine ${CUDA_LIBRARY})

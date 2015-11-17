@@ -64,6 +64,16 @@ static void CreateDefaultImageSource(ImageSourceEngine* & imageSource, IMUSource
 		}
 	}
 	if (imageSource == NULL)
+  {
+    printf("trying Skybotix VI-Sensor\n");
+    imageSource = new VISensorEngine(calibFile);
+    if (imageSource->getDepthImageSize().x == 0)
+    {
+      delete imageSource;
+      imageSource = NULL;
+    }
+  }
+	if (imageSource == NULL)
 	{
 		printf("trying MS Kinect 2 device\n");
 		imageSource = new Kinect2Engine(calibFile);
@@ -72,16 +82,6 @@ static void CreateDefaultImageSource(ImageSourceEngine* & imageSource, IMUSource
 			delete imageSource;
 			imageSource = NULL;
 		}
-	}
-	if (imageSource == NULL)
-	{
-	  printf("trying Skybotix VI-Sensor\n");
-	  imageSource = new VISensorEngine(calibFile);
-	  if (imageSource->getDepthImageSize().x == 0)
-    {
-      delete imageSource;
-      imageSource = NULL;
-    }
 	}
 
 	// this is a hack to ensure backwards compatibility in certain configurations
