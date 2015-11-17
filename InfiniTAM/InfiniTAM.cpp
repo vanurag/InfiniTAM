@@ -1,12 +1,14 @@
 // Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #include <cstdlib>
+#include <ros/ros.h>
 
 #include "Engine/UIEngine.h"
 #include "Engine/ImageSourceEngine.h"
 
 #include "Engine/OpenNIEngine.h"
 #include "Engine/Kinect2Engine.h"
+#include "Engine/VISensorEngine.h"
 #include "Engine/LibUVCEngine.h"
 
 using namespace InfiniTAM::Engine;
@@ -71,6 +73,16 @@ static void CreateDefaultImageSource(ImageSourceEngine* & imageSource, IMUSource
 			imageSource = NULL;
 		}
 	}
+	if (imageSource == NULL)
+	{
+	  printf("trying Skybotix VI-Sensor\n");
+	  imageSource = new VISensorEngine(calibFile);
+	  if (imageSource->getDepthImageSize().x == 0)
+    {
+      delete imageSource;
+      imageSource = NULL;
+    }
+	}
 
 	// this is a hack to ensure backwards compatibility in certain configurations
 	if (imageSource == NULL) return;
@@ -84,6 +96,11 @@ static void CreateDefaultImageSource(ImageSourceEngine* & imageSource, IMUSource
 int main(int argc, char** argv)
 try
 {
+
+  ros::Time::init();
+  ros::init(argc, argv, "infinitam_node");
+  ROS_INFO("Starting infinitam_node with node name %s", ros::this_node::getName().c_str());
+
 	const char *arg1 = "";
 	const char *arg2 = NULL;
 	const char *arg3 = NULL;
@@ -128,6 +145,9 @@ try
 	UIEngine::Instance()->Initialise(argc, argv, imageSource, imuSource, mainEngine, "./Files/Out", internalSettings->deviceType);
 	UIEngine::Instance()->Run();
 	UIEngine::Instance()->Shutdown();
+
+	printf("Exiting IoHandler!");
+  ros::shutdown();
 
 	delete mainEngine;
 	delete internalSettings;
