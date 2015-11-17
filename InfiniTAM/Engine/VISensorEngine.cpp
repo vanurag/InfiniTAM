@@ -30,12 +30,12 @@ VISensorEngine::VISensorEngine(const char *calibFilename) : ImageSourceEngine(ca
   message_filters::TimeSynchronizer<sensor_msgs::Image, sensor_msgs::Image> sync(
       mf_sub_image_fused_, mf_sub_depthmap_fused_, 10);
 
-  sync.registerCallback(boost::bind(&VISensorEngine::VISensorCallBackFunction, _1, _2));
+  sync.registerCallback(boost::bind(&VISensorEngine::VISensorCallBackFunction, this, _1, _2));
 
 }
 
-void VISensorEngine::VISensorCallBackFunction(const sensor_msgs::ImageConstPtr& msg_image_fused,
-                                              const sensor_msgs::ImageConstPtr& msg_depthmap_fused)
+void VISensorEngine::VISensorCallBackFunction(const sensor_msgs::ImageConstPtr msg_image_fused,
+                                              const sensor_msgs::ImageConstPtr msg_depthmap_fused)
 {
   rgb_.create(cv::Size(msg_image_fused->width, msg_image_fused->height), CV_8UC3);
   depth_.create(cv::Size(msg_depthmap_fused->width, msg_depthmap_fused->height), CV_16UC1);
@@ -44,7 +44,6 @@ void VISensorEngine::VISensorCallBackFunction(const sensor_msgs::ImageConstPtr& 
   imageSize_rgb_ = Vector2i(rgb_.cols, rgb_.rows);
   imageSize_d_ = Vector2i(depth_.cols, depth_.rows);
 }
-
 
 void VISensorEngine::getImages(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage)
 {
@@ -70,7 +69,7 @@ void VISensorEngine::getImages(ITMUChar4Image *rgbImage, ITMShortImage *rawDepth
     }
 
     // Depth data
-    uchar* depth_pointer = (uchar*)depth_;
+    uchar* depth_pointer = (uchar*)depth_.data;
     for (int i = 0; i < imageSize_d_.x * imageSize_d_.y; ++i) {
       depth[i] = (short)depth_pointer[i];
     }

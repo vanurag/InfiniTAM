@@ -45,8 +45,8 @@ namespace InfiniTAM
     class VISensorEngine : public ImageSourceEngine
     {
     private:
-      void VISensorCallBackFunction(const sensor_msgs::ImageConstPtr& msg_image_fused,
-                                          const sensor_msgs::ImageConstPtr& msg_depthmap_fused);
+      void VISensorCallBackFunction(const sensor_msgs::ImageConstPtr msg_image_fused,
+                                    const sensor_msgs::ImageConstPtr msg_depthmap_fused);
 
       char timestamp_[16];
       cv::Mat rgb_, depth_;

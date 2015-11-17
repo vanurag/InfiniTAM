@@ -146,7 +146,7 @@ try
 	UIEngine::Instance()->Run();
 	UIEngine::Instance()->Shutdown();
 
-	printf("Exiting IoHandler!");
+  printf("Exiting IoHandler!");
   ros::shutdown();
 
 	delete mainEngine;
