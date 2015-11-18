@@ -8,6 +8,7 @@
 
 #include "Engine/OpenNIEngine.h"
 #include "Engine/Kinect2Engine.h"
+#include "Engine/RealsenseEngine.h"
 #include "Engine/VISensorEngine.h"
 #include "Engine/LibUVCEngine.h"
 
@@ -73,6 +74,16 @@ static void CreateDefaultImageSource(ImageSourceEngine* & imageSource, IMUSource
 			imageSource = NULL;
 		}
 	}
+	if (imageSource == NULL)
+  {
+    printf("trying Intel Realsense device\n");
+    imageSource = new RealsenseEngine(calibFile);
+//    if (imageSource->getDepthImageSize().x == 0)
+//    {
+//      delete imageSource;
+//      imageSource = NULL;
+//    }
+  }
 	if (imageSource == NULL)
   {
     printf("trying Skybotix VI-Sensor\n");
