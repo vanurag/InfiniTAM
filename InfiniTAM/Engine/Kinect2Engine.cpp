@@ -154,6 +154,8 @@
 				depthAvailable = false;
 				colorAvailable = false;
 				printf("Kinect2: No ready Kinect 2 sensor found\n");
+				imageSize_d = Vector2i(0, 0);
+				imageSize_rgb = Vector2i(0, 0);
 				return;
 			}
 
