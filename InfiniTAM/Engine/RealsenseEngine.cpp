@@ -21,19 +21,26 @@ RealsenseEngine::RealsenseEngine(const char *calibFilename) : ImageSourceEngine(
 
   ros::NodeHandle node_;
   message_filters::Subscriber<sensor_msgs::Image> mf_sub_rgb_(
-      node_, node_.resolveName("/camera/color/image_raw"), 100);
+      node_, "/camera/color/image_raw", 1);
   message_filters::Subscriber<sensor_msgs::Image> mf_sub_depth_(
-      node_, node_.resolveName("/camera/depth/image_raw"), 100);
-  sub_rgb_ = node_.subscribe(node_.resolveName("/camera/depth/image_raw"), 1, &RealsenseEngine::BlaCallBackFunction, this);
+      node_, "/camera/color/image_raw", 1);
+//  sub_rgb_ = node_.subscribe(node_.resolveName("/camera/depth/image_raw"), 1, &RealsenseEngine::BlaCallBackFunction, this);
 
 //  message_filters::TimeSynchronizer<sensor_msgs::Image, sensor_msgs::Image> sync(
 //      mf_sub_rgb_, mf_sub_depth_, 1);
 
   typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> MySyncPolicy;
-  message_filters::Synchronizer<MySyncPolicy> sync(MySyncPolicy(100), mf_sub_rgb_, mf_sub_depth_);
+  message_filters::Synchronizer<MySyncPolicy> sync(MySyncPolicy(1000), mf_sub_rgb_, mf_sub_depth_);
 
   sync.registerCallback(boost::bind(&RealsenseEngine::RealsenseCallBackFunction, this, _1, _2));
 
+  ros::spinOnce();
+  ros::Duration(0.2).sleep();
+  for (int i = 0; i < 10000; ++i) {
+    std::cout << "loop no: " << i << std::endl;
+    ros::spinOnce();
+//    ros::Duration(0.2).sleep();
+  }
 }
 
 void RealsenseEngine::BlaCallBackFunction(const sensor_msgs::ImageConstPtr rgb_msg)
@@ -53,6 +60,10 @@ void RealsenseEngine::RealsenseCallBackFunction(const sensor_msgs::ImageConstPtr
   colorAvailable_ = true;
   depthAvailable_ = true;
   std::cout << "real callback check: real callback check: real callback check: " << imageSize_rgb_.x << " " << imageSize_rgb_.y << std::endl;
+//  for (int i = 0; i < 10000; ++i) {
+//      ros::spinOnce();
+//      ros::Duration(5).sleep();
+//    }
 }
 
 void RealsenseEngine::getImages(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage)
@@ -60,6 +71,7 @@ void RealsenseEngine::getImages(ITMUChar4Image *rgbImage, ITMShortImage *rawDept
 
   std::cout << std::endl <<  "before spin" << std::endl;
   ros::spinOnce();
+  ros::Duration(5).sleep();
   Vector4u *rgb = rgbImage->GetData(MEMORYDEVICE_CPU);
   short *depth = rawDepthImage->GetData(MEMORYDEVICE_CPU);
   if (colorAvailable_&&depthAvailable_)
