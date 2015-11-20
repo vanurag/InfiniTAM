@@ -20,16 +20,19 @@ using namespace InfiniTAM::Engine;
     @para arg4 the IMU images. If images are omitted, some live sources will
     be tried.
 */
-static void CreateDefaultImageSource(ImageSourceEngine* & imageSource, IMUSourceEngine* & imuSource, const char *arg1, const char *arg2, const char *arg3, const char *arg4)
+static void CreateDefaultImageSource(
+    ImageSourceEngine* & imageSource, IMUSourceEngine* & imuSource, const char *arg1,
+    const char *arg2, const char *arg3, const char *arg4, const char *arg5)
 {
 	const char *calibFile = arg1;
-	const char *filename1 = arg2;
-	const char *filename2 = arg3;
-	const char *filename_imu = arg4;
+	const char *source = arg2;
+	const char *filename1 = arg3;
+	const char *filename2 = arg4;
+	const char *filename_imu = arg5;
 
 	printf("using calibration file: %s\n", calibFile);
 
-	if (filename2 != NULL)
+	if (filename2 != NULL && source == std::string("any"))
 	{
 		printf("using rgb images: %s\nusing depth images: %s\n", filename1, filename2);
 		if (filename_imu == NULL)
@@ -44,7 +47,7 @@ static void CreateDefaultImageSource(ImageSourceEngine* & imageSource, IMUSource
 		}
 	}
 
-	if (imageSource == NULL)
+	if (imageSource == NULL && source == std::string("any"))
 	{
 		printf("trying OpenNI device: %s\n", (filename1==NULL)?"<OpenNI default device>":filename1);
 		imageSource = new OpenNIEngine(calibFile, filename1);
@@ -54,7 +57,7 @@ static void CreateDefaultImageSource(ImageSourceEngine* & imageSource, IMUSource
 			imageSource = NULL;
 		}
 	}
-	if (imageSource == NULL)
+	if (imageSource == NULL && source == std::string("any"))
 	{
 		printf("trying UVC device\n");
 		imageSource = new LibUVCEngine(calibFile);
@@ -64,7 +67,7 @@ static void CreateDefaultImageSource(ImageSourceEngine* & imageSource, IMUSource
 			imageSource = NULL;
 		}
 	}
-	if (imageSource == NULL)
+	if (imageSource == NULL && source == std::string("any"))
 	{
 		printf("trying MS Kinect 2 device\n");
 		imageSource = new Kinect2Engine(calibFile);
@@ -74,7 +77,7 @@ static void CreateDefaultImageSource(ImageSourceEngine* & imageSource, IMUSource
 			imageSource = NULL;
 		}
 	}
-	if (imageSource == NULL)
+	if (imageSource == NULL && source == std::string("realsense"))
   {
     printf("trying Intel Realsense device\n");
     imageSource = new RealsenseEngine(calibFile);
@@ -84,7 +87,7 @@ static void CreateDefaultImageSource(ImageSourceEngine* & imageSource, IMUSource
 //      imageSource = NULL;
 //    }
   }
-	if (imageSource == NULL)
+	if (imageSource == NULL && source == std::string("vi-sensor"))
   {
     printf("trying Skybotix VI-Sensor\n");
     imageSource = new VISensorEngine(calibFile);
@@ -116,6 +119,7 @@ try
 	const char *arg2 = NULL;
 	const char *arg3 = NULL;
 	const char *arg4 = NULL;
+	const char *arg5 = NULL;
 
 	int arg = 1;
 	do {
@@ -126,24 +130,27 @@ try
 		if (argv[arg] != NULL) arg3 = argv[arg]; else break;
 		++arg;
 		if (argv[arg] != NULL) arg4 = argv[arg]; else break;
+		++arg;
+    if (argv[arg] != NULL) arg5 = argv[arg]; else break;
 	} while (false);
 
 	if (arg == 1) {
 		printf("usage: %s [<calibfile> [<imagesource>] ]\n"
 		       "  <calibfile>   : path to a file containing intrinsic calibration parameters\n"
+		       "  <source>      : source input device 'any'/'realsense'/'vi-sensor'\n"
 		       "  <imagesource> : either one argument to specify OpenNI device ID\n"
 		       "                  or two arguments specifying rgb and depth file masks\n"
 		       "\n"
 		       "examples:\n"
-		       "  %s ./Files/Teddy/calib.txt ./Files/Teddy/Frames/%%04i.ppm ./Files/Teddy/Frames/%%04i.pgm\n"
-		       "  %s ./Files/Teddy/calib.txt\n\n", argv[0], argv[0], argv[0]);
+		       "  %s ./Files/Teddy/calib.txt any ./Files/Teddy/Frames/%%04i.ppm ./Files/Teddy/Frames/%%04i.pgm\n"
+		       "  %s ./Files/Teddy/calib.txt realsense\n\n", argv[0], argv[0], argv[0]);
 	}
 
 	printf("initialising ...\n");
 	ImageSourceEngine *imageSource = NULL;
 	IMUSourceEngine *imuSource = NULL;
 
-	CreateDefaultImageSource(imageSource, imuSource, arg1, arg2, arg3, arg4);
+	CreateDefaultImageSource(imageSource, imuSource, arg1, arg2, arg3, arg4, arg5);
 	if (imageSource==NULL)
 	{
 		std::cout << "failed to open any image stream" << std::endl;
