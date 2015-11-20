@@ -11,38 +11,35 @@
 
 using namespace InfiniTAM::Engine;
 
-VISensorEngine::VISensorEngine(const char *calibFilename) : ImageSourceEngine(calibFilename), node_local_("~")
+VISensorEngine::VISensorEngine(const char *calibFilename) : ImageSourceEngine(calibFilename),
+    mf_sub_rgb_(node_, "/stereo_dense_reconstruction/image_fused", 1),
+    mf_sub_depth_(node_, "/stereo_dense_reconstruction/depthmap_fused", 1),
+    sync_(MySyncPolicy(10), mf_sub_rgb_, mf_sub_depth_)
 {
-  imageSize_d_ = Vector2i(512, 424);
-  imageSize_rgb_ = Vector2i(1920, 1080);
+  imageSize_d_ = Vector2i(752, 480);
+  imageSize_rgb_ = Vector2i(752, 480);
 
   colorAvailable_ = true;
   depthAvailable_ = true;
 
-  // get timestamp
-  time_t time_now;
-  time_now = std::time(NULL);
-  std::strftime(timestamp_,16,"%y%m%d_%H%M%S",std::localtime(&time_now));
-
-  mf_sub_image_fused_.subscribe(node_, "/stereo_dense_reconstruction/image_fused", 1);
-  mf_sub_depthmap_fused_.subscribe(node_, "/stereo_dense_reconstruction/depthmap_fused", 1);
-
-  message_filters::TimeSynchronizer<sensor_msgs::Image, sensor_msgs::Image> sync(
-      mf_sub_image_fused_, mf_sub_depthmap_fused_, 10);
-
-  sync.registerCallback(boost::bind(&VISensorEngine::VISensorCallBackFunction, this, _1, _2));
-
+  sync_.registerCallback(boost::bind(&VISensorEngine::VISensorCallBackFunction, this, _1, _2));
 }
 
-void VISensorEngine::VISensorCallBackFunction(const sensor_msgs::ImageConstPtr msg_image_fused,
-                                              const sensor_msgs::ImageConstPtr msg_depthmap_fused)
+void VISensorEngine::VISensorCallBackFunction(const sensor_msgs::ImageConstPtr rgb_msg,
+                                              const sensor_msgs::ImageConstPtr depth_msg)
 {
-  rgb_.create(cv::Size(msg_image_fused->width, msg_image_fused->height), CV_8UC3);
-  depth_.create(cv::Size(msg_depthmap_fused->width, msg_depthmap_fused->height), CV_16UC1);
-  rgb_ = cv_bridge::toCvCopy(msg_image_fused, sensor_msgs::image_encodings::BGR8)->image;
-  depth_ = cv_bridge::toCvCopy(msg_depthmap_fused, sensor_msgs::image_encodings::MONO16)->image;
+  if (rgb_.empty()) {
+    rgb_.create(cv::Size(rgb_msg->width, rgb_msg->height), CV_8UC3);
+  }
+  if (depth_.empty()) {
+    depth_.create(cv::Size(depth_msg->width, depth_msg->height), CV_32FC1);
+  }
+  rgb_ = cv_bridge::toCvCopy(rgb_msg, sensor_msgs::image_encodings::BGR8)->image;
+  depth_ = cv_bridge::toCvCopy(depth_msg, sensor_msgs::image_encodings::TYPE_32FC1)->image;
   imageSize_rgb_ = Vector2i(rgb_.cols, rgb_.rows);
   imageSize_d_ = Vector2i(depth_.cols, depth_.rows);
+  colorAvailable_ = true;
+  depthAvailable_ = true;
 }
 
 void VISensorEngine::getImages(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage)
@@ -69,7 +66,7 @@ void VISensorEngine::getImages(ITMUChar4Image *rgbImage, ITMShortImage *rawDepth
     }
 
     // Depth data
-    uchar* depth_pointer = (uchar*)depth_.data;
+    float* depth_pointer = (float*)depth_.data;
     for (int i = 0; i < imageSize_d_.x * imageSize_d_.y; ++i) {
       depth[i] = (short)depth_pointer[i];
     }

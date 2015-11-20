@@ -22,6 +22,7 @@
 #include <image_transport/image_transport.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
+#include <message_filters/sync_policies/approximate_time.h>
 #include <ros/ros.h>
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
@@ -45,14 +46,16 @@ namespace InfiniTAM
     class VISensorEngine : public ImageSourceEngine
     {
     private:
-      void VISensorCallBackFunction(const sensor_msgs::ImageConstPtr msg_image_fused,
-                                    const sensor_msgs::ImageConstPtr msg_depthmap_fused);
+      typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> MySyncPolicy;
+      void VISensorCallBackFunction(const sensor_msgs::ImageConstPtr rgb_msg,
+                                    const sensor_msgs::ImageConstPtr depth_msg);
 
       char timestamp_[16];
       cv::Mat rgb_, depth_;
-      ros::NodeHandle node_, node_local_;
-      message_filters::Subscriber<sensor_msgs::Image> mf_sub_image_fused_;
-      message_filters::Subscriber<sensor_msgs::Image> mf_sub_depthmap_fused_;
+      ros::Subscriber sub_rgb_;
+      ros::NodeHandle node_;
+      message_filters::Subscriber<sensor_msgs::Image> mf_sub_rgb_, mf_sub_depth_;
+      message_filters::Synchronizer<MySyncPolicy> sync_;
       Vector2i imageSize_d_, imageSize_rgb_;
       bool colorAvailable_, depthAvailable_;
     public:
