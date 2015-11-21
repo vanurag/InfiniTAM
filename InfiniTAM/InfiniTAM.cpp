@@ -97,6 +97,16 @@ static void CreateDefaultImageSource(
       imageSource = NULL;
     }
   }
+	if (imageSource == NULL && source == std::string("kinect"))
+  {
+    printf("trying MS Kinect 2 device\n");
+    imageSource = new Kinect2Engine(calibFile);
+    if (imageSource->getDepthImageSize().x == 0)
+    {
+      //delete imageSource;
+      imageSource = NULL;
+    }
+  }
 
 	// this is a hack to ensure backwards compatibility in certain configurations
 	if (imageSource == NULL) return;
