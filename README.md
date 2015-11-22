@@ -93,11 +93,19 @@ Some sensors may need a small change to work correctly with OpenNI, the changes 
 
 The build process should result in an executable InfiniTAM, which is the main sample program. For a version without visualisation, try InfiniTAM_cli. If compiled with OpenNI support, both should run out-of-the-box without problems for live reconstruction. If you have calibration information for your specific device, you can pass it as the first argument to the program, e.g.:
 ```
-  $ ./InfiniTAM Teddy/calib.txt
+  $ ./InfiniTAM Teddy/calib.txt <source:kinect/realsense/vi-sensor/offline>
 ```
-If no OpenNI support has been compiled in, the program can be used for offline processing:
+Kinect requires OpenNI/libfreenect2 to be installed.
+Reaslense requires [R200 ros node](http://wiki.ros.org/RealSense_R200)
+VI-Sensor requires [vi-sensor ros node](https://github.com/ethz-asl/visensor_node)
+Can also request InfiniTAM to search all possible input sources:
 ```
-  $ ./InfiniTAM Teddy/calib.txt Teddy/Frames/%04i.ppm Teddy/Frames/%04i.pgm
+ $ ./InfiniTAM Teddy/calib.txt <source:any>
+```
+
+If no device support has been compiled in, the program can be used for offline processing:
+```
+  $ ./InfiniTAM Teddy/calib.txt offline Teddy/Frames/%04i.ppm Teddy/Frames/%04i.pgm
 ```
 The arguments are essentially masks for sprintf and the %04i will be replaced by a running number, accordingly.
 
