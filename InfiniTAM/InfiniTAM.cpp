@@ -107,6 +107,20 @@ static void CreateDefaultImageSource(
       imageSource = NULL;
     }
   }
+	if (imageSource == NULL && filename2 != NULL && source == std::string("offline"))
+  {
+    printf("using rgb images: %s\nusing depth images: %s\n", filename1, filename2);
+    if (filename_imu == NULL)
+    {
+      imageSource = new ImageFileReader(calibFile, filename1, filename2);
+    }
+    else
+    {
+      printf("using imu data: %s\n", filename_imu);
+      imageSource = new RawFileReader(calibFile, filename1, filename2, Vector2i(320, 240), 0.5f);
+      imuSource = new IMUSourceEngine(filename_imu);
+    }
+  }
 
 	// this is a hack to ensure backwards compatibility in certain configurations
 	if (imageSource == NULL) return;
