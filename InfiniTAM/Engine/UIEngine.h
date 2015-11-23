@@ -86,7 +86,7 @@ namespace InfiniTAM
 			ITMUChar4Image *saveImage;
 
 			void Initialise(int & argc, char** argv, ImageSourceEngine *imageSource, IMUSourceEngine *imuSource, ITMMainEngine *mainEngine,
-				const char *outFolder, ITMLibSettings::DeviceType deviceType);
+				const char *outFolder, ITMLibSettings* itmSettings);
 			void Shutdown();
 
 			void Run();

@@ -184,7 +184,7 @@ try
 	ITMLibSettings *internalSettings = new ITMLibSettings();
 	ITMMainEngine *mainEngine = new ITMMainEngine(internalSettings, &imageSource->calib, imageSource->getRGBImageSize(), imageSource->getDepthImageSize());
 
-	UIEngine::Instance()->Initialise(argc, argv, imageSource, imuSource, mainEngine, "./Files/Out", internalSettings->deviceType);
+	UIEngine::Instance()->Initialise(argc, argv, imageSource, imuSource, mainEngine, "./Files/Out", internalSettings);
 	UIEngine::Instance()->Run();
 	UIEngine::Instance()->Shutdown();
 
