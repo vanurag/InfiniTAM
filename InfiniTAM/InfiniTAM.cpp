@@ -5,13 +5,13 @@
 
 #include "Engine/UIEngine.h"
 #include "Engine/ImageSourceEngine.h"
-#include "Engine/VISensorIMUSourceEngine.h"
-
+#include "Engine/ROSIMUSourceEngine.h"
 #include "Engine/OpenNIEngine.h"
 #include "Engine/Kinect2Engine.h"
 #include "Engine/RealsenseEngine.h"
 #include "Engine/VISensorEngine.h"
 #include "Engine/LibUVCEngine.h"
+#include "Engine/ROSIMUSourceEngine.h"
 
 using namespace InfiniTAM::Engine;
 
