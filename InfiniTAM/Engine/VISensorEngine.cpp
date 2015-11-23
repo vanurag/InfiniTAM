@@ -50,7 +50,6 @@ void VISensorEngine::getImages(ITMUChar4Image *rgbImage, ITMShortImage *rawDepth
   short *depth = rawDepthImage->GetData(MEMORYDEVICE_CPU);
   if (colorAvailable_&&depthAvailable_) // in libFreenect2, both data are available or neither is available
   {
-    std::cout << "check: color and depth available..." << std::endl;
 
     // RGB data
     uchar* rgb_pointer = (uchar*)rgb_.data;

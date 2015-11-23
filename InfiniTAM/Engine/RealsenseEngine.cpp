@@ -49,7 +49,6 @@ void RealsenseEngine::getImages(ITMUChar4Image *rgbImage, ITMShortImage *rawDept
   short *depth = rawDepthImage->GetData(MEMORYDEVICE_CPU);
   if (colorAvailable_&&depthAvailable_)
   {
-    std::cout << "check: color and depth available..." << std::endl;
 
     // RGB data
     uchar* rgb_pointer = (uchar*)rgb_.data;

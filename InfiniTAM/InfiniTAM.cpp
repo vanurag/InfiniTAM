@@ -182,6 +182,19 @@ try
 	}
 
 	ITMLibSettings *internalSettings = new ITMLibSettings();
+	if (arg2 == std::string("kinect")) { // Kinect2
+	  internalSettings->sceneParams.viewFrustum_min = 0.5f;
+	  internalSettings->sceneParams.viewFrustum_max = 8.0f;
+	} else if (arg2 == std::string("realsense")) { // R200
+	  internalSettings->sceneParams.viewFrustum_min = 0.5f;
+	  internalSettings->sceneParams.viewFrustum_max = 4.0f;
+	} else if (arg2 == std::string("vi-sensor")) {
+	  internalSettings->sceneParams.viewFrustum_min = 0.2f;
+    internalSettings->sceneParams.viewFrustum_max = 20.0f;
+	}
+	std::cout << "Setting viewFrustum to the range: [ "
+      << internalSettings->sceneParams.viewFrustum_min << ", "
+      << internalSettings->sceneParams.viewFrustum_max << " ]" << std::endl;
 	ITMMainEngine *mainEngine = new ITMMainEngine(internalSettings, &imageSource->calib, imageSource->getRGBImageSize(), imageSource->getDepthImageSize());
 
 	UIEngine::Instance()->Initialise(argc, argv, imageSource, imuSource, mainEngine, "./Files/Out", internalSettings);

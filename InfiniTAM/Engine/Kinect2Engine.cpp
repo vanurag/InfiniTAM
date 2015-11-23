@@ -173,7 +173,6 @@
 			short *depth = rawDepthImage->GetData(MEMORYDEVICE_CPU);
 			if (colorAvailable&&depthAvailable)	// in libFreenect2, both data are available or neither is available
 			{
-        std::cout << "check: color and depth available..." << std::endl;
 			    data->listener->waitForNewFrame(data->frames);
 			    
 				libfreenect2::Frame *rgbFrame = data->frames[libfreenect2::Frame::Color];
