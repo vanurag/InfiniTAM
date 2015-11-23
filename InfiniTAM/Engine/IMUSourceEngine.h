@@ -22,10 +22,10 @@ namespace InfiniTAM
 
 		public:
 			IMUSourceEngine(const char *imuMask);
-			~IMUSourceEngine() { }
+			virtual ~IMUSourceEngine() { }
 
-			bool hasMoreMeasurements(void);
-			void getMeasurement(ITMIMUMeasurement *imu);
+			virtual bool hasMoreMeasurements(void);
+			virtual void getMeasurement(ITMIMUMeasurement *imu);
 		};
 	}
 }

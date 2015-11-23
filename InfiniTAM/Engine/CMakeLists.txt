@@ -39,6 +39,8 @@ ImageSourceEngine.cpp
 ImageSourceEngine.h
 IMUSourceEngine.cpp
 IMUSourceEngine.h
+VISensorIMUSourceEngine.cpp
+VISensorIMUSourceEngine.h
 Kinect2Engine.cpp
 Kinect2Engine.h
 RealsenseEngine.cpp
