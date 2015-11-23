@@ -5,6 +5,7 @@
 
 #include "Engine/UIEngine.h"
 #include "Engine/ImageSourceEngine.h"
+#include "Engine/VISensorIMUSourceEngine.h"
 
 #include "Engine/OpenNIEngine.h"
 #include "Engine/Kinect2Engine.h"
@@ -26,24 +27,24 @@ static void CreateDefaultImageSource(
 {
 	const char *calibFile = arg1;
 	const char *source = arg2;
-	const char *filename1 = arg3;
-	const char *filename2 = arg4;
-	const char *filename_imu = arg5;
+	const char *imu_source = arg3;
+	const char *filename1 = arg4;
+	const char *filename2 = arg5;
 
 	printf("using calibration file: %s\n", calibFile);
 
 	if (filename2 != NULL && source == std::string("any"))
 	{
 		printf("using rgb images: %s\nusing depth images: %s\n", filename1, filename2);
-		if (filename_imu == NULL)
+		if (imu_source == NULL)
 		{
 			imageSource = new ImageFileReader(calibFile, filename1, filename2);
 		}
 		else
 		{
-			printf("using imu data: %s\n", filename_imu);
+			printf("using imu data: %s\n", imu_source);
 			imageSource = new RawFileReader(calibFile, filename1, filename2, Vector2i(320, 240), 0.5f);
-			imuSource = new IMUSourceEngine(filename_imu);
+			imuSource = new IMUSourceEngine(imu_source);
 		}
 	}
 
@@ -77,15 +78,20 @@ static void CreateDefaultImageSource(
 			imageSource = NULL;
 		}
 	}
+
 	if (imageSource == NULL && source == std::string("realsense"))
   {
     printf("trying Intel Realsense device\n");
     imageSource = new RealsenseEngine(calibFile);
-//    if (imageSource->getDepthImageSize().x == 0)
-//    {
-//      delete imageSource;
-//      imageSource = NULL;
-//    }
+    if (imageSource->getDepthImageSize().x == 0)
+    {
+      delete imageSource;
+      imageSource = NULL;
+    }
+    if (imu_source != NULL) {
+      printf("using IMU ROS topic: %s\n", imu_source);
+      imuSource = new VISensorIMUSourceEngine(imu_source);
+    }
   }
 	if (imageSource == NULL && source == std::string("vi-sensor"))
   {
@@ -95,6 +101,10 @@ static void CreateDefaultImageSource(
     {
       delete imageSource;
       imageSource = NULL;
+    }
+    if (imu_source != NULL) {
+      printf("using IMU ROS topic: %s\n", imu_source);
+      imuSource = new VISensorIMUSourceEngine(imu_source);
     }
   }
 	if (imageSource == NULL && source == std::string("kinect"))
@@ -110,15 +120,15 @@ static void CreateDefaultImageSource(
 	if (imageSource == NULL && filename2 != NULL && source == std::string("offline"))
   {
     printf("using rgb images: %s\nusing depth images: %s\n", filename1, filename2);
-    if (filename_imu == NULL)
+    if (imu_source == NULL)
     {
       imageSource = new ImageFileReader(calibFile, filename1, filename2);
     }
     else
     {
-      printf("using imu data: %s\n", filename_imu);
+      printf("using imu data: %s\n", imu_source);
       imageSource = new RawFileReader(calibFile, filename1, filename2, Vector2i(320, 240), 0.5f);
-      imuSource = new IMUSourceEngine(filename_imu);
+      imuSource = new IMUSourceEngine(imu_source);
     }
   }
 
@@ -135,15 +145,29 @@ int main(int argc, char** argv)
 try
 {
 
+  if (argc < 3) {
+    printf("usage: %s [<calibfile>] [<source>] [optional:<imusource>] [optional:metadata]\n"
+           "  <calibfile>   : path to a file containing intrinsic calibration parameters\n"
+           "  <source>      : source input device 'any'/'realsense'/'vi-sensor'\n"
+           "  <imusource>   : ROS IMU topic/file containing transformations\n"
+           "  <metadata>    : either one argument to specify OpenNI device ID\n"
+           "                  or two arguments specifying rgb and depth file masks\n"
+           "\n"
+           "examples:\n"
+           "  %s ./Files/Teddy/calib.txt any ./Files/Teddy/Frames/%%04i.ppm ./Files/Teddy/Frames/%%04i.pgm\n"
+           "  %s ./Files/Teddy/calib.txt realsense\n\n", argv[0], argv[0], argv[0]);
+    return -1;
+  }
+
   ros::Time::init();
   ros::init(argc, argv, "infinitam_node");
   ROS_INFO("Starting infinitam_node with node name %s", ros::this_node::getName().c_str());
 
-	const char *arg1 = "";
-	const char *arg2 = NULL;
-	const char *arg3 = NULL;
-	const char *arg4 = NULL;
-	const char *arg5 = NULL;
+	const char *arg1 = "";    // calib
+	const char *arg2 = NULL;  // source device
+	const char *arg3 = NULL;  // IMU source
+	const char *arg4 = NULL;  // metadata-1
+	const char *arg5 = NULL;  // metadata-2
 
 	int arg = 1;
 	do {
@@ -157,18 +181,6 @@ try
 		++arg;
     if (argv[arg] != NULL) arg5 = argv[arg]; else break;
 	} while (false);
-
-	if (arg == 1) {
-		printf("usage: %s [<calibfile> [<imagesource>] ]\n"
-		       "  <calibfile>   : path to a file containing intrinsic calibration parameters\n"
-		       "  <source>      : source input device 'any'/'realsense'/'vi-sensor'\n"
-		       "  <imagesource> : either one argument to specify OpenNI device ID\n"
-		       "                  or two arguments specifying rgb and depth file masks\n"
-		       "\n"
-		       "examples:\n"
-		       "  %s ./Files/Teddy/calib.txt any ./Files/Teddy/Frames/%%04i.ppm ./Files/Teddy/Frames/%%04i.pgm\n"
-		       "  %s ./Files/Teddy/calib.txt realsense\n\n", argv[0], argv[0], argv[0]);
-	}
 
 	printf("initialising ...\n");
 	ImageSourceEngine *imageSource = NULL;
