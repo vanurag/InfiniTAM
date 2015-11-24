@@ -17,15 +17,52 @@ using namespace InfiniTAM::Engine;
 VISensorIMUSourceEngine::VISensorIMUSourceEngine(const char *imuMask) : IMUSourceEngine(imuMask)
 {
   strncpy(this->imuMask, imuMask, BUF_SIZE);
-  sub_imu_ = node_.subscribe(node_.resolveName(imuMask), 1,
-                             &VISensorIMUSourceEngine::VISensorIMUCallback, this);
+  ros::master::getTopics(master_topics);
+
+  for (auto topic : master_topics) {
+    if (topic.datatype == std::string("nav_msgs/Odometry")) {     // preference #1
+      sub_pose_ = node_.subscribe(node_.resolveName(imuMask), 1,
+                                  &VISensorIMUSourceEngine::VISensorOdometryCallback, this);
+      break;
+    }
+    if (topic.datatype == std::string("sensor_msgs/Imu")) {       // preference #2
+      sub_pose_ = node_.subscribe(node_.resolveName(imuMask), 1,
+                                  &VISensorIMUSourceEngine::VISensorIMUCallback, this);
+      break;
+    }
+    if (topic.datatype == std::string("geometry_msgs/TransformStamped")) { // preference #3
+      sub_pose_ = node_.subscribe(node_.resolveName(imuMask), 1,
+                                  &VISensorIMUSourceEngine::VISensorTFCallback, this);
+      break;
+    }
+  }
   cached_imu = NULL;
+}
+
+void VISensorIMUSourceEngine::VISensorOdometryCallback(const nav_msgs::Odometry::ConstPtr& msg)
+{
+  ROS_INFO("Odometry Orientation x: [%f], y: [%f], z: [%f], w: [%f]",
+           msg->pose.pose.orientation.x, msg->pose.pose.orientation.y, msg->pose.pose.orientation.z,
+           msg->pose.pose.orientation.w);
+  quat2ITMIMU(msg->pose.pose.orientation.x, msg->pose.pose.orientation.y,
+              msg->pose.pose.orientation.z, msg->pose.pose.orientation.w);
 }
 
 void VISensorIMUSourceEngine::VISensorIMUCallback(const sensor_msgs::Imu::ConstPtr& msg)
 {
-  ROS_INFO("IMU Orientation x: [%f], y: [%f], z: [%f], w: [%f]", msg->orientation.x,msg->orientation.y,msg->orientation.z,msg->orientation.w);
+  ROS_INFO("IMU Orientation x: [%f], y: [%f], z: [%f], w: [%f]",
+           msg->orientation.x,msg->orientation.y,msg->orientation.z,msg->orientation.w);
   quat2ITMIMU(msg->orientation.x, msg->orientation.y, msg->orientation.z, msg->orientation.w);
+}
+
+void VISensorIMUSourceEngine::VISensorTFCallback(
+    const geometry_msgs::TransformStamped::ConstPtr& msg)
+{
+  ROS_INFO("TF Orientation x: [%f], y: [%f], z: [%f], w: [%f]",
+           msg->transform.rotation.x, msg->transform.rotation.y,
+           msg->transform.rotation.z, msg->transform.rotation.w);
+  quat2ITMIMU(msg->transform.rotation.x, msg->transform.rotation.y,
+              msg->transform.rotation.z, msg->transform.rotation.w);
 }
 
 // conversion from quaternion to rotation matrix

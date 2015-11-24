@@ -16,6 +16,8 @@
 // ROS
 #include <ros/ros.h>
 #include <sensor_msgs/Imu.h>
+#include <nav_msgs/Odometry.h>
+#include <geometry_msgs/TransformStamped.h>
 
 namespace InfiniTAM
 {
@@ -30,11 +32,14 @@ namespace InfiniTAM
       ITMIMUMeasurement *cached_imu;
 
       ros::NodeHandle node_;
-      ros::Subscriber sub_imu_;
+      ros::Subscriber sub_pose_;
+      ros::master::V_TopicInfo master_topics;
 
       // conversion from quaternion to ITM IMU Measurement
       void quat2ITMIMU(const double qx, const double qy, const double qz, const double qw);
+      void VISensorOdometryCallback(const nav_msgs::Odometry::ConstPtr& msg);
       void VISensorIMUCallback(const sensor_msgs::Imu::ConstPtr& msg);
+      void VISensorTFCallback(const geometry_msgs::TransformStamped::ConstPtr& msg);
 
     public:
       VISensorIMUSourceEngine(const char *imuMask);
