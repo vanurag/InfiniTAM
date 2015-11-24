@@ -20,20 +20,22 @@ VISensorIMUSourceEngine::VISensorIMUSourceEngine(const char *imuMask) : IMUSourc
   ros::master::getTopics(master_topics);
 
   for (auto topic : master_topics) {
-    if (topic.datatype == std::string("nav_msgs/Odometry")) {     // preference #1
-      sub_pose_ = node_.subscribe(node_.resolveName(imuMask), 1,
-                                  &VISensorIMUSourceEngine::VISensorOdometryCallback, this);
-      break;
-    }
-    if (topic.datatype == std::string("sensor_msgs/Imu")) {       // preference #2
-      sub_pose_ = node_.subscribe(node_.resolveName(imuMask), 1,
-                                  &VISensorIMUSourceEngine::VISensorIMUCallback, this);
-      break;
-    }
-    if (topic.datatype == std::string("geometry_msgs/TransformStamped")) { // preference #3
-      sub_pose_ = node_.subscribe(node_.resolveName(imuMask), 1,
-                                  &VISensorIMUSourceEngine::VISensorTFCallback, this);
-      break;
+    if (topic.name == imuMask) {
+      if (topic.datatype == std::string("nav_msgs/Odometry")) {
+        sub_pose_ = node_.subscribe(node_.resolveName(imuMask), 1,
+                                    &VISensorIMUSourceEngine::VISensorOdometryCallback, this);
+        break;
+      }
+      if (topic.datatype == std::string("sensor_msgs/Imu")) {
+        sub_pose_ = node_.subscribe(node_.resolveName(imuMask), 1,
+                                    &VISensorIMUSourceEngine::VISensorIMUCallback, this);
+        break;
+      }
+      if (topic.datatype == std::string("geometry_msgs/TransformStamped")) {
+        sub_pose_ = node_.subscribe(node_.resolveName(imuMask), 1,
+                                    &VISensorIMUSourceEngine::VISensorTFCallback, this);
+        break;
+      }
     }
   }
   cached_imu = NULL;
