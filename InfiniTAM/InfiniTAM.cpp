@@ -90,7 +90,7 @@ static void CreateDefaultImageSource(
     }
     if (imu_source != NULL) {
       printf("using IMU ROS topic: %s\n", imu_source);
-      imuSource = new VISensorIMUSourceEngine(imu_source);
+      imuSource = new ROSIMUSourceEngine(imu_source);
     }
   }
 	if (imageSource == NULL && source == std::string("vi-sensor"))
@@ -104,7 +104,7 @@ static void CreateDefaultImageSource(
     }
     if (imu_source != NULL) {
       printf("using IMU ROS topic: %s\n", imu_source);
-      imuSource = new VISensorIMUSourceEngine(imu_source);
+      imuSource = new ROSIMUSourceEngine(imu_source);
     }
   }
 	if (imageSource == NULL && source == std::string("kinect"))

@@ -1,5 +1,5 @@
 /*
- * VISensorIMUSourceEngine.h
+ * ROSIMUSourceEngine.h
  *
  *  Created on: Nov 23, 2015
  *      Author: anurag
@@ -23,7 +23,7 @@ namespace InfiniTAM
 {
   namespace Engine
   {
-    class VISensorIMUSourceEngine : public IMUSourceEngine
+    class ROSIMUSourceEngine : public IMUSourceEngine
     {
     private:
       static const int BUF_SIZE = 2048;
@@ -37,13 +37,13 @@ namespace InfiniTAM
 
       // conversion from quaternion to ITM IMU Measurement
       void quat2ITMIMU(const double qx, const double qy, const double qz, const double qw);
-      void VISensorOdometryCallback(const nav_msgs::Odometry::ConstPtr& msg);
-      void VISensorIMUCallback(const sensor_msgs::Imu::ConstPtr& msg);
-      void VISensorTFCallback(const geometry_msgs::TransformStamped::ConstPtr& msg);
+      void ROSOdometryCallback(const nav_msgs::Odometry::ConstPtr& msg);
+      void ROSIMUCallback(const sensor_msgs::Imu::ConstPtr& msg);
+      void ROSTFCallback(const geometry_msgs::TransformStamped::ConstPtr& msg);
 
     public:
-      VISensorIMUSourceEngine(const char *imuMask);
-      virtual ~VISensorIMUSourceEngine() { }
+      ROSIMUSourceEngine(const char *imuMask);
+      virtual ~ROSIMUSourceEngine() { }
 
       virtual bool hasMoreMeasurements(void);
       virtual void getMeasurement(ITMIMUMeasurement *imu);

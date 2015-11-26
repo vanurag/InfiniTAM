@@ -1,5 +1,5 @@
 /*
- * VISensorIMUSourceEngine.cpp
+ * ROSIMUSourceEngine.cpp
  *
  *  Created on: Nov 23, 2015
  *      Author: anurag
@@ -14,7 +14,7 @@
 
 using namespace InfiniTAM::Engine;
 
-VISensorIMUSourceEngine::VISensorIMUSourceEngine(const char *imuMask) : IMUSourceEngine(imuMask)
+ROSIMUSourceEngine::ROSIMUSourceEngine(const char *imuMask) : IMUSourceEngine(imuMask)
 {
   strncpy(this->imuMask, imuMask, BUF_SIZE);
   ros::master::getTopics(master_topics);
@@ -23,17 +23,17 @@ VISensorIMUSourceEngine::VISensorIMUSourceEngine(const char *imuMask) : IMUSourc
     if (topic.name == imuMask) {
       if (topic.datatype == std::string("nav_msgs/Odometry")) {
         sub_pose_ = node_.subscribe(node_.resolveName(imuMask), 1,
-                                    &VISensorIMUSourceEngine::VISensorOdometryCallback, this);
+                                    &ROSIMUSourceEngine::ROSOdometryCallback, this);
         break;
       }
       if (topic.datatype == std::string("sensor_msgs/Imu")) {
         sub_pose_ = node_.subscribe(node_.resolveName(imuMask), 1,
-                                    &VISensorIMUSourceEngine::VISensorIMUCallback, this);
+                                    &ROSIMUSourceEngine::ROSIMUCallback, this);
         break;
       }
       if (topic.datatype == std::string("geometry_msgs/TransformStamped")) {
         sub_pose_ = node_.subscribe(node_.resolveName(imuMask), 1,
-                                    &VISensorIMUSourceEngine::VISensorTFCallback, this);
+                                    &ROSIMUSourceEngine::ROSTFCallback, this);
         break;
       }
     }
@@ -41,7 +41,7 @@ VISensorIMUSourceEngine::VISensorIMUSourceEngine(const char *imuMask) : IMUSourc
   cached_imu = NULL;
 }
 
-void VISensorIMUSourceEngine::VISensorOdometryCallback(const nav_msgs::Odometry::ConstPtr& msg)
+void ROSIMUSourceEngine::ROSOdometryCallback(const nav_msgs::Odometry::ConstPtr& msg)
 {
   ROS_INFO("Odometry Orientation x: [%f], y: [%f], z: [%f], w: [%f]",
            msg->pose.pose.orientation.x, msg->pose.pose.orientation.y, msg->pose.pose.orientation.z,
@@ -50,14 +50,14 @@ void VISensorIMUSourceEngine::VISensorOdometryCallback(const nav_msgs::Odometry:
               msg->pose.pose.orientation.z, msg->pose.pose.orientation.w);
 }
 
-void VISensorIMUSourceEngine::VISensorIMUCallback(const sensor_msgs::Imu::ConstPtr& msg)
+void ROSIMUSourceEngine::ROSIMUCallback(const sensor_msgs::Imu::ConstPtr& msg)
 {
   ROS_INFO("IMU Orientation x: [%f], y: [%f], z: [%f], w: [%f]",
            msg->orientation.x,msg->orientation.y,msg->orientation.z,msg->orientation.w);
   quat2ITMIMU(msg->orientation.x, msg->orientation.y, msg->orientation.z, msg->orientation.w);
 }
 
-void VISensorIMUSourceEngine::VISensorTFCallback(
+void ROSIMUSourceEngine::ROSTFCallback(
     const geometry_msgs::TransformStamped::ConstPtr& msg)
 {
   ROS_INFO("TF Orientation x: [%f], y: [%f], z: [%f], w: [%f]",
@@ -68,7 +68,7 @@ void VISensorIMUSourceEngine::VISensorTFCallback(
 }
 
 // conversion from quaternion to rotation matrix
-void VISensorIMUSourceEngine::quat2ITMIMU(
+void ROSIMUSourceEngine::quat2ITMIMU(
     const double qx, const double qy, const double qz, const double qw) {
 
   cached_imu = new ITMIMUMeasurement();
@@ -84,12 +84,12 @@ void VISensorIMUSourceEngine::quat2ITMIMU(
   cached_imu->R.m22 = 1 - 2*pow(qx, 2) - 2*pow(qy, 2);
 }
 
-bool VISensorIMUSourceEngine::hasMoreMeasurements(void)
+bool ROSIMUSourceEngine::hasMoreMeasurements(void)
 {
   return (cached_imu != NULL);
 }
 
-void VISensorIMUSourceEngine::getMeasurement(ITMIMUMeasurement *imu)
+void ROSIMUSourceEngine::getMeasurement(ITMIMUMeasurement *imu)
 {
   if (cached_imu != NULL)
   {
