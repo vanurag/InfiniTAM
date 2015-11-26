@@ -3,6 +3,8 @@
  *
  *  Created on: Nov 23, 2015
  *      Author: anurag
+ *
+ *  Using JPL's Quaternion format: https://claraty.jpl.nasa.gov/man/software/development/conventions/standards_docs/unadopted/JPL_Quaternions_Breckenridge.pdf
  */
 
 
@@ -46,15 +48,16 @@ void ROSIMUSourceEngine::ROSOdometryCallback(const nav_msgs::Odometry::ConstPtr&
   ROS_INFO("Odometry Orientation x: [%f], y: [%f], z: [%f], w: [%f]",
            msg->pose.pose.orientation.x, msg->pose.pose.orientation.y, msg->pose.pose.orientation.z,
            msg->pose.pose.orientation.w);
-  quat2ITMIMU(msg->pose.pose.orientation.x, msg->pose.pose.orientation.y,
-              msg->pose.pose.orientation.z, msg->pose.pose.orientation.w);
+  quat2ITMIMU(Quaternion(msg->pose.pose.orientation.x, msg->pose.pose.orientation.y,
+                         msg->pose.pose.orientation.z, msg->pose.pose.orientation.w));
 }
 
 void ROSIMUSourceEngine::ROSIMUCallback(const sensor_msgs::Imu::ConstPtr& msg)
 {
   ROS_INFO("IMU Orientation x: [%f], y: [%f], z: [%f], w: [%f]",
            msg->orientation.x,msg->orientation.y,msg->orientation.z,msg->orientation.w);
-  quat2ITMIMU(msg->orientation.x, msg->orientation.y, msg->orientation.z, msg->orientation.w);
+  quat2ITMIMU(Quaternion(msg->orientation.x, msg->orientation.y,
+                         msg->orientation.z, msg->orientation.w));
 }
 
 void ROSIMUSourceEngine::ROSTFCallback(
@@ -63,25 +66,28 @@ void ROSIMUSourceEngine::ROSTFCallback(
   ROS_INFO("TF Orientation x: [%f], y: [%f], z: [%f], w: [%f]",
            msg->transform.rotation.x, msg->transform.rotation.y,
            msg->transform.rotation.z, msg->transform.rotation.w);
-  quat2ITMIMU(msg->transform.rotation.x, msg->transform.rotation.y,
-              msg->transform.rotation.z, msg->transform.rotation.w);
+  quat2ITMIMU(Quaternion(msg->transform.rotation.x, msg->transform.rotation.y,
+                         msg->transform.rotation.z, msg->transform.rotation.w));
 }
 
 // conversion from quaternion to rotation matrix
-void ROSIMUSourceEngine::quat2ITMIMU(
-    const double qx, const double qy, const double qz, const double qw) {
+void ROSIMUSourceEngine::quat2ITMIMU(const Quaternion imu_pose) {
 
+  // TODO(vanurag): make this user definable
+  Quaternion q_cam_to_imu(-0.0439623792008964, -0.07685149594247381,
+                          -0.9957522559683859, 0.025274394156932774);
+  Quaternion cam_pose = imu_pose * q_cam_to_imu;
   cached_imu = new ITMIMUMeasurement();
 
-  cached_imu->R.m00 = 1 - 2*pow(qy, 2) - 2*pow(qz, 2);
-  cached_imu->R.m01 = 2*qx*qy - 2*qz*qw;
-  cached_imu->R.m02 = 2*qx*qz + 2*qy*qw;
-  cached_imu->R.m10 = 2*qx*qy + 2*qz*qw;
-  cached_imu->R.m11 = 1 - 2*pow(qx, 2) - 2*pow(qz, 2);
-  cached_imu->R.m12 = 2*qy*qz - 2*qx*qw;
-  cached_imu->R.m20 = 2*qx*qz - 2*qy*qw;
-  cached_imu->R.m21 = 2*qy*qz + 2*qx*qw;
-  cached_imu->R.m22 = 1 - 2*pow(qx, 2) - 2*pow(qy, 2);
+  cached_imu->R.m00 = pow(cam_pose.w, 2) + pow(cam_pose.x, 2) - 0.5;
+  cached_imu->R.m01 = cam_pose.x*cam_pose.y + cam_pose.z*cam_pose.w;
+  cached_imu->R.m02 = cam_pose.x*cam_pose.z - cam_pose.y*cam_pose.w;
+  cached_imu->R.m10 = cam_pose.x*cam_pose.y - cam_pose.z*cam_pose.w;
+  cached_imu->R.m11 = pow(cam_pose.y, 2) + pow(cam_pose.w, 2) - 0.5;
+  cached_imu->R.m12 = cam_pose.y*cam_pose.z + cam_pose.x*cam_pose.w;
+  cached_imu->R.m20 = cam_pose.x*cam_pose.z + cam_pose.y*cam_pose.w;
+  cached_imu->R.m21 = cam_pose.y*cam_pose.z - cam_pose.x*cam_pose.w;
+  cached_imu->R.m22 = pow(cam_pose.w, 2) + pow(cam_pose.z, 2) - 0.5;
 }
 
 bool ROSIMUSourceEngine::hasMoreMeasurements(void)
