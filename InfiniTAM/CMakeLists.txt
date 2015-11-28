@@ -46,6 +46,13 @@ find_package(OpenNI2)
 CANONIFY_BOOL(OPENNI2_FOUND)
 message(STATUS "OpenNI2 found: " ${OPENNI2_FOUND})
 
+find_package(OpenCV CONFIG COMPONENTS core features2d viz REQUIRED
+             HINTS /home/anurag/kinfu_ws/devel/)
+CANONIFY_BOOL(OpenCV_FOUND)
+message(STATUS "OpenCV2 found: " ${OpenCV_FOUND})
+#CANONIFY_BOOL(opencv_core_FOUND)  
+#message(STATUS "OpenCV2 VIZ found: " ${opencv_core_FOUND})      
+
 find_package(libuvc QUIET)
 CANONIFY_BOOL(libuvc_FOUND)
 message(STATUS "libuvc found: ${libuvc_FOUND}")
