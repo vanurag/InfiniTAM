@@ -16,7 +16,8 @@
 
 using namespace InfiniTAM::Engine;
 
-ROSIMUSourceEngine::ROSIMUSourceEngine(const char *imuMask) : IMUSourceEngine(imuMask)
+ROSIMUSourceEngine::ROSIMUSourceEngine(const char *imuMask) : IMUSourceEngine(imuMask),
+    myWindow("Coordinate Frame")
 {
   strncpy(this->imuMask, imuMask, BUF_SIZE);
   ros::master::getTopics(master_topics);
@@ -41,6 +42,10 @@ ROSIMUSourceEngine::ROSIMUSourceEngine(const char *imuMask) : IMUSourceEngine(im
     }
   }
   cached_imu = NULL;
+
+  // Add camera coordinate axes visualization widget
+  myWindow.setWindowSize(cv::Size(600, 600));
+  myWindow.showWidget("Coordinate Widget", cv::viz::WCoordinateSystem(100.0));
 }
 
 void ROSIMUSourceEngine::ROSOdometryCallback(const nav_msgs::Odometry::ConstPtr& msg)
@@ -79,15 +84,47 @@ void ROSIMUSourceEngine::quat2ITMIMU(const Quaternion imu_pose) {
   Quaternion cam_pose = imu_pose * q_cam_to_imu;
   cached_imu = new ITMIMUMeasurement();
 
+  // JPL -> ORUtils Matrix
   cached_imu->R.m00 = pow(cam_pose.w, 2) + pow(cam_pose.x, 2) - 0.5;
-  cached_imu->R.m01 = cam_pose.x*cam_pose.y + cam_pose.z*cam_pose.w;
-  cached_imu->R.m02 = cam_pose.x*cam_pose.z - cam_pose.y*cam_pose.w;
-  cached_imu->R.m10 = cam_pose.x*cam_pose.y - cam_pose.z*cam_pose.w;
+  cached_imu->R.m10 = cam_pose.x*cam_pose.y + cam_pose.z*cam_pose.w;
+  cached_imu->R.m20 = cam_pose.x*cam_pose.z - cam_pose.y*cam_pose.w;
+  cached_imu->R.m01 = cam_pose.x*cam_pose.y - cam_pose.z*cam_pose.w;
   cached_imu->R.m11 = pow(cam_pose.y, 2) + pow(cam_pose.w, 2) - 0.5;
-  cached_imu->R.m12 = cam_pose.y*cam_pose.z + cam_pose.x*cam_pose.w;
-  cached_imu->R.m20 = cam_pose.x*cam_pose.z + cam_pose.y*cam_pose.w;
-  cached_imu->R.m21 = cam_pose.y*cam_pose.z - cam_pose.x*cam_pose.w;
+  cached_imu->R.m21 = cam_pose.y*cam_pose.z + cam_pose.x*cam_pose.w;
+  cached_imu->R.m02 = cam_pose.x*cam_pose.z + cam_pose.y*cam_pose.w;
+  cached_imu->R.m12 = cam_pose.y*cam_pose.z - cam_pose.x*cam_pose.w;
   cached_imu->R.m22 = pow(cam_pose.w, 2) + pow(cam_pose.z, 2) - 0.5;
+
+  // Non-JPL --> ORUtils Matrix
+//  cached_imu->R.m00 = 1.0 - 2*pow(cam_pose.y, 2) - 2*pow(cam_pose.z, 2);
+//  cached_imu->R.m10 = 2.0*cam_pose.x*cam_pose.y - 2.0*cam_pose.z*cam_pose.w;
+//  cached_imu->R.m20 = 2.0*cam_pose.x*cam_pose.z + 2.0*cam_pose.y*cam_pose.w;
+//  cached_imu->R.m01 = 2.0*cam_pose.x*cam_pose.y + 2.0*cam_pose.z*cam_pose.w;
+//  cached_imu->R.m11 = 1.0 - 2*pow(cam_pose.x, 2) - 2*pow(cam_pose.z, 2);
+//  cached_imu->R.m21 = 2.0*cam_pose.y*cam_pose.z - 2.0*cam_pose.x*cam_pose.w;
+//  cached_imu->R.m02 = 2.0*cam_pose.x*cam_pose.z - 2.0*cam_pose.y*cam_pose.w;
+//  cached_imu->R.m12 = 2.0*cam_pose.y*cam_pose.z + 2.0*cam_pose.x*cam_pose.w;
+//  cached_imu->R.m22 = 1.0 - 2*pow(cam_pose.x, 2) - 2*pow(cam_pose.y, 2);
+
+  VisualizePose();
+
+}
+
+void ROSIMUSourceEngine::VisualizePose() {
+
+  // Construct pose
+  cv::Mat pose_mat(3, 3, CV_32F);
+  float* mat_pointer = (float*)pose_mat.data;
+  for (int row = 0; row < 3; ++row) {
+    for (int col = 0; col < 3; ++col) {
+      mat_pointer[3*row + col] = cached_imu->R(col, row);
+    }
+  }
+  cv::Affine3f pose(pose_mat, cv::Vec3f(0.0, 0.0, 0.0));
+
+  myWindow.setWidgetPose("Coordinate Widget", pose);
+
+  myWindow.spinOnce(1, true);
 }
 
 bool ROSIMUSourceEngine::hasMoreMeasurements(void)

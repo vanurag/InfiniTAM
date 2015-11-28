@@ -20,6 +20,9 @@
 #include <sensor_msgs/Imu.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <opencv2/viz/vizcore.hpp>
+#include <opencv2/calib3d/calib3d.hpp>
+#include <iostream>
 
 namespace InfiniTAM
 {
@@ -36,6 +39,9 @@ namespace InfiniTAM
       ros::NodeHandle node_;
       ros::Subscriber sub_pose_;
       ros::master::V_TopicInfo master_topics;
+
+      /// Create visualization window
+      cv::viz::Viz3d myWindow;
 
       struct Quaternion {
         double x;
@@ -74,6 +80,7 @@ namespace InfiniTAM
       void ROSOdometryCallback(const nav_msgs::Odometry::ConstPtr& msg);
       void ROSIMUCallback(const sensor_msgs::Imu::ConstPtr& msg);
       void ROSTFCallback(const geometry_msgs::TransformStamped::ConstPtr& msg);
+      void VisualizePose();
 
     public:
       ROSIMUSourceEngine(const char *imuMask);
