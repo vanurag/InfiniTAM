@@ -21,6 +21,7 @@
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <opencv2/viz/vizcore.hpp>
+#include <opencv2/viz/types.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 #include <iostream>
 
@@ -39,9 +40,6 @@ namespace InfiniTAM
       ros::NodeHandle node_;
       ros::Subscriber sub_pose_;
       ros::master::V_TopicInfo master_topics;
-
-      /// Create visualization window
-      cv::viz::Viz3d myWindow;
 
       struct Quaternion {
         double x;
@@ -80,6 +78,17 @@ namespace InfiniTAM
       void ROSOdometryCallback(const nav_msgs::Odometry::ConstPtr& msg);
       void ROSIMUCallback(const sensor_msgs::Imu::ConstPtr& msg);
       void ROSTFCallback(const geometry_msgs::TransformStamped::ConstPtr& msg);
+
+      // Visualization
+      cv::viz::KeyboardEvent viz_key_event;
+      static cv::viz::Viz3d viz_window;
+      static cv::Affine3f viz_cam_pose;
+      static void VizKeyboardCallback(const cv::viz::KeyboardEvent&, void*) {
+        std::cout << "Setting VIZ viewing angle to camera's viewing direction" << std::endl;
+        cv::Affine3f viz_viewer_pose = viz_cam_pose;
+        viz_viewer_pose = viz_viewer_pose.translate(cv::Vec3f(0.0, 0.0, 10.0));
+        viz_window.setViewerPose(viz_viewer_pose);
+      }
       void VisualizePose();
 
     public:

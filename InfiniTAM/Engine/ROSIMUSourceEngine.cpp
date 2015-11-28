@@ -16,8 +16,11 @@
 
 using namespace InfiniTAM::Engine;
 
+cv::viz::Viz3d ROSIMUSourceEngine::viz_window = cv::viz::Viz3d("Pose Viewer");
+cv::Affine3f ROSIMUSourceEngine::viz_cam_pose = cv::Affine3f();
+
 ROSIMUSourceEngine::ROSIMUSourceEngine(const char *imuMask) : IMUSourceEngine(imuMask),
-    myWindow("Coordinate Frame")
+    viz_key_event(cv::viz::KeyboardEvent::Action::KEY_DOWN, "A", cv::viz::KeyboardEvent::ALT, 1)
 {
   strncpy(this->imuMask, imuMask, BUF_SIZE);
   ros::master::getTopics(master_topics);
@@ -44,8 +47,9 @@ ROSIMUSourceEngine::ROSIMUSourceEngine(const char *imuMask) : IMUSourceEngine(im
   cached_imu = NULL;
 
   // Add camera coordinate axes visualization widget
-  myWindow.setWindowSize(cv::Size(600, 600));
-  myWindow.showWidget("Coordinate Widget", cv::viz::WCoordinateSystem(100.0));
+  viz_window.setWindowSize(cv::Size(600, 600));
+  viz_window.showWidget("Coordinate Widget", cv::viz::WCoordinateSystem(100.0));
+  viz_window.registerKeyboardCallback(VizKeyboardCallback);
 }
 
 void ROSIMUSourceEngine::ROSOdometryCallback(const nav_msgs::Odometry::ConstPtr& msg)
@@ -120,11 +124,10 @@ void ROSIMUSourceEngine::VisualizePose() {
       mat_pointer[3*row + col] = cached_imu->R(col, row);
     }
   }
-  cv::Affine3f pose(pose_mat, cv::Vec3f(0.0, 0.0, 0.0));
-
-  myWindow.setWidgetPose("Coordinate Widget", pose);
-
-  myWindow.spinOnce(1, true);
+  viz_cam_pose.rotation(pose_mat);
+  viz_cam_pose.translate(cv::Vec3f(0.0, 0.0, 0.0));
+  viz_window.setWidgetPose("Coordinate Widget", viz_cam_pose);
+  viz_window.spinOnce(1, true);
 }
 
 bool ROSIMUSourceEngine::hasMoreMeasurements(void)
