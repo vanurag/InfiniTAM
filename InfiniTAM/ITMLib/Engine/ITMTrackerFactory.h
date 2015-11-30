@@ -57,6 +57,7 @@ namespace ITMLib
         makers.insert(std::make_pair(ITMLibSettings::TRACKER_ICP, &MakeICPTracker));
 		makers.insert(std::make_pair(ITMLibSettings::TRACKER_WICP, &MakeWeightedICPTracker));
         makers.insert(std::make_pair(ITMLibSettings::TRACKER_IMU, &MakeIMUTracker));
+        makers.insert(std::make_pair(ITMLibSettings::TRACKER_STRICT_IMU, &MakeStrictIMUTracker));
         makers.insert(std::make_pair(ITMLibSettings::TRACKER_REN, &MakeRenTracker));
       }
 
@@ -237,7 +238,7 @@ namespace ITMLib
 	  }
 
       /**
-       * \brief Makes an IMU tracker.
+       * \brief Makes an IMU tracker + Depth Tracker.
        */
       static ITMTracker *MakeIMUTracker(const Vector2i& trackedImageSize, const ITMLibSettings *settings, const ITMLowLevelEngine *lowLevelEngine,
                                         ITMIMUCalibrator *imuCalibrator, ITMScene<TVoxel,TIndex> *scene)
@@ -308,6 +309,19 @@ namespace ITMLib
 
         DIEWITHEXCEPTION("Failed to make IMU tracker");
       }
+
+
+      /**
+       * \brief Makes an IMU tracker.
+       */
+      static ITMTracker *MakeStrictIMUTracker(
+          const Vector2i& trackedImageSize, const ITMLibSettings *settings,
+          const ITMLowLevelEngine *lowLevelEngine,
+          ITMIMUCalibrator *imuCalibrator, ITMScene<TVoxel,TIndex> *scene)
+      {
+        return new ITMIMUTracker(imuCalibrator);
+      }
+
 
       /**
        * \brief Makes a Ren tracker.

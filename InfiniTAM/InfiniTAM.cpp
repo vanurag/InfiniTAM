@@ -200,6 +200,7 @@ try
 	} else if (arg2 == std::string("realsense")) { // R200
 	  internalSettings->sceneParams.viewFrustum_min = 0.5f;
 	  internalSettings->sceneParams.viewFrustum_max = 4.0f;
+	  internalSettings->trackerType = ITMLibSettings::TRACKER_STRICT_IMU;
 	} else if (arg2 == std::string("vi-sensor")) {
 	  internalSettings->sceneParams.viewFrustum_min = 0.2f;
     internalSettings->sceneParams.viewFrustum_max = 20.0f;
