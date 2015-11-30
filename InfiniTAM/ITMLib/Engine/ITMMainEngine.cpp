@@ -5,6 +5,7 @@
 using namespace ITMLib::Engine;
 
 ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib *calib, Vector2i imgSize_rgb, Vector2i imgSize_d)
+  : viz_window_("ITM Tracking Pose")
 {
 	// create all the things required for marching cubes and mesh extraction
 	// - uses additional memory (lots!)
@@ -55,7 +56,8 @@ ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib 
 	denseMapper = new ITMDenseMapper<ITMVoxel, ITMVoxelIndex>(settings);
 	denseMapper->ResetScene(scene);
 
-	imuCalibrator = new ITMIMUCalibrator_iPad();
+	// TODO(vanurag): Make this a user choice
+	imuCalibrator = new ITMIMUCalibrator_DRZ();
 	tracker = ITMTrackerFactory<ITMVoxel, ITMVoxelIndex>::Instance().Make(trackedImageSize, settings, lowLevelEngine, imuCalibrator, scene);
 	trackingController = new ITMTrackingController(tracker, visualisationEngine, lowLevelEngine, settings);
 
@@ -66,6 +68,10 @@ ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib 
 
 	fusionActive = true;
 	mainProcessingActive = true;
+
+	// VIZ
+	viz_window_.setWindowSize(cv::Size(600, 600));
+  viz_window_.showWidget("ITM Tracking Pose", cv::viz::WCoordinateSystem(100.0));
 }
 
 ITMMainEngine::~ITMMainEngine()
@@ -117,6 +123,21 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 
 	// tracking
 	trackingController->Track(trackingState, view);
+
+  // VIZ ITM Tracker estimate
+  Matrix4f itm_pose = trackingState->pose_d->GetInvM();
+  cv::Affine3f viz_itm_pose;
+  cv::Mat pose_mat(3, 3, CV_32F);
+  float* mat_pointer = (float*)pose_mat.data;
+  for (int row = 0; row < 3; ++row) {
+    for (int col = 0; col < 3; ++col) {
+      mat_pointer[3*row + col] = itm_pose(col, row);
+    }
+  }
+  viz_itm_pose.rotation(pose_mat);
+  viz_itm_pose.translate(cv::Vec3f(0.0, 0.0, 0.0));
+  viz_window_.setWidgetPose("ITM Tracking Pose", viz_itm_pose);
+  viz_window_.spinOnce(1, true);
 
 	// fusion
 	if (fusionActive) denseMapper->ProcessFrame(view, trackingState, scene, renderState_live);
