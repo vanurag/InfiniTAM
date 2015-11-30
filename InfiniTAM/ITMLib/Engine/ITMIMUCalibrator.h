@@ -80,6 +80,45 @@ namespace ITMLib
 				delete imuPose_cameracoords;
 			}
 		};
+
+		class ITMIMUCalibrator_DRZ : public ITMIMUCalibrator
+    {
+    private:
+      Matrix3f differential_rotation_change;
+      Vector3f t_imu, r_imu;
+      Matrix3f inv_oldR_imu;
+      Matrix3f newR_imu, oldR_imu;
+      bool hasTwoFrames;
+
+    public:
+      void RegisterMeasurement(const Matrix3f & R)
+      {
+        newR_imu = R;
+      }
+
+      Matrix3f GetDifferentialRotationChange()
+      {
+        if (hasTwoFrames)
+        {
+          oldR_imu.inv(inv_oldR_imu);
+          differential_rotation_change = newR_imu * inv_oldR_imu;
+        } else {
+          differential_rotation_change.setIdentity();
+        }
+        hasTwoFrames = true;
+        oldR_imu = newR_imu;
+        return differential_rotation_change;
+      }
+
+      ITMIMUCalibrator_DRZ() : ITMIMUCalibrator()
+      {
+        hasTwoFrames = false;
+        oldR_imu.setIdentity();
+        newR_imu.setIdentity();
+      }
+
+      ~ITMIMUCalibrator_DRZ(void) {}
+    };
 	}
 }
 
