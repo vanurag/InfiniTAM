@@ -48,7 +48,9 @@ ROSIMUSourceEngine::ROSIMUSourceEngine(const char *imuMask) : IMUSourceEngine(im
 
   // Add camera coordinate axes visualization widget
   viz_window.setWindowSize(cv::Size(600, 600));
-  viz_window.showWidget("Coordinate Widget", cv::viz::WCoordinateSystem(100.0));
+  viz_window.showWidget("Coordinate Widget", cv::viz::WCoordinateSystem(200.0));
+//  viz_window.showWidget("Test Sphere", cv::viz::WSphere(cv::Point3f(100.0, 0.0, 0.0), 5.0));
+  viz_window.showWidget("Camera Widget", cv::viz::WCoordinateSystem(100.0));
   viz_window.registerKeyboardCallback(VizKeyboardCallback);
 }
 
@@ -83,12 +85,18 @@ void ROSIMUSourceEngine::ROSTFCallback(
 void ROSIMUSourceEngine::quat2ITMIMU(const Quaternion imu_pose) {
 
   // TODO(vanurag): make this user definable
-  Quaternion q_cam_to_imu(-0.0439623792008964, -0.07685149594247381,
-                          -0.9957522559683859, 0.025274394156932774);
-  Quaternion cam_pose = imu_pose * q_cam_to_imu;
+//  Quaternion q_cam_to_imu(-0.0439623792008964, -0.07685149594247381,
+//                          -0.9957522559683859, 0.025274394156932774);
+//  Quaternion cam_pose = imu_pose * q_cam_to_imu;
+//  Quaternion q_imu_to_cam(0.0439623792008964, 0.07685149594247381,
+//                          0.9957522559683859, 0.025274394156932774);
+//  Quaternion cam_pose = q_imu_to_cam * imu_pose;
   cached_imu = new ITMIMUMeasurement();
 
-  // JPL -> ORUtils Matrix
+  // IMU Tracker only needs differential rotational changes.
+  // So, no need to convert to camera reference frame.
+  Quaternion cam_pose = imu_pose;
+  // JPL Convention quaternion -> ORUtils Matrix
   cached_imu->R.m00 = pow(cam_pose.w, 2) + pow(cam_pose.x, 2) - 0.5;
   cached_imu->R.m10 = cam_pose.x*cam_pose.y + cam_pose.z*cam_pose.w;
   cached_imu->R.m20 = cam_pose.x*cam_pose.z - cam_pose.y*cam_pose.w;
@@ -99,7 +107,7 @@ void ROSIMUSourceEngine::quat2ITMIMU(const Quaternion imu_pose) {
   cached_imu->R.m12 = cam_pose.y*cam_pose.z - cam_pose.x*cam_pose.w;
   cached_imu->R.m22 = pow(cam_pose.w, 2) + pow(cam_pose.z, 2) - 0.5;
 
-  // Non-JPL --> ORUtils Matrix
+  // Non-JPL Convention quaternion --> ORUtils Matrix
 //  cached_imu->R.m00 = 1.0 - 2*pow(cam_pose.y, 2) - 2*pow(cam_pose.z, 2);
 //  cached_imu->R.m10 = 2.0*cam_pose.x*cam_pose.y - 2.0*cam_pose.z*cam_pose.w;
 //  cached_imu->R.m20 = 2.0*cam_pose.x*cam_pose.z + 2.0*cam_pose.y*cam_pose.w;
@@ -126,7 +134,7 @@ void ROSIMUSourceEngine::VisualizePose() {
   }
   viz_cam_pose.rotation(pose_mat);
   viz_cam_pose.translate(cv::Vec3f(0.0, 0.0, 0.0));
-  viz_window.setWidgetPose("Coordinate Widget", viz_cam_pose);
+  viz_window.setWidgetPose("Camera Widget", viz_cam_pose);
   viz_window.spinOnce(1, true);
 }
 
