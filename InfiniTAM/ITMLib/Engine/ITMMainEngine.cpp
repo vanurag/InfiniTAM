@@ -57,7 +57,7 @@ ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib 
 	denseMapper->ResetScene(scene);
 
 	// TODO(vanurag): Make this a user choice
-	imuCalibrator = new ITMIMUCalibrator_DRZ();
+	imuCalibrator = new ITMIMUCalibrator_DRZ2();
 	tracker = ITMTrackerFactory<ITMVoxel, ITMVoxelIndex>::Instance().Make(trackedImageSize, settings, lowLevelEngine, imuCalibrator, scene);
 	trackingController = new ITMTrackingController(tracker, visualisationEngine, lowLevelEngine, settings);
 
@@ -125,7 +125,7 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 	trackingController->Track(trackingState, view);
 
   // VIZ ITM Tracker estimate
-  Matrix4f itm_pose = trackingState->pose_d->GetInvM();
+  Matrix4f itm_pose = trackingState->pose_d->GetM();
   cv::Affine3f viz_itm_pose;
   cv::Mat pose_mat(3, 3, CV_32F);
   float* mat_pointer = (float*)pose_mat.data;
