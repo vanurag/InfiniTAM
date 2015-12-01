@@ -41,6 +41,8 @@ namespace ITMLib
 				TRACKER_REN,
 				//! Identifies a tracker based on depth image and IMU measurement
 				TRACKER_IMU,
+				//! Identifies a tracker based on IMU measurement
+        TRACKER_STRICT_IMU,
 				//! Identifies a tracker that use weighted ICP only on depth image
 				TRACKER_WICP
 			} TrackerType;

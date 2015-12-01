@@ -4,6 +4,9 @@
 
 #include "../ITMLib.h"
 #include "../Utils/ITMLibSettings.h"
+#include <opencv2/viz/vizcore.hpp>
+#include <opencv2/viz/types.hpp>
+#include <opencv2/calib3d/calib3d.hpp>
 
 /** \mainpage
     This is the API reference documentation for InfiniTAM. For a general
@@ -71,6 +74,9 @@ namespace ITMLib
 			ITMScene<ITMVoxel, ITMVoxelIndex> *scene;
 			ITMRenderState *renderState_live;
 			ITMRenderState *renderState_freeview;
+
+			// VIZ
+			cv::viz::Viz3d viz_window_;
 
 		public:
 			enum GetImageType

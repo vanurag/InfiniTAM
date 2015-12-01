@@ -80,6 +80,110 @@ namespace ITMLib
 				delete imuPose_cameracoords;
 			}
 		};
+
+		class ITMIMUCalibrator_DRZ : public ITMIMUCalibrator
+    {
+    private:
+      Matrix3f differential_rotation_change;
+      Vector3f t_imu, r_imu;
+      Matrix3f inv_oldR_imu;
+      Matrix3f newR_imu, oldR_imu;
+      bool hasTwoFrames;
+
+    public:
+      void RegisterMeasurement(const Matrix3f & R)
+      {
+        newR_imu = R;
+      }
+
+      Matrix3f GetDifferentialRotationChange()
+      {
+        if (hasTwoFrames)
+        {
+          oldR_imu.inv(inv_oldR_imu);
+          differential_rotation_change = newR_imu * inv_oldR_imu;
+        } else {
+          differential_rotation_change.setIdentity();
+        }
+        hasTwoFrames = true;
+        oldR_imu = newR_imu;
+        return differential_rotation_change;
+      }
+
+      ITMIMUCalibrator_DRZ() : ITMIMUCalibrator()
+      {
+        hasTwoFrames = false;
+        oldR_imu.setIdentity();
+        newR_imu.setIdentity();
+      }
+
+      ~ITMIMUCalibrator_DRZ(void) {}
+    };
+
+		class ITMIMUCalibrator_DRZ2 : public ITMIMUCalibrator
+    {
+    private:
+      ITMPose *imuPose_imucoords, *imuPose_cameracoords;
+      Vector3f t_imu, r_imu;
+      Matrix3f inv_oldR_imu;
+      Matrix3f newR_imu, oldR_imu;
+      bool hasTwoFrames;
+
+    public:
+      void RegisterMeasurement(const Matrix3f & R)
+      {
+        oldR_imu = imuPose_imucoords->GetR();
+
+        imuPose_imucoords->SetR(R);
+
+        imuPose_imucoords->GetParams(t_imu, r_imu);
+        float rx, ry, rz;
+        rx = r_imu.x;
+        ry = r_imu.z;
+        rz = r_imu.y;
+        imuPose_imucoords->SetFrom(t_imu, Vector3f(rx, ry, rz));
+
+        newR_imu = imuPose_imucoords->GetR();
+      }
+
+      Matrix3f GetDifferentialRotationChange()
+      {
+        if (hasTwoFrames)
+        {
+          oldR_imu.inv(inv_oldR_imu);
+          imuPose_cameracoords->SetR(imuPose_imucoords->GetR() * inv_oldR_imu);
+
+          imuPose_cameracoords->GetParams(t_imu, r_imu);
+          float rx, ry, rz;
+          rx = r_imu.x;
+          ry = r_imu.z;
+          rz = r_imu.y;
+          imuPose_cameracoords->SetFrom(t_imu.x, t_imu.y, t_imu.z, rx, ry, -rz);
+        }
+
+        hasTwoFrames = true;
+        return imuPose_cameracoords->GetR();
+      }
+
+      ITMIMUCalibrator_DRZ2() : ITMIMUCalibrator()
+      {
+        hasTwoFrames = false;
+
+        imuPose_imucoords = new ITMPose();
+        imuPose_imucoords->SetFrom(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+
+        imuPose_cameracoords = new ITMPose();
+        imuPose_cameracoords->SetFrom(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+
+        oldR_imu.setIdentity();
+      }
+
+      ~ITMIMUCalibrator_DRZ2(void)
+      {
+        delete imuPose_imucoords;
+        delete imuPose_cameracoords;
+      }
+    };
 	}
 }
 

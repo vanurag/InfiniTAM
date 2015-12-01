@@ -1,7 +1,31 @@
 cmake_minimum_required(VERSION 2.8)
 project(InfiniTAM)
 
+find_package(catkin REQUIRED COMPONENTS 
+	            roscpp 
+	            message_generation 
+	            std_msgs
+	            cv_bridge
+	            image_transport)
+	            
+find_package(Boost REQUIRED)
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
+
+OPTION(ENABLE_CXX11 "Enable C++11 support" ON)
+
+IF(ENABLE_CXX11)
+  INCLUDE(CheckCXXCompilerFlag)
+  CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
+  CHECK_CXX_COMPILER_FLAG("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
+  IF(COMPILER_SUPPORTS_CXX11)
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+  ELSEIF(COMPILER_SUPPORTS_CXX0X)
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+  ELSE()
+    MESSAGE(STATUS "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
+  ENDIF()
+ENDIF(ENABLE_CXX11)
 
 macro(CANONIFY_BOOL var)
   if (${var})
@@ -18,9 +42,16 @@ find_package(CUDA QUIET)
 CANONIFY_BOOL(CUDA_FOUND)
 message(STATUS "CUDA found: " ${CUDA_FOUND})
 
-find_package(OpenNI QUIET)
-CANONIFY_BOOL(OPENNI_FOUND)
-message(STATUS "OpenNI found: " ${OPENNI_FOUND})
+find_package(OpenNI2)
+CANONIFY_BOOL(OPENNI2_FOUND)
+message(STATUS "OpenNI2 found: " ${OPENNI2_FOUND})
+
+find_package(OpenCV CONFIG COMPONENTS core features2d viz REQUIRED
+             HINTS /home/anurag/kinfu_ws/devel/)
+CANONIFY_BOOL(OpenCV_FOUND)
+message(STATUS "OpenCV2 found: " ${OpenCV_FOUND})
+#CANONIFY_BOOL(opencv_core_FOUND)  
+#message(STATUS "OpenCV2 VIZ found: " ${opencv_core_FOUND})      
 
 find_package(libuvc QUIET)
 CANONIFY_BOOL(libuvc_FOUND)

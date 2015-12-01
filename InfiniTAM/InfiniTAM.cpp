@@ -1,13 +1,17 @@
 // Copyright 2014-2015 Isis Innovation Limited and the authors of InfiniTAM
 
 #include <cstdlib>
+#include <ros/ros.h>
 
 #include "Engine/UIEngine.h"
 #include "Engine/ImageSourceEngine.h"
-
+#include "Engine/ROSIMUSourceEngine.h"
 #include "Engine/OpenNIEngine.h"
 #include "Engine/Kinect2Engine.h"
+#include "Engine/RealsenseEngine.h"
+#include "Engine/VISensorEngine.h"
 #include "Engine/LibUVCEngine.h"
+#include "Engine/ROSIMUSourceEngine.h"
 #include "Engine/RealSenseEngine.h"
 
 using namespace InfiniTAM::Engine;
@@ -18,31 +22,34 @@ using namespace InfiniTAM::Engine;
     @para arg4 the IMU images. If images are omitted, some live sources will
     be tried.
 */
-static void CreateDefaultImageSource(ImageSourceEngine* & imageSource, IMUSourceEngine* & imuSource, const char *arg1, const char *arg2, const char *arg3, const char *arg4)
+static void CreateDefaultImageSource(
+    ImageSourceEngine* & imageSource, IMUSourceEngine* & imuSource, const char *arg1,
+    const char *arg2, const char *arg3, const char *arg4, const char *arg5)
 {
 	const char *calibFile = arg1;
-	const char *filename1 = arg2;
-	const char *filename2 = arg3;
-	const char *filename_imu = arg4;
+	const char *source = arg2;
+	const char *imu_source = arg3;
+	const char *filename1 = arg4;
+	const char *filename2 = arg5;
 
 	printf("using calibration file: %s\n", calibFile);
 
-	if (filename2 != NULL)
+	if (filename2 != NULL && source == std::string("any"))
 	{
 		printf("using rgb images: %s\nusing depth images: %s\n", filename1, filename2);
-		if (filename_imu == NULL)
+		if (imu_source == NULL)
 		{
 			imageSource = new ImageFileReader(calibFile, filename1, filename2);
 		}
 		else
 		{
-			printf("using imu data: %s\n", filename_imu);
+			printf("using imu data: %s\n", imu_source);
 			imageSource = new RawFileReader(calibFile, filename1, filename2, Vector2i(320, 240), 0.5f);
-			imuSource = new IMUSourceEngine(filename_imu);
+			imuSource = new IMUSourceEngine(imu_source);
 		}
 	}
 
-	if (imageSource == NULL)
+	if (imageSource == NULL && source == std::string("any"))
 	{
 		printf("trying OpenNI device: %s\n", (filename1==NULL)?"<OpenNI default device>":filename1);
 		imageSource = new OpenNIEngine(calibFile, filename1);
@@ -52,7 +59,7 @@ static void CreateDefaultImageSource(ImageSourceEngine* & imageSource, IMUSource
 			imageSource = NULL;
 		}
 	}
-	if (imageSource == NULL)
+	if (imageSource == NULL && source == std::string("any"))
 	{
 		printf("trying UVC device\n");
 		imageSource = new LibUVCEngine(calibFile);
@@ -62,9 +69,19 @@ static void CreateDefaultImageSource(ImageSourceEngine* & imageSource, IMUSource
 			imageSource = NULL;
 		}
 	}
-	if (imageSource == NULL)
+	if (imageSource == NULL && source == std::string("any"))
+  {
+    printf("trying MS Kinect 2 device\n");
+    imageSource = new Kinect2Engine(calibFile);
+    if (imageSource->getDepthImageSize().x == 0)
+    {
+      //delete imageSource;
+      imageSource = NULL;
+    }
+  }
+	if (imageSource == NULL && source == std::string("any"))
 	{
-		printf("trying RealSense device\n");
+		printf("trying RealSense device (only Windows)\n");
 		imageSource = new RealSenseEngine(calibFile);
 		if (imageSource->getDepthImageSize().x == 0)
 		{
@@ -72,16 +89,76 @@ static void CreateDefaultImageSource(ImageSourceEngine* & imageSource, IMUSource
 			imageSource = NULL;
 		}
 	}
-	if (imageSource == NULL)
-	{
-		printf("trying MS Kinect 2 device\n");
-		imageSource = new Kinect2Engine(calibFile);
-		if (imageSource->getDepthImageSize().x == 0)
-		{
-			delete imageSource;
-			imageSource = NULL;
-		}
-	}
+
+
+	if (imageSource == NULL &&
+	    (source == std::string("realsense") || source == std::string("realsense+imu")))
+  {
+    printf("trying Intel Realsense device\n");
+    imageSource = new RealsenseEngine(calibFile);
+    if (imageSource->getDepthImageSize().x == 0)
+    {
+      delete imageSource;
+      imageSource = NULL;
+    }
+    if (source == std::string("realsense+imu")) {
+      if (imu_source != NULL) {
+        printf("using IMU ROS topic: %s\n", imu_source);
+        imuSource = new ROSIMUSourceEngine(imu_source);
+      } else {
+        printf("IMU source not provided! aborting.");
+        return;
+      }
+    }
+  }
+	if (imageSource == NULL && source == std::string("vi-sensor"))
+  {
+    printf("trying Skybotix VI-Sensor\n");
+    imageSource = new VISensorEngine(calibFile);
+    if (imageSource->getDepthImageSize().x == 0)
+    {
+      delete imageSource;
+      imageSource = NULL;
+    }
+    if (imu_source != NULL) {
+      printf("using IMU ROS topic: %s\n", imu_source);
+      imuSource = new ROSIMUSourceEngine(imu_source);
+    }
+  }
+	if (imageSource == NULL &&
+	    (source == std::string("kinect") || source == std::string("kinect+imu")))
+  {
+    printf("trying MS Kinect 2 device\n");
+    imageSource = new Kinect2Engine(calibFile);
+    if (imageSource->getDepthImageSize().x == 0)
+    {
+      //delete imageSource;
+      imageSource = NULL;
+    }
+    if (source == std::string("kinect+imu")) {
+      if (imu_source != NULL) {
+        printf("using IMU ROS topic: %s\n", imu_source);
+        imuSource = new ROSIMUSourceEngine(imu_source);
+      } else {
+        printf("IMU source not provided! aborting.");
+        return;
+      }
+    }
+  }
+	if (imageSource == NULL && filename2 != NULL && source == std::string("offline"))
+  {
+    printf("using rgb images: %s\nusing depth images: %s\n", filename1, filename2);
+    if (imu_source == NULL)
+    {
+      imageSource = new ImageFileReader(calibFile, filename1, filename2);
+    }
+    else
+    {
+      printf("using imu data: %s\n", imu_source);
+      imageSource = new RawFileReader(calibFile, filename1, filename2, Vector2i(320, 240), 0.5f);
+      imuSource = new IMUSourceEngine(imu_source);
+    }
+  }
 
 	// this is a hack to ensure backwards compatibility in certain configurations
 	if (imageSource == NULL) return;
@@ -95,10 +172,30 @@ static void CreateDefaultImageSource(ImageSourceEngine* & imageSource, IMUSource
 int main(int argc, char** argv)
 try
 {
-	const char *arg1 = "";
-	const char *arg2 = NULL;
-	const char *arg3 = NULL;
-	const char *arg4 = NULL;
+
+  if (argc < 3) {
+    printf("usage: %s [<calibfile>] [<source>] [optional:<imusource>] [optional:metadata]\n"
+           "  <calibfile>   : path to a file containing intrinsic calibration parameters\n"
+           "  <source>      : source input device 'any'/'realsense'/'vi-sensor'\n"
+           "  <imusource>   : ROS IMU topic/file containing transformations\n"
+           "  <metadata>    : either one argument to specify OpenNI device ID\n"
+           "                  or two arguments specifying rgb and depth file masks\n"
+           "\n"
+           "examples:\n"
+           "  %s ./Files/Teddy/calib.txt any ./Files/Teddy/Frames/%%04i.ppm ./Files/Teddy/Frames/%%04i.pgm\n"
+           "  %s ./Files/Teddy/calib.txt realsense\n\n", argv[0], argv[0], argv[0]);
+    return -1;
+  }
+
+  ros::Time::init();
+  ros::init(argc, argv, "infinitam_node");
+  ROS_INFO("Starting infinitam_node with node name %s", ros::this_node::getName().c_str());
+
+	const char *arg1 = "";    // calib
+	const char *arg2 = NULL;  // source device
+	const char *arg3 = NULL;  // IMU source
+	const char *arg4 = NULL;  // metadata-1
+	const char *arg5 = NULL;  // metadata-2
 
 	int arg = 1;
 	do {
@@ -109,24 +206,15 @@ try
 		if (argv[arg] != NULL) arg3 = argv[arg]; else break;
 		++arg;
 		if (argv[arg] != NULL) arg4 = argv[arg]; else break;
+		++arg;
+    if (argv[arg] != NULL) arg5 = argv[arg]; else break;
 	} while (false);
-
-	if (arg == 1) {
-		printf("usage: %s [<calibfile> [<imagesource>] ]\n"
-		       "  <calibfile>   : path to a file containing intrinsic calibration parameters\n"
-		       "  <imagesource> : either one argument to specify OpenNI device ID\n"
-		       "                  or two arguments specifying rgb and depth file masks\n"
-		       "\n"
-		       "examples:\n"
-		       "  %s ./Files/Teddy/calib.txt ./Files/Teddy/Frames/%%04i.ppm ./Files/Teddy/Frames/%%04i.pgm\n"
-		       "  %s ./Files/Teddy/calib.txt\n\n", argv[0], argv[0], argv[0]);
-	}
 
 	printf("initialising ...\n");
 	ImageSourceEngine *imageSource = NULL;
 	IMUSourceEngine *imuSource = NULL;
 
-	CreateDefaultImageSource(imageSource, imuSource, arg1, arg2, arg3, arg4);
+	CreateDefaultImageSource(imageSource, imuSource, arg1, arg2, arg3, arg4, arg5);
 	if (imageSource==NULL)
 	{
 		std::cout << "failed to open any image stream" << std::endl;
@@ -134,11 +222,37 @@ try
 	}
 
 	ITMLibSettings *internalSettings = new ITMLibSettings();
+	if (arg2 == std::string("kinect")) { // Kinect2
+	  internalSettings->sceneParams.viewFrustum_min = 0.5f;
+	  internalSettings->sceneParams.viewFrustum_max = 8.0f;
+	} else if (arg2 == std::string("kinect+imu")) { // Kinect2
+    internalSettings->sceneParams.viewFrustum_min = 0.5f;
+    internalSettings->sceneParams.viewFrustum_max = 8.0f;
+    //    internalSettings->trackerType = ITMLibSettings::TRACKER_STRICT_IMU;
+    internalSettings->trackerType = ITMLibSettings::TRACKER_IMU;
+	} else if (arg2 == std::string("realsense")) { // R200
+	  internalSettings->sceneParams.viewFrustum_min = 0.5f;
+	  internalSettings->sceneParams.viewFrustum_max = 4.0f;
+	} else if (arg2 == std::string("realsense+imu")) { // R200
+    internalSettings->sceneParams.viewFrustum_min = 0.5f;
+    internalSettings->sceneParams.viewFrustum_max = 4.0f;
+	  //    internalSettings->trackerType = ITMLibSettings::TRACKER_STRICT_IMU;
+    internalSettings->trackerType = ITMLibSettings::TRACKER_IMU;
+	} else if (arg2 == std::string("vi-sensor")) {
+	  internalSettings->sceneParams.viewFrustum_min = 0.2f;
+    internalSettings->sceneParams.viewFrustum_max = 20.0f;
+	}
+	std::cout << "Setting viewFrustum to the range: [ "
+      << internalSettings->sceneParams.viewFrustum_min << ", "
+      << internalSettings->sceneParams.viewFrustum_max << " ]" << std::endl;
 	ITMMainEngine *mainEngine = new ITMMainEngine(internalSettings, &imageSource->calib, imageSource->getRGBImageSize(), imageSource->getDepthImageSize());
 
-	UIEngine::Instance()->Initialise(argc, argv, imageSource, imuSource, mainEngine, "./Files/Out", internalSettings->deviceType);
+	UIEngine::Instance()->Initialise(argc, argv, imageSource, imuSource, mainEngine, "./Files/Out", internalSettings);
 	UIEngine::Instance()->Run();
 	UIEngine::Instance()->Shutdown();
+
+  printf("Exiting IoHandler!");
+  ros::shutdown();
 
 	delete mainEngine;
 	delete internalSettings;

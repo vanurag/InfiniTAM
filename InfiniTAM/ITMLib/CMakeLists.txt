@@ -209,6 +209,7 @@ if(WITH_CUDA)
     set(CUDA_ARCH_OPTIONS "${CUDA_ARCH_OPTIONS} -gencode arch=compute_${a},code=compute_${a}")
   endforeach()
   include_directories(${CUDA_INCLUDE_DIRS})
+  SET(CUDA_PROPAGATE_HOST_FLAGS OFF)
   cuda_add_library(ITMLib
 	${ITMLIB_CPU_OBJECTS}
 	${ITMLIB_CUDA_OBJECTS}
