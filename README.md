@@ -21,37 +21,37 @@ Other related projects can be found in the Oxford Active Vision Library <http://
 
 Several 3rd party libraries are needed for compiling InfiniTAM. The given version numbers are checked and working, but different versions might be fine as well. Some of the libraries are optional, and skipping them will reduce functionality.
 
-  - cmake (e.g. version 2.8.10.2 or 3.2.3)  
-    REQUIRED for Linux, unless you write your own build system  
-    OPTIONAL for MS Windows, if you use MSVC instead  
+  - cmake (e.g. version 2.8.10.2 or 3.2.3)
+    REQUIRED for Linux, unless you write your own build system
+    OPTIONAL for MS Windows, if you use MSVC instead
     available at http://www.cmake.org/
 
-  - OpenGL / GLUT (e.g. freeglut 2.8.0 or 3.0.0)  
-    REQUIRED for the visualisation  
-    the library should run without  
+  - OpenGL / GLUT (e.g. freeglut 2.8.0 or 3.0.0)
+    REQUIRED for the visualisation
+    the library should run without
     available at http://freeglut.sourceforge.net/
 
-  - CUDA (e.g. version 6.0 or 7.0)  
-    OPTIONAL but REQUIRED for all GPU accelerated code  
-    at least with cmake it is still possible to compile the CPU part without  
+  - CUDA (e.g. version 6.0 or 7.0)
+    OPTIONAL but REQUIRED for all GPU accelerated code
+    at least with cmake it is still possible to compile the CPU part without
     available at https://developer.nvidia.com/cuda-downloads
 
-  - OpenNI (e.g. version 2.2.0.33)  
-    OPTIONAL but REQUIRED to get live images from suitable hardware  
-    also make sure you have freenect/OpenNI2-FreenectDriver if you need it  
+  - OpenNI (e.g. version 2.2.0.33)
+    OPTIONAL but REQUIRED to get live images from suitable hardware
+    also make sure you have freenect/OpenNI2-FreenectDriver if you need it
     available at http://structure.io/openni
 
-  - libpng (e.g. version 1.6)  
-    OPTIONAL, allows to read PNG input files  
+  - libpng (e.g. version 1.6)
+    OPTIONAL, allows to read PNG input files
     available at http://libpng.org
 
-  - libuvc (e.g. github version from 2015-JUL-10)  
-    OPTIONAL, allows to get live images from Intel Realsense cameras  
-    currently this is only in branch mcguire-steve/master  
-    available at https://github.com/mcguire-steve/libuvc
+  - libuvc (e.g. github version from 2015-OCT-27)
+    OPTIONAL, allows to get live images from Intel Realsense cameras
+    currently this works only with branch olafkaehler/master
+    available at https://github.com/olafkaehler/libuvc
 
-  - doxygen (e.g. version 1.8.2)  
-    OPTIONAL, builds a nice reference manual  
+  - doxygen (e.g. version 1.8.2)
+    OPTIONAL, builds a nice reference manual
     available at http://www.doxygen.org/
 
 ###1.2 Build Process
@@ -93,11 +93,19 @@ Some sensors may need a small change to work correctly with OpenNI, the changes 
 
 The build process should result in an executable InfiniTAM, which is the main sample program. For a version without visualisation, try InfiniTAM_cli. If compiled with OpenNI support, both should run out-of-the-box without problems for live reconstruction. If you have calibration information for your specific device, you can pass it as the first argument to the program, e.g.:
 ```
-  $ ./InfiniTAM Teddy/calib.txt
+  $ ./InfiniTAM Teddy/calib.txt <source:kinect/realsense/vi-sensor/offline>
 ```
-If no OpenNI support has been compiled in, the program can be used for offline processing:
+Kinect requires OpenNI/libfreenect2 to be installed.
+Reaslense requires [R200 ros node](http://wiki.ros.org/RealSense_R200)
+VI-Sensor requires [vi-sensor ros node](https://github.com/ethz-asl/visensor_node)
+Can also request InfiniTAM to search all possible input sources:
 ```
-  $ ./InfiniTAM Teddy/calib.txt Teddy/Frames/%04i.ppm Teddy/Frames/%04i.pgm
+ $ ./InfiniTAM Teddy/calib.txt <source:any>
+```
+
+If no device support has been compiled in, the program can be used for offline processing:
+```
+  $ ./InfiniTAM Teddy/calib.txt offline Teddy/Frames/%04i.ppm Teddy/Frames/%04i.pgm
 ```
 The arguments are essentially masks for sprintf and the %04i will be replaced by a running number, accordingly.
 

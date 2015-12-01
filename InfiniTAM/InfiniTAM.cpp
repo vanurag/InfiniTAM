@@ -12,6 +12,7 @@
 #include "Engine/VISensorEngine.h"
 #include "Engine/LibUVCEngine.h"
 #include "Engine/ROSIMUSourceEngine.h"
+#include "Engine/RealSenseEngine.h"
 
 using namespace InfiniTAM::Engine;
 
@@ -69,15 +70,26 @@ static void CreateDefaultImageSource(
 		}
 	}
 	if (imageSource == NULL && source == std::string("any"))
+  {
+    printf("trying MS Kinect 2 device\n");
+    imageSource = new Kinect2Engine(calibFile);
+    if (imageSource->getDepthImageSize().x == 0)
+    {
+      //delete imageSource;
+      imageSource = NULL;
+    }
+  }
+	if (imageSource == NULL && source == std::string("any"))
 	{
-		printf("trying MS Kinect 2 device\n");
-		imageSource = new Kinect2Engine(calibFile);
+		printf("trying RealSense device (only Windows)\n");
+		imageSource = new RealSenseEngine(calibFile);
 		if (imageSource->getDepthImageSize().x == 0)
 		{
-			//delete imageSource;
+			delete imageSource;
 			imageSource = NULL;
 		}
 	}
+
 
 	if (imageSource == NULL &&
 	    (source == std::string("realsense") || source == std::string("realsense+imu")))

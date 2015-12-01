@@ -33,4 +33,3 @@ if(CUDA_FOUND)
         set(CUDA_HAVE_GPU FALSE CACHE BOOL "Whether CUDA-capable GPU is present")
     endif()
 endif()
-
