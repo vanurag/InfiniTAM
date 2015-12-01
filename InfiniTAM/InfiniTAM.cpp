@@ -79,7 +79,8 @@ static void CreateDefaultImageSource(
 		}
 	}
 
-	if (imageSource == NULL && source == std::string("realsense"))
+	if (imageSource == NULL &&
+	    (source == std::string("realsense") || source == std::string("realsense+imu")))
   {
     printf("trying Intel Realsense device\n");
     imageSource = new RealsenseEngine(calibFile);
@@ -88,9 +89,14 @@ static void CreateDefaultImageSource(
       delete imageSource;
       imageSource = NULL;
     }
-    if (imu_source != NULL) {
-      printf("using IMU ROS topic: %s\n", imu_source);
-      imuSource = new ROSIMUSourceEngine(imu_source);
+    if (source == std::string("realsense+imu")) {
+      if (imu_source != NULL) {
+        printf("using IMU ROS topic: %s\n", imu_source);
+        imuSource = new ROSIMUSourceEngine(imu_source);
+      } else {
+        printf("IMU source not provided! aborting.");
+        return;
+      }
     }
   }
 	if (imageSource == NULL && source == std::string("vi-sensor"))
@@ -107,7 +113,8 @@ static void CreateDefaultImageSource(
       imuSource = new ROSIMUSourceEngine(imu_source);
     }
   }
-	if (imageSource == NULL && source == std::string("kinect"))
+	if (imageSource == NULL &&
+	    (source == std::string("kinect") || source == std::string("kinect+imu")))
   {
     printf("trying MS Kinect 2 device\n");
     imageSource = new Kinect2Engine(calibFile);
@@ -115,6 +122,15 @@ static void CreateDefaultImageSource(
     {
       //delete imageSource;
       imageSource = NULL;
+    }
+    if (source == std::string("kinect+imu")) {
+      if (imu_source != NULL) {
+        printf("using IMU ROS topic: %s\n", imu_source);
+        imuSource = new ROSIMUSourceEngine(imu_source);
+      } else {
+        printf("IMU source not provided! aborting.");
+        return;
+      }
     }
   }
 	if (imageSource == NULL && filename2 != NULL && source == std::string("offline"))
@@ -197,10 +213,19 @@ try
 	if (arg2 == std::string("kinect")) { // Kinect2
 	  internalSettings->sceneParams.viewFrustum_min = 0.5f;
 	  internalSettings->sceneParams.viewFrustum_max = 8.0f;
+	} else if (arg2 == std::string("kinect+imu")) { // Kinect2
+    internalSettings->sceneParams.viewFrustum_min = 0.5f;
+    internalSettings->sceneParams.viewFrustum_max = 8.0f;
+    //    internalSettings->trackerType = ITMLibSettings::TRACKER_STRICT_IMU;
+    internalSettings->trackerType = ITMLibSettings::TRACKER_IMU;
 	} else if (arg2 == std::string("realsense")) { // R200
 	  internalSettings->sceneParams.viewFrustum_min = 0.5f;
 	  internalSettings->sceneParams.viewFrustum_max = 4.0f;
-	  internalSettings->trackerType = ITMLibSettings::TRACKER_STRICT_IMU;
+	} else if (arg2 == std::string("realsense+imu")) { // R200
+    internalSettings->sceneParams.viewFrustum_min = 0.5f;
+    internalSettings->sceneParams.viewFrustum_max = 4.0f;
+	  //    internalSettings->trackerType = ITMLibSettings::TRACKER_STRICT_IMU;
+    internalSettings->trackerType = ITMLibSettings::TRACKER_IMU;
 	} else if (arg2 == std::string("vi-sensor")) {
 	  internalSettings->sceneParams.viewFrustum_min = 0.2f;
     internalSettings->sceneParams.viewFrustum_max = 20.0f;
