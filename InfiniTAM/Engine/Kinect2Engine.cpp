@@ -176,13 +176,13 @@
 			    data->listener->waitForNewFrame(data->frames);
 			    
 				libfreenect2::Frame *rgbFrame = data->frames[libfreenect2::Frame::Color];
-				for (int i = 0; i < imageSize_rgb.x*imageSize_rgb.y*4; i+=4)
-				{
-					rgb[i/4].b   = rgbFrame->data[i+0];
-					rgb[i/4].g = rgbFrame->data[i+1];
-					rgb[i/4].r = rgbFrame->data[i+2];
-					rgb[i/4].a = rgbFrame->data[i+3];
-
+				for (int row = 0; row < imageSize_rgb.y; ++row) {
+				  for (int col = 0; col < imageSize_rgb.x; ++col) {
+            rgb[imageSize_rgb.x*(row+1) - col - 1].b = rgbFrame->data[4*(imageSize_rgb.x*row + col)];
+            rgb[imageSize_rgb.x*(row+1) - col - 1].g = rgbFrame->data[4*(imageSize_rgb.x*row + col) + 1];
+            rgb[imageSize_rgb.x*(row+1) - col - 1].r = rgbFrame->data[4*(imageSize_rgb.x*row + col) + 2];
+            rgb[imageSize_rgb.x*(row+1) - col - 1].a = rgbFrame->data[4*(imageSize_rgb.x*row + col) + 3];
+				  }
 				}
 
 			    libfreenect2::Frame *depthFrame = data->frames[libfreenect2::Frame::Depth];
@@ -190,8 +190,10 @@
 
         float* depth_pointer = (float*)depthMat.data;
 
-        for (int i = 0; i < imageSize_d.x * imageSize_d.y; ++i) {
-          depth[i] = (short)depth_pointer[i];
+        for (int row = 0; row < imageSize_d.y; ++row) {
+          for (int col = 0; col < imageSize_d.x; ++col) {
+            depth[imageSize_d.x*(row+1) - col - 1] = (short)depth_pointer[imageSize_d.x*row + col];
+          }
         }
 				data->listener->release(data->frames);
 			}else{
