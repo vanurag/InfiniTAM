@@ -220,6 +220,10 @@ try
 		std::cout << "failed to open any image stream" << std::endl;
 		return -1;
 	}
+	if (imuSource==NULL)
+  {
+    std::cout << "Proceeding without an IMU source" << std::endl;
+  }
 
 	ITMLibSettings *internalSettings = new ITMLibSettings();
 	if (arg2 == std::string("kinect")) { // Kinect2
@@ -232,10 +236,10 @@ try
     internalSettings->trackerType = ITMLibSettings::TRACKER_IMU;
 	} else if (arg2 == std::string("realsense")) { // R200
 	  internalSettings->sceneParams.viewFrustum_min = 0.5f;
-	  internalSettings->sceneParams.viewFrustum_max = 4.0f;
+	  internalSettings->sceneParams.viewFrustum_max = 2.0f; // 4.0f
 	} else if (arg2 == std::string("realsense+imu")) { // R200
     internalSettings->sceneParams.viewFrustum_min = 0.5f;
-    internalSettings->sceneParams.viewFrustum_max = 4.0f;
+    internalSettings->sceneParams.viewFrustum_max = 2.0f; // 4.0f
 	  //    internalSettings->trackerType = ITMLibSettings::TRACKER_STRICT_IMU;
     internalSettings->trackerType = ITMLibSettings::TRACKER_IMU;
 	} else if (arg2 == std::string("vi-sensor")) {

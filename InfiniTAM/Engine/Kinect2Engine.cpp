@@ -169,11 +169,12 @@
 
 		void Kinect2Engine::getImages(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage)
 		{
+		  ros::spinOnce();
 			Vector4u *rgb = rgbImage->GetData(MEMORYDEVICE_CPU);
 			short *depth = rawDepthImage->GetData(MEMORYDEVICE_CPU);
 			if (colorAvailable&&depthAvailable)	// in libFreenect2, both data are available or neither is available
 			{
-			    data->listener->waitForNewFrame(data->frames);
+        data->listener->waitForNewFrame(data->frames);
 			    
 				libfreenect2::Frame *rgbFrame = data->frames[libfreenect2::Frame::Color];
 				for (int row = 0; row < imageSize_rgb.y; ++row) {
@@ -185,8 +186,8 @@
 				  }
 				}
 
-			    libfreenect2::Frame *depthFrame = data->frames[libfreenect2::Frame::Depth];
-			    cv::Mat depthMat(424, 512, CV_16UC1, depthFrame->data);
+        libfreenect2::Frame *depthFrame = data->frames[libfreenect2::Frame::Depth];
+        cv::Mat depthMat(424, 512, CV_16UC1, depthFrame->data);
 
         float* depth_pointer = (float*)depthMat.data;
 
