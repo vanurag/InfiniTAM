@@ -175,7 +175,9 @@ void ITMMainEngine::GetImage(ITMUChar4Image *out, GetImageType getImageType, ITM
 		else
 		{
 			if (settings->deviceType == ITMLibSettings::DEVICE_CUDA) view->depth->UpdateHostFromDevice();
-			ITMVisualisationEngine<ITMVoxel, ITMVoxelIndex>::DepthToUchar4(out, view->depth);
+			ITMVisualisationEngine<ITMVoxel, ITMVoxelIndex>::DepthToUchar4(
+			    out, view->depth, Vector2f(settings->sceneParams.viewFrustum_min,
+			                               settings->sceneParams.viewFrustum_max));
 		}
 
 		break;

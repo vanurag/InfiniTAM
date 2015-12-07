@@ -27,7 +27,7 @@ namespace ITMLib
 
 			virtual ~IITMVisualisationEngine(void) {}
 
-			static void DepthToUchar4(ITMUChar4Image *dst, ITMFloatImage *src);
+			static void DepthToUchar4(ITMUChar4Image *dst, ITMFloatImage *src, Vector2f view_frustum);
 			static void NormalToUchar4(ITMUChar4Image* dst, ITMFloat4Image *src);
 			static void WeightToUchar4(ITMUChar4Image *dst, ITMFloatImage *src);
 
