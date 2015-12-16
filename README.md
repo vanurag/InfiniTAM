@@ -31,6 +31,10 @@ Several 3rd party libraries are needed for compiling InfiniTAM. The given versio
     the library should run without
     available at http://freeglut.sourceforge.net/
 
+  - Opencv2 catkin
+    REQUIRED for the visualization
+    available at https://github.com/ethz-asl/opencv2_catkin.git
+
   - CUDA (e.g. version 6.0 or 7.0)
     OPTIONAL but REQUIRED for all GPU accelerated code
     at least with cmake it is still possible to compile the CPU part without
@@ -60,7 +64,7 @@ Several 3rd party libraries are needed for compiling InfiniTAM. The given versio
 ```
   $ mkdir build
   $ cd build
-  $ cmake /path/to/InfiniTAM -DOPEN_NI_ROOT=/path/to/OpenNI2/
+  $ cmake /path/to/InfiniTAM -DOPEN_NI_ROOT=/path/to/OpenNI2/ -DOpenCV_DIR=/path/to/catkin/workspace/devel/share/OpenCV
   $ make
 ```
   To create a doxygen documentation, just run doxygen:
