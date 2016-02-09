@@ -32,6 +32,8 @@ ITMDepthTracker::ITMDepthTracker(Vector2i imgSize, TrackerIterationType *trackin
 	this->noICPLevel = noICPRunTillLevel;
 
 	this->terminationThreshold = terminationThreshold;
+
+	this->memory_type = memoryType;
 }
 
 ITMDepthTracker::~ITMDepthTracker(void) 
@@ -147,7 +149,7 @@ void ITMDepthTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 	this->SetEvaluationData(trackingState, view);
 	this->PrepareForEvaluation();
 
-	float f_old = 1e10, f_new;
+	float f_old = 1e10, f_new;  // error metric
 	int noValidPoints_new;
 
 	float hessian_good[6 * 6], hessian_new[6 * 6], A[6 * 6];
@@ -159,14 +161,33 @@ void ITMDepthTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 		this->SetEvaluationParams(levelId);
 		if (iterationType == TRACKER_ITERATION_NONE) continue;
 
+		// T_g,k =  approxInvPose
 		Matrix4f approxInvPose = trackingState->pose_d->GetInvM();
 		ITMPose lastKnownGoodPose(*(trackingState->pose_d));
 		f_old = 1e20f;
 		float lambda = 1.0;
 
+		// Libnabo
+    //  delete nns;
+    Eigen::MatrixXf M;
+    if (memory_type == MEMORYDEVICE_CPU) {
+      M = ITMVectorToEigenMatrix(
+          sceneHierarchy->levels[0]->pointsMap->GetData(MEMORYDEVICE_CPU),
+          sceneHierarchy->levels[0]->pointsMap->noDims);
+    } else {
+      M = ITMVectorToEigenMatrix(
+          sceneHierarchy->levels[0]->pointsMap->GetData(MEMORYDEVICE_CUDA),
+          sceneHierarchy->levels[0]->pointsMap->noDims);
+    }
+    //  Eigen::MatrixXf M(1, 1);
+    nns.reset(Nabo::NNSearchF::createKDTreeLinearHeap(M, M.rows()));
+//    nns = Nabo::NNSearchF::createKDTreeLinearHeap(M, M.rows());
+    std::cout << "Tree Prepared......................................... " << nns->cloud.cols() << std::endl;
+
 		for (int iterNo = 0; iterNo < noIterationsPerLevel[levelId]; iterNo++)
 		{
-			// evaluate error function and gradients
+		  std::cout << "Iteration no: " << iterNo << std::endl;
+		  // evaluate error function and gradients
 			noValidPoints_new = this->ComputeGandH(f_new, nabla_new, hessian_new, approxInvPose);
 
 			// check if error increased. If so, revert
@@ -196,5 +217,18 @@ void ITMDepthTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 			if (HasConverged(step)) break;
 		}
 	}
+}
+
+
+const Eigen::MatrixXf ITMDepthTracker::ITMVectorToEigenMatrix(
+    const Vector4f* vector, const Vector2i dim) {
+  Eigen::MatrixXf m(3, dim.height * dim.width);
+  for (int i = 0; i < dim.width * dim.height; ++i) {
+    m(0, i) = vector[i].x;
+    m(1, i) = vector[i].y;
+    m(2, i) = vector[i].z;
+  }
+
+  return m;
 }
 

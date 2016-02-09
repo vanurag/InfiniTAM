@@ -16,7 +16,7 @@
 
 using namespace InfiniTAM::Engine;
 
-cv::viz::Viz3d ROSIMUSourceEngine::viz_window = cv::viz::Viz3d("Pose Viewer");
+cv::viz::Viz3d ROSIMUSourceEngine::viz_window = cv::viz::Viz3d("IMU pose");
 cv::Affine3f ROSIMUSourceEngine::viz_cam_pose = cv::Affine3f();
 
 ROSIMUSourceEngine::ROSIMUSourceEngine(const char *imuMask) : IMUSourceEngine(imuMask),
@@ -48,7 +48,7 @@ ROSIMUSourceEngine::ROSIMUSourceEngine(const char *imuMask) : IMUSourceEngine(im
 
   // Add camera coordinate axes visualization widget
   viz_window.setWindowSize(cv::Size(600, 600));
-  viz_window.showWidget("Coordinate Widget", cv::viz::WCoordinateSystem(200.0));
+//  viz_window.showWidget("Coordinate Widget", cv::viz::WCoordinateSystem(200.0));
 //  viz_window.showWidget("Test Sphere", cv::viz::WSphere(cv::Point3f(100.0, 0.0, 0.0), 5.0));
   viz_window.showWidget("Camera Widget", cv::viz::WCoordinateSystem(100.0));
   viz_window.registerKeyboardCallback(VizKeyboardCallback);

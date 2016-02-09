@@ -221,4 +221,5 @@ else()
   add_library(ITMLib ${ITMLIB_CPU_OBJECTS} ${ITMLIB_COMMON_OBJECTS})
 endif()
 
+target_link_libraries(ITMLib ${libnabo_LIBRARIES})
 target_link_libraries(ITMLib Utils)

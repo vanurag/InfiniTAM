@@ -2,11 +2,11 @@ cmake_minimum_required(VERSION 2.8)
 project(InfiniTAM)
 
 find_package(catkin REQUIRED COMPONENTS 
-	            roscpp 
-	            message_generation 
-	            std_msgs
-	            cv_bridge
-	            image_transport)
+	           roscpp 
+	           message_generation 
+	           std_msgs
+	           cv_bridge
+	           image_transport)
 	            
 find_package(Boost REQUIRED)
 
@@ -60,6 +60,13 @@ message(STATUS "libuvc found: ${libuvc_FOUND}")
 find_package(PNG QUIET)
 CANONIFY_BOOL(PNG_FOUND)
 message(STATUS "libpng found: ${PNG_FOUND}")
+
+#--------------------
+# DEPENDENCY: nabo
+#--------------------
+find_package(libnabo REQUIRED)
+include_directories(${libnabo_INCLUDE_DIRS})
+message("-- libnabo found, version ${libnabo_VERSION}")
 
 OPTION(WITH_CUDA "Build with CUDA support?" ${CUDA_FOUND})
 INCLUDE(${PROJECT_SOURCE_DIR}/cmake/UseOpenMP.cmake)

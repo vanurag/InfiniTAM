@@ -10,7 +10,7 @@ _CPU_AND_GPU_CODE_ inline bool computePerPointGH_Depth_Ab(THREADPTR(float) *A, T
 	const THREADPTR(int) & x, const THREADPTR(int) & y,
 	const CONSTPTR(float) &depth, const CONSTPTR(Vector2i) & viewImageSize, const CONSTPTR(Vector4f) & viewIntrinsics, const CONSTPTR(Vector2i) & sceneImageSize,
 	const CONSTPTR(Vector4f) & sceneIntrinsics, const CONSTPTR(Matrix4f) & approxInvPose, const CONSTPTR(Matrix4f) & scenePose, const CONSTPTR(Vector4f) *pointsMap,
-	const CONSTPTR(Vector4f) *normalsMap, float distThresh)
+	const CONSTPTR(Vector4f) *normalsMap, float distThresh, const boost::shared_ptr<Nabo::NNSearchF>& nns = Nabo::NNSearchF::createKDTreeLinearHeap(Eigen::MatrixXf(1, 1)))
 {
 	if (depth <= 1e-8f) return false; //check if valid -- != 0.0f
 
@@ -25,17 +25,48 @@ _CPU_AND_GPU_CODE_ inline bool computePerPointGH_Depth_Ab(THREADPTR(float) *A, T
 	// transform to previous frame coordinates
 	tmp3Dpoint = approxInvPose * tmp3Dpoint;
 	tmp3Dpoint.w = 1.0f;
-
-	// project into previous rendered image
 	tmp3Dpoint_reproj = scenePose * tmp3Dpoint;
-	if (tmp3Dpoint_reproj.z <= 0.0f) return false;
-	tmp2Dpoint.x = sceneIntrinsics.x * tmp3Dpoint_reproj.x / tmp3Dpoint_reproj.z + sceneIntrinsics.z;
-	tmp2Dpoint.y = sceneIntrinsics.y * tmp3Dpoint_reproj.y / tmp3Dpoint_reproj.z + sceneIntrinsics.w;
+  if (tmp3Dpoint_reproj.z <= 0.0f) return false;
 
-	if (!((tmp2Dpoint.x >= 0.0f) && (tmp2Dpoint.x <= sceneImageSize.x - 2) && (tmp2Dpoint.y >= 0.0f) && (tmp2Dpoint.y <= sceneImageSize.y - 2)))
-		return false;
+	// project into previous rendered image -> point match pairs for ICP
+	if (nns->cloud.cols() > 1) {
+	  std::cout << "Using Libnabo NN " << nns->cloud.cols() << std::endl << std::endl;
+	  std::cout << "Sample cloud: " << std::endl;
+	  for (int c = 0, i = 0; c < 3 && i < nns->cloud.cols(); ++i) {
+	    if (nns->cloud.col(i).sum() != 0) {
+	      c += 1;
+	      std::cout << "Col " << i << ": " << nns->cloud.col(i) << std::endl;
+	    }
+	  }
+	  std::cout << std::endl;
 
-	curr3Dpoint = interpolateBilinear_withHoles(pointsMap, tmp2Dpoint, sceneImageSize);
+	  Eigen::Vector3f query(tmp3Dpoint_reproj.x, tmp3Dpoint_reproj.y, tmp3Dpoint_reproj.z);
+	  Eigen::VectorXi index(1);  // 1 nearest neighbour index required
+	  Eigen::VectorXf dists2(1);  // dist to nearest neighbour
+	  nns->knn(query, index, dists2, 1, 3.16, Nabo::NearestNeighbourSearch<float>::ALLOW_SELF_MATCH);
+
+	  curr3Dpoint.x = nns->cloud(0, index.coeff(0));
+	  curr3Dpoint.y = nns->cloud(1, index.coeff(0));
+	  curr3Dpoint.z = nns->cloud(2, index.coeff(0));
+	  curr3Dpoint.w = 1.0;
+
+	  if (curr3Dpoint.x != 0.0 || curr3Dpoint.y != 0.0 || curr3Dpoint.z != 0.0) {
+	    std::cout << curr3Dpoint.x << ", " << curr3Dpoint.y << ", " << curr3Dpoint.z << ", " << std::endl;
+	  } else {
+	    std::cout << "NN ZEROSSSSSSS " << index.coeff(0) << " " << dists2.coeff(0) << std::endl;
+	    return false;
+	  }
+	} else {
+	  std::cout << "NOT Using Libnabo NN" << std::endl;
+    tmp2Dpoint.x = sceneIntrinsics.x * tmp3Dpoint_reproj.x / tmp3Dpoint_reproj.z + sceneIntrinsics.z;
+    tmp2Dpoint.y = sceneIntrinsics.y * tmp3Dpoint_reproj.y / tmp3Dpoint_reproj.z + sceneIntrinsics.w;
+
+    if (!((tmp2Dpoint.x >= 0.0f) && (tmp2Dpoint.x <= sceneImageSize.x - 2) && (tmp2Dpoint.y >= 0.0f) && (tmp2Dpoint.y <= sceneImageSize.y - 2)))
+      return false;
+
+    curr3Dpoint = interpolateBilinear_withHoles(pointsMap, tmp2Dpoint, sceneImageSize);
+	}
+
 	if (curr3Dpoint.w < 0.0f) return false;
 
 	ptDiff.x = curr3Dpoint.x - tmp3Dpoint.x;
@@ -77,13 +108,13 @@ _CPU_AND_GPU_CODE_ inline bool computePerPointGH_Depth(THREADPTR(float) *localNa
 	const THREADPTR(int) & x, const THREADPTR(int) & y,
 	const CONSTPTR(float) &depth, const CONSTPTR(Vector2i) & viewImageSize, const CONSTPTR(Vector4f) & viewIntrinsics, const CONSTPTR(Vector2i) & sceneImageSize,
 	const CONSTPTR(Vector4f) & sceneIntrinsics, const CONSTPTR(Matrix4f) & approxInvPose, const CONSTPTR(Matrix4f) & scenePose, const CONSTPTR(Vector4f) *pointsMap,
-	const CONSTPTR(Vector4f) *normalsMap, float distThresh)
+	const CONSTPTR(Vector4f) *normalsMap, float distThresh, const boost::shared_ptr<Nabo::NNSearchF>& nns = Nabo::NNSearchF::createKDTreeLinearHeap(Eigen::MatrixXf(1, 1)))
 {
 	const int noPara = shortIteration ? 3 : 6;
 	float A[noPara];
 	float b;
 
-	bool ret = computePerPointGH_Depth_Ab<shortIteration,rotationOnly>(A, b, x, y, depth, viewImageSize, viewIntrinsics, sceneImageSize, sceneIntrinsics, approxInvPose, scenePose, pointsMap, normalsMap, distThresh);
+	bool ret = computePerPointGH_Depth_Ab<shortIteration,rotationOnly>(A, b, x, y, depth, viewImageSize, viewIntrinsics, sceneImageSize, sceneIntrinsics, approxInvPose, scenePose, pointsMap, normalsMap, distThresh, nns);
 
 	if (!ret) return false;
 

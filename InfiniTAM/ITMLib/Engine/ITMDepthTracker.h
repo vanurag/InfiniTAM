@@ -11,6 +11,10 @@
 #include "../Engine/ITMTracker.h"
 #include "../Engine/ITMLowLevelEngine.h"
 
+#include "nabo/nabo.h"
+
+#include <boost/thread/mutex.hpp>
+
 using namespace ITMLib::Objects;
 
 namespace ITMLib
@@ -43,6 +47,8 @@ namespace ITMLib
 			bool HasConverged(float *step) const;
 
 			void SetEvaluationData(ITMTrackingState *trackingState, const ITMView *view);
+
+			const Eigen::MatrixXf ITMVectorToEigenMatrix(const Vector4f* vector, const Vector2i dim);
 		protected:
 			float *distThresh;
 
@@ -53,14 +59,23 @@ namespace ITMLib
 			ITMSceneHierarchyLevel *sceneHierarchyLevel;
 			ITMTemplatedHierarchyLevel<ITMFloatImage> *viewHierarchyLevel;
 
+			int memory_type;
+			// libnabo kd-tree
+//      Nabo::NNSearchF* nns;
+
 			virtual int ComputeGandH(float &f, float *nabla, float *hessian, Matrix4f approxInvPose) = 0;
 
 		public:
 			void TrackCamera(ITMTrackingState *trackingState, const ITMView *view);
 
+			// libnabo kd-tree
+      boost::shared_ptr<Nabo::NNSearchF> nns;
+
 			ITMDepthTracker(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels, int noICPRunTillLevel, float distThresh,
 				float terminationThreshold, const ITMLowLevelEngine *lowLevelEngine, MemoryDeviceType memoryType);
 			virtual ~ITMDepthTracker(void);
+
+
 		};
 	}
 }
