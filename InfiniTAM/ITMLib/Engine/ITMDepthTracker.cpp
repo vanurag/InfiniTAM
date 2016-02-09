@@ -174,15 +174,11 @@ void ITMDepthTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
       M = ITMVectorToEigenMatrix(
           sceneHierarchy->levels[0]->pointsMap->GetData(MEMORYDEVICE_CPU),
           sceneHierarchy->levels[0]->pointsMap->noDims);
-    } else {
-      M = ITMVectorToEigenMatrix(
-          sceneHierarchy->levels[0]->pointsMap->GetData(MEMORYDEVICE_CUDA),
-          sceneHierarchy->levels[0]->pointsMap->noDims);
+      //  Eigen::MatrixXf M(1, 1);
+      nns.reset(Nabo::NNSearchF::createKDTreeLinearHeap(M, M.rows()));
+      //    nns = Nabo::NNSearchF::createKDTreeLinearHeap(M, M.rows());
+      std::cout << "Tree Prepared......................................... " << nns->cloud.cols() << std::endl;
     }
-    //  Eigen::MatrixXf M(1, 1);
-    nns.reset(Nabo::NNSearchF::createKDTreeLinearHeap(M, M.rows()));
-//    nns = Nabo::NNSearchF::createKDTreeLinearHeap(M, M.rows());
-    std::cout << "Tree Prepared......................................... " << nns->cloud.cols() << std::endl;
 
 		for (int iterNo = 0; iterNo < noIterationsPerLevel[levelId]; iterNo++)
 		{
