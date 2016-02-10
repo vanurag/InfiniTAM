@@ -9,6 +9,8 @@ using namespace ITMLib::Engine;
 
 ITMDepthTracker::ITMDepthTracker(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels, int noICPRunTillLevel, float distThresh,
 	float terminationThreshold, const ITMLowLevelEngine *lowLevelEngine, MemoryDeviceType memoryType)
+    : pc_viewer("Point Cloud Viewer"), scene_cloud_pointer(&scene_cloud),
+      current_view_cloud_pointer(&current_view_cloud)
 {
 	viewHierarchy = new ITMImageHierarchy<ITMTemplatedHierarchyLevel<ITMFloatImage> >(imgSize, trackingRegime, noHierarchyLevels, memoryType, true);
 	sceneHierarchy = new ITMImageHierarchy<ITMSceneHierarchyLevel>(imgSize, trackingRegime, noHierarchyLevels, memoryType, true);
@@ -34,6 +36,16 @@ ITMDepthTracker::ITMDepthTracker(Vector2i imgSize, TrackerIterationType *trackin
 	this->terminationThreshold = terminationThreshold;
 
 	this->memory_type = memoryType;
+
+	// PCL viewer
+	pc_viewer.setBackgroundColor(0, 0, 0);
+	pc_viewer.addPointCloud<pcl::PointXYZRGB>(scene_cloud_pointer, "scene cloud");
+  pc_viewer.setPointCloudRenderingProperties(
+      pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "scene cloud");
+  pc_viewer.addPointCloud<pcl::PointXYZRGB>(current_view_cloud_pointer, "current scan");
+  pc_viewer.setPointCloudRenderingProperties(
+      pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "current scan");
+
 }
 
 ITMDepthTracker::~ITMDepthTracker(void) 
@@ -182,7 +194,8 @@ void ITMDepthTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 
 		for (int iterNo = 0; iterNo < noIterationsPerLevel[levelId]; iterNo++)
 		{
-		  std::cout << "Iteration no: " << iterNo << std::endl;
+		  std::cout << "[ Level ID, Iteration no ]: " << "[ " << levelId << ", "
+		      << iterNo << " ]" << std::endl;
 		  // evaluate error function and gradients
 			noValidPoints_new = this->ComputeGandH(f_new, nabla_new, hessian_new, approxInvPose);
 
@@ -211,6 +224,10 @@ void ITMDepthTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 
 			// if step is small, assume it's going to decrease the error and finish
 			if (HasConverged(step)) break;
+
+			// Visualization
+			visualizeTracker(this->sceneHierarchyLevel->pointsMap, this->viewHierarchyLevel->depth,
+			                 this->viewHierarchyLevel->intrinsics, memory_type);
 		}
 	}
 }
@@ -228,3 +245,95 @@ const Eigen::MatrixXf ITMDepthTracker::ITMVectorToEigenMatrix(
   return m;
 }
 
+// 3D point vector to PCL point cloud
+const void ITMDepthTracker::Float4ImagetoPclPointCloud(
+    const ITMFloat4Image* im, pcl::PointCloud<pcl::PointXYZRGB>& cloud, Vector3i color,
+    int memory_type) {
+
+  cloud.clear();
+  const Vector4f* v = im->GetData(MemoryDeviceType(memory_type));
+  Vector4f point;
+  pcl::PointXYZRGB pc_point;
+  for (int i = 0; i < im->noDims.width * im->noDims.height; ++i) {
+#ifndef COMPILE_WITHOUT_CUDA
+  ITMSafeCall(cudaMemcpy(&point, &v[i], sizeof(Vector4f), cudaMemcpyDeviceToHost));
+#else
+  point = v[i];
+#endif
+//    std::cout << "Float4 point: " << i << " size: " << im->noDims << std::endl;
+//    std::cout << "value: " << point << std::endl;
+    pc_point.x = point.x;
+    pc_point.y = point.y;
+    pc_point.z = point.z;
+
+    pc_point.r = color[0];
+    pc_point.g = color[1];
+    pc_point.b = color[2];
+
+    cloud.push_back(pc_point);
+  }
+}
+
+// Depth Map to PCL point cloud
+const void ITMDepthTracker::FloatImagetoPclPointCloud(
+    const ITMFloatImage* im, pcl::PointCloud<pcl::PointXYZRGB>& cloud,
+    const Vector4f intrinsics, Vector3i color, int memory_type) {
+
+  cloud.clear();
+  const float* v = im->GetData(MemoryDeviceType(memory_type));
+  float point;
+  pcl::PointXYZRGB pc_point;
+  for (int row = 0; row < im->noDims.height; ++row) {
+    for (int col = 0; col < im->noDims.width; ++col) {
+#ifndef COMPILE_WITHOUT_CUDA
+  ITMSafeCall(cudaMemcpy(&point, &v[row*im->noDims.width + col], sizeof(float),
+                         cudaMemcpyDeviceToHost));
+#else
+  point = v[row*im->noDims.width + col];
+#endif
+//      std::cout << "Float point: " << row << " " << col << " size: " << im->noDims << std::endl;
+      pc_point.x = point * ((float(col) - intrinsics.z) / intrinsics.x);
+      pc_point.y = point * ((float(row) - intrinsics.w) / intrinsics.y);
+      pc_point.z = point;
+
+      pc_point.r = color[0];
+      pc_point.g = color[1];
+      pc_point.b = color[2];
+
+      cloud.push_back(pc_point);
+    }
+  }
+}
+
+// Tracker Visualization
+const void ITMDepthTracker::visualizeTracker(
+    const ITMFloat4Image* scene, const ITMFloatImage* current_view,
+    const Vector4f intrinsics, int memory_type) {
+
+//  pc_viewer.removeAllPointClouds();
+  // scene
+  Float4ImagetoPclPointCloud(scene, scene_cloud, Vector3i(255, 0, 0), memory_type);
+
+  // current view
+  FloatImagetoPclPointCloud(current_view, current_view_cloud, intrinsics,
+                            Vector3i(0, 0, 255), memory_type);
+
+  pc_viewer.updatePointCloud(scene_cloud_pointer, "scene cloud");
+  pc_viewer.updatePointCloud(current_view_cloud_pointer, "current scan");
+
+  pcl_render_stop = false;
+  boost::thread t(boost::bind(&ITMDepthTracker::pcl_render_loop, this));
+  if (std::cin.get() == '\n') {
+    std::cout << "Pressed ENTER" << std::endl;
+    pcl_render_stop = true;
+  }
+//  pc_viewer.spinOnce (100);
+}
+
+void ITMDepthTracker::pcl_render_loop() {
+  std::cout << "stop flag: " << pcl_render_stop << std::endl;
+  while (!pcl_render_stop) {
+    std::cout << "SPINNING......." << std::endl;
+    pc_viewer.spinOnce (100);
+  }
+}

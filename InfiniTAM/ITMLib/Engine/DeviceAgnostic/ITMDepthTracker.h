@@ -103,4 +103,3 @@ _CPU_AND_GPU_CODE_ inline bool computePerPointGH_Depth(THREADPTR(float) *localNa
 
 	return true;
 }
-

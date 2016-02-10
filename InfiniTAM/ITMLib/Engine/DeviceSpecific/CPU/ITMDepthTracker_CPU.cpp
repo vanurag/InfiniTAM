@@ -15,7 +15,6 @@ int ITMDepthTracker_CPU::ComputeGandH(float &f, float *nabla, float *hessian, Ma
 {
 
 	Vector4f *pointsMap = sceneHierarchyLevel->pointsMap->GetData(MEMORYDEVICE_CPU);
-
 	Vector4f *normalsMap = sceneHierarchyLevel->normalsMap->GetData(MEMORYDEVICE_CPU);
 	Vector4f sceneIntrinsics = sceneHierarchyLevel->intrinsics;
 	Vector2i sceneImageSize = sceneHierarchyLevel->pointsMap->noDims;
@@ -134,6 +133,7 @@ bool ITMDepthTracker_CPU::computePerPointGH_Depth_Ab_NN(THREADPTR(float) *A, THR
 
     if (curr3Dpoint.x != 0.0 || curr3Dpoint.y != 0.0 || curr3Dpoint.z != 0.0) {
       std::cout << curr3Dpoint.x << ", " << curr3Dpoint.y << ", " << curr3Dpoint.z << ", " << std::endl;
+      std::cout << "NN YAYYYYYYYYY " << index.coeff(0) << " " << dists2.coeff(0) << std::endl;
     } else {
       std::cout << "NN ZEROSSSSSSS " << index.coeff(0) << " " << dists2.coeff(0) << std::endl;
       return false;

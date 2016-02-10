@@ -13,7 +13,16 @@
 
 #include "nabo/nabo.h"
 
+#include <boost/thread.hpp>
 #include <boost/thread/mutex.hpp>
+
+// PCL
+#include <pcl/point_types.h>
+#include <pcl/visualization/cloud_viewer.h>
+#include <pcl/visualization/pcl_visualizer.h>
+#include <pcl/common/common_headers.h>
+#include <pcl/common/transforms.h>
+
 
 using namespace ITMLib::Objects;
 
@@ -38,6 +47,13 @@ namespace ITMLib
 			int noICPLevel;
 
 			float terminationThreshold;
+
+			// PCL viewer
+			bool pcl_render_stop = false;
+			pcl::visualization::PCLVisualizer pc_viewer;
+			pcl::PointCloud<pcl::PointXYZRGB> scene_cloud, current_view_cloud;
+			pcl::PointCloud<pcl::PointXYZRGB>::Ptr scene_cloud_pointer, current_view_cloud_pointer;
+			void pcl_render_loop();
 
 			void PrepareForEvaluation();
 			void SetEvaluationParams(int levelId);
@@ -64,6 +80,20 @@ namespace ITMLib
 //      Nabo::NNSearchF* nns;
 
 			virtual int ComputeGandH(float &f, float *nabla, float *hessian, Matrix4f approxInvPose) = 0;
+
+			// 3D point vector to PCL point cloud
+			const void Float4ImagetoPclPointCloud(
+			    const ITMFloat4Image* im, pcl::PointCloud<pcl::PointXYZRGB>& cloud, Vector3i color,
+			    int memory_type);
+
+			// Depth Map to PCL point cloud
+			const void FloatImagetoPclPointCloud(
+			    const ITMFloatImage* im, pcl::PointCloud<pcl::PointXYZRGB>& cloud,
+			    const Vector4f intrinsics, Vector3i color, int memory_type);
+
+			// Tracker Visualization
+			const void visualizeTracker(const ITMFloat4Image* scene, const ITMFloatImage* current_view,
+			                            const Vector4f intrinsics, int memory_type);
 
 		public:
 			void TrackCamera(ITMTrackingState *trackingState, const ITMView *view);

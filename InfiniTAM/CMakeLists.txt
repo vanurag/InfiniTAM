@@ -68,6 +68,15 @@ find_package(libnabo REQUIRED)
 include_directories(${libnabo_INCLUDE_DIRS})
 message("-- libnabo found, version ${libnabo_VERSION}")
 
+#--------------------
+# DEPENDENCY: PCL
+#--------------------
+find_package(PCL 1.7 REQUIRED)
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
+message("-- PCL found, version ${PCL_VERSION}")
+
 OPTION(WITH_CUDA "Build with CUDA support?" ${CUDA_FOUND})
 INCLUDE(${PROJECT_SOURCE_DIR}/cmake/UseOpenMP.cmake)
 INCLUDE(${PROJECT_SOURCE_DIR}/cmake/UseRealSense.cmake)
