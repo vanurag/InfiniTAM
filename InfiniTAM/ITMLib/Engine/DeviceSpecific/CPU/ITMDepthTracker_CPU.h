@@ -29,7 +29,7 @@ namespace ITMLib
 
 		public:
 			ITMDepthTracker_CPU(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels, int noICPRunTillLevel, float distThresh,
-				float terminationThreshold, const ITMLowLevelEngine *lowLevelEngine);
+				float terminationThreshold, bool visualize_icp, const ITMLowLevelEngine *lowLevelEngine);
 			~ITMDepthTracker_CPU(void);
 		};
 	}

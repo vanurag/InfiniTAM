@@ -8,8 +8,8 @@
 using namespace ITMLib::Engine;
 
 ITMDepthTracker::ITMDepthTracker(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels, int noICPRunTillLevel, float distThresh,
-	float terminationThreshold, const ITMLowLevelEngine *lowLevelEngine, MemoryDeviceType memoryType)
-    : pc_viewer("Point Cloud Viewer"), scene_cloud_pointer(&scene_cloud),
+	float terminationThreshold, bool visualize_icp, const ITMLowLevelEngine *lowLevelEngine, MemoryDeviceType memoryType)
+    : pc_viewer("ICP visualizer"), scene_cloud_pointer(&scene_cloud),
       current_view_cloud_pointer(&current_view_cloud)
 {
 	viewHierarchy = new ITMImageHierarchy<ITMTemplatedHierarchyLevel<ITMFloatImage> >(imgSize, trackingRegime, noHierarchyLevels, memoryType, true);
@@ -38,13 +38,16 @@ ITMDepthTracker::ITMDepthTracker(Vector2i imgSize, TrackerIterationType *trackin
 	this->memory_type = memoryType;
 
 	// PCL viewer
-	pc_viewer.setBackgroundColor(0, 0, 0);
-	pc_viewer.addPointCloud<pcl::PointXYZRGB>(scene_cloud_pointer, "scene cloud");
-  pc_viewer.setPointCloudRenderingProperties(
-      pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "scene cloud");
-  pc_viewer.addPointCloud<pcl::PointXYZRGB>(current_view_cloud_pointer, "current scan");
-  pc_viewer.setPointCloudRenderingProperties(
-      pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "current scan");
+	viz_icp = visualize_icp;
+	if (viz_icp) {
+    pc_viewer.setBackgroundColor(0, 0, 0);
+    pc_viewer.addPointCloud<pcl::PointXYZRGB>(scene_cloud_pointer, "scene cloud");
+    pc_viewer.setPointCloudRenderingProperties(
+        pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "scene cloud");
+    pc_viewer.addPointCloud<pcl::PointXYZRGB>(current_view_cloud_pointer, "current scan");
+    pc_viewer.setPointCloudRenderingProperties(
+        pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "current scan");
+	}
 
 }
 
@@ -226,8 +229,10 @@ void ITMDepthTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 			if (HasConverged(step)) break;
 
 			// Visualization
-			visualizeTracker(this->sceneHierarchyLevel->pointsMap, this->viewHierarchyLevel->depth,
-			                 this->viewHierarchyLevel->intrinsics, memory_type);
+			if (viz_icp) {
+        visualizeTracker(this->sceneHierarchyLevel->pointsMap, this->viewHierarchyLevel->depth,
+                         this->viewHierarchyLevel->intrinsics, memory_type);
+			}
 		}
 	}
 }

@@ -45,6 +45,9 @@ ITMLibSettings::ITMLibSettings(void)
 	//trackerType = TRACKER_IMU;
 	//trackerType = TRACKER_WICP;
 
+	// ICP visualization
+	visualizeICP = false;
+
 	/// model the sensor noise as  the weight for weighted ICP
 	modelSensorNoise = false;
 	if (trackerType == TRACKER_WICP) modelSensorNoise = true;
@@ -64,9 +67,9 @@ ITMLibSettings::ITMLibSettings(void)
     noHierarchyLevels = 1;
     trackingRegime = new TrackerIterationType[noHierarchyLevels];
 
-    trackingRegime[0] = TRACKER_ITERATION_NONE;
-//    trackingRegime[1] = TRACKER_ITERATION_TRANSLATION;
-      //trackingRegime[2] = TRACKER_ITERATION_TRANSLATION;
+//    trackingRegime[0] = TRACKER_ITERATION_BOTH;
+    trackingRegime[0] = TRACKER_ITERATION_TRANSLATION;
+//    trackingRegime[1] = TRACKER_ITERATION_ROTATION;
   }
 	else
 	{

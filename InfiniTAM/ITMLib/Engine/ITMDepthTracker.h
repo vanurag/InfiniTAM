@@ -49,6 +49,7 @@ namespace ITMLib
 			float terminationThreshold;
 
 			// PCL viewer
+			bool viz_icp = false; // Whether or not to run visualization routine
 			bool pcl_render_stop = false;
 			pcl::visualization::PCLVisualizer pc_viewer;
 			pcl::PointCloud<pcl::PointXYZRGB> scene_cloud, current_view_cloud;
@@ -102,7 +103,7 @@ namespace ITMLib
       boost::shared_ptr<Nabo::NNSearchF> nns;
 
 			ITMDepthTracker(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels, int noICPRunTillLevel, float distThresh,
-				float terminationThreshold, const ITMLowLevelEngine *lowLevelEngine, MemoryDeviceType memoryType);
+				float terminationThreshold, bool visualize_icp, const ITMLowLevelEngine *lowLevelEngine, MemoryDeviceType memoryType);
 			virtual ~ITMDepthTracker(void);
 
 
