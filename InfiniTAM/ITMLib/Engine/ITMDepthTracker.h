@@ -94,8 +94,8 @@ namespace ITMLib
 
 			// Tracker Visualization
 			const void visualizeTracker(
-			    const ITMFloat4Image* scene, const ITMFloatImage* current_view,
-			    const Vector4f intrinsics, int memory_type, std::vector<Matrix4f*>& tf_chain);
+			    const ITMFloat4Image* scene, const ITMFloatImage* current_view, const Vector4f intrinsics,
+			    int memory_type, std::vector<Matrix4f*>& tf_chain, bool converged, std::vector<bool>& update_flags);
 
 		public:
 			void TrackCamera(ITMTrackingState *trackingState, const ITMView *view);
