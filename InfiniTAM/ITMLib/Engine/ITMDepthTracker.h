@@ -80,7 +80,7 @@ namespace ITMLib
 			// libnabo kd-tree
 //      Nabo::NNSearchF* nns;
 
-			virtual int ComputeGandH(float &f, float *nabla, float *hessian, Matrix4f approxInvPose) = 0;
+			virtual std::pair<Vector4f*, int> ComputeGandH(float &f, float *nabla, float *hessian, Matrix4f approxInvPose) = 0;
 
 			// 3D point vector to PCL point cloud
 			const void Float4ImagetoPclPointCloud(
@@ -92,10 +92,14 @@ namespace ITMLib
 			    const ITMFloatImage* im, pcl::PointCloud<pcl::PointXYZRGB>& cloud,
 			    const Vector4f intrinsics, Vector3i color, int memory_type, std::vector<Matrix4f*>& tf_chain);
 
+			// Draw ICP point matches
+			void DrawPointMatches(
+			    pcl::PointCloud<pcl::PointXYZRGB>& cloud, Vector4f* matches, Vector3i color);
+
 			// Tracker Visualization
 			const void visualizeTracker(
 			    const ITMFloat4Image* scene, const ITMFloatImage* current_view,
-			    const Vector4f intrinsics, int memory_type, std::vector<Matrix4f*>& tf_chain, bool converged);
+			    const Vector4f intrinsics, Vector4f* matches, int memory_type, std::vector<Matrix4f*>& tf_chain, bool converged);
 
 		public:
 			void TrackCamera(ITMTrackingState *trackingState, const ITMView *view);

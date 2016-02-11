@@ -167,6 +167,7 @@ void ITMDepthTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 
 	float f_old = 1e10, f_new;  // error metric
 	int noValidPoints_new;
+	Vector4f* matches;
 
 	float hessian_good[6 * 6], hessian_new[6 * 6], A[6 * 6];
 	float nabla_good[6], nabla_new[6];
@@ -201,7 +202,9 @@ void ITMDepthTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 		  std::cout << "[ Level ID, Iteration no ]: " << "[ " << levelId << ", "
 		      << iterNo << " ]" << std::endl;
 		  // evaluate error function and gradients
-			noValidPoints_new = this->ComputeGandH(f_new, nabla_new, hessian_new, approxInvPose);
+		  std::pair<Vector4f*, int> res = this->ComputeGandH(f_new, nabla_new, hessian_new, approxInvPose);
+		  matches = res.first;
+			noValidPoints_new = res.second;
 
 			// check if error increased. If so, revert
 			if ((noValidPoints_new <= 0)||(f_new > f_old)) {
@@ -236,8 +239,9 @@ void ITMDepthTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 			  std::vector<Matrix4f*> tf_chain;
 			  tf_chain.push_back(T1);
 			  tf_chain.push_back(T2);
-        visualizeTracker(this->sceneHierarchyLevel->pointsMap, this->viewHierarchyLevel->depth,
-                         this->viewHierarchyLevel->intrinsics, memory_type, tf_chain, converged);
+        visualizeTracker(
+            this->sceneHierarchyLevel->pointsMap, this->viewHierarchyLevel->depth,
+            this->viewHierarchyLevel->intrinsics, matches, memory_type, tf_chain, converged);
 			}
 
 			// if step is small, assume it's going to decrease the error and finish
@@ -329,21 +333,42 @@ const void ITMDepthTracker::FloatImagetoPclPointCloud(
   }
 }
 
+
+// Draw ICP point matches
+void ITMDepthTracker::DrawPointMatches(
+    pcl::PointCloud<pcl::PointXYZRGB>& cloud, Vector4f* matches, Vector3i color) {
+
+  for (int i = 0; i < cloud.size(); ++i) {
+    if (matches[i].w != 0.0) {
+      pcl::PointXYZ m;
+      m.x = matches[i].x;
+      m.y = matches[i].y;
+      m.z = matches[i].z;
+      std::string l_string("line");
+      l_string += std::to_string(i);
+      pc_viewer.addLine(cloud[i], m, color.r, color.g, color.b, l_string);
+    }
+  }
+}
+
+
 // Tracker Visualization
 const void ITMDepthTracker::visualizeTracker(
     const ITMFloat4Image* scene, const ITMFloatImage* current_view,
-    const Vector4f intrinsics, int memory_type, std::vector<Matrix4f*>& tf_chain, bool converged) {
+    const Vector4f intrinsics, Vector4f* matches, int memory_type, std::vector<Matrix4f*>& tf_chain, bool converged) {
 
 //  pc_viewer.removeAllPointClouds();
   // scene
   Float4ImagetoPclPointCloud(scene, scene_cloud, Vector3i(255, 0, 0), memory_type);
+  pc_viewer.updatePointCloud(scene_cloud_pointer, "scene cloud");
 
   // current view
   FloatImagetoPclPointCloud(current_view, current_view_cloud, intrinsics,
                             Vector3i(0, 0, 255), memory_type, tf_chain);
-
-  pc_viewer.updatePointCloud(scene_cloud_pointer, "scene cloud");
   pc_viewer.updatePointCloud(current_view_cloud_pointer, "current scan");
+
+  // matches
+  DrawPointMatches(current_view_cloud, matches, Vector3i(255, 255, 255));
 
   // Message
   if (converged) {

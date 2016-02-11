@@ -16,6 +16,7 @@ struct ITMDepthTracker_CUDA::AccuCell {
 
 struct ITMDepthTracker_KernelParameters {
 	ITMDepthTracker_CUDA::AccuCell *accu;
+	Vector4f* matches;
 	float *depth;
 	Matrix4f approxInvPose;
 	Vector4f *pointsMap;
@@ -47,7 +48,7 @@ ITMDepthTracker_CUDA::~ITMDepthTracker_CUDA(void)
 	ITMSafeCall(cudaFree(accu_device));
 }
 
-int ITMDepthTracker_CUDA::ComputeGandH(float &f, float *nabla, float *hessian, Matrix4f approxInvPose)
+std::pair<Vector4f*, int> ITMDepthTracker_CUDA::ComputeGandH(float &f, float *nabla, float *hessian, Matrix4f approxInvPose)
 {
 	Vector4f *pointsMap = sceneHierarchyLevel->pointsMap->GetData(MEMORYDEVICE_CUDA);
 	Vector4f *normalsMap = sceneHierarchyLevel->normalsMap->GetData(MEMORYDEVICE_CUDA);
@@ -58,7 +59,9 @@ int ITMDepthTracker_CUDA::ComputeGandH(float &f, float *nabla, float *hessian, M
 	Vector4f viewIntrinsics = viewHierarchyLevel->intrinsics;
 	Vector2i viewImageSize = viewHierarchyLevel->depth->noDims;
 
-	if (iterationType == TRACKER_ITERATION_NONE) return 0;
+	if (iterationType == TRACKER_ITERATION_NONE) {
+		return std::make_pair(new Vector4f, 0);
+	}
 
 	bool shortIteration = (iterationType == TRACKER_ITERATION_ROTATION) || (iterationType == TRACKER_ITERATION_TRANSLATION);
 
@@ -68,9 +71,12 @@ int ITMDepthTracker_CUDA::ComputeGandH(float &f, float *nabla, float *hessian, M
 	dim3 gridSize((int)ceil((float)viewImageSize.x / (float)blockSize.x), (int)ceil((float)viewImageSize.y / (float)blockSize.y));
 
 	ITMSafeCall(cudaMemset(accu_device, 0, sizeof(AccuCell)));
+	Vector4f* device_matches = new Vector4f;
+	ITMSafeCall(cudaMalloc((void**)&device_matches, viewImageSize.height * viewImageSize.width * sizeof(Vector4f)));
 
 	struct ITMDepthTracker_KernelParameters args;
 	args.accu = accu_device;
+	args.matches = device_matches;
 	args.depth = depth;
 	args.approxInvPose = approxInvPose;
 	args.pointsMap = pointsMap;
@@ -97,6 +103,10 @@ int ITMDepthTracker_CUDA::ComputeGandH(float &f, float *nabla, float *hessian, M
 	}
 
 	ITMSafeCall(cudaMemcpy(accu_host, accu_device, sizeof(AccuCell), cudaMemcpyDeviceToHost));
+	Vector4f* host_matches = new Vector4f;
+	ITMSafeCall(cudaMallocHost((void**)&host_matches, viewImageSize.height * viewImageSize.width * sizeof(Vector4f)));
+	ITMSafeCall(cudaMemcpy(host_matches, device_matches,
+			viewImageSize.height * viewImageSize.width * sizeof(Vector4f), cudaMemcpyDeviceToHost));
 
 	for (int r = 0, counter = 0; r < noPara; r++) for (int c = 0; c <= r; c++, counter++) hessian[r + c * 6] = accu_host->h[counter];
 	for (int r = 0; r < noPara; ++r) for (int c = r + 1; c < noPara; c++) hessian[r + c * 6] = hessian[c + r * 6];
@@ -104,13 +114,13 @@ int ITMDepthTracker_CUDA::ComputeGandH(float &f, float *nabla, float *hessian, M
 	memcpy(nabla, accu_host->g, noPara * sizeof(float));
 	f = (accu_host->numPoints > 100) ? sqrt(accu_host->f) / accu_host->numPoints : 1e5f;
 
-	return accu_host->numPoints;
+	return std::make_pair(host_matches, accu_host->numPoints);
 }
 
 // device functions
 
 template<bool shortIteration, bool rotationOnly>
-__device__ void depthTrackerOneLevel_g_rt_device_main(ITMDepthTracker_CUDA::AccuCell *accu, float *depth, Matrix4f approxInvPose, Vector4f *pointsMap,
+__device__ void depthTrackerOneLevel_g_rt_device_main(ITMDepthTracker_CUDA::AccuCell *accu, Vector4f* matches, float *depth, Matrix4f approxInvPose, Vector4f *pointsMap,
 	Vector4f *normalsMap, Vector4f sceneIntrinsics, Vector2i sceneImageSize, Matrix4f scenePose, Vector4f viewIntrinsics, Vector2i viewImageSize,
 	float distThresh)
 {
@@ -136,6 +146,7 @@ __device__ void depthTrackerOneLevel_g_rt_device_main(ITMDepthTracker_CUDA::Accu
 	{
 		match = computePerPointGH_Depth_Ab<shortIteration, rotationOnly>(A, b, x, y, depth[x + y * viewImageSize.x],
 			viewImageSize, viewIntrinsics, sceneImageSize, sceneIntrinsics, approxInvPose, scenePose, pointsMap, normalsMap, distThresh);
+		matches[x + y * viewImageSize.x] = match;
 		if (match.w != 0.0) {
 			isValidPoint = true;
 		}
@@ -269,6 +280,6 @@ __device__ void depthTrackerOneLevel_g_rt_device_main(ITMDepthTracker_CUDA::Accu
 template<bool shortIteration, bool rotationOnly>
 __global__ void depthTrackerOneLevel_g_rt_device(ITMDepthTracker_KernelParameters para)
 {
-	depthTrackerOneLevel_g_rt_device_main<shortIteration, rotationOnly>(para.accu, para.depth, para.approxInvPose, para.pointsMap, para.normalsMap, para.sceneIntrinsics, para.sceneImageSize, para.scenePose, para.viewIntrinsics, para.viewImageSize, para.distThresh);
+	depthTrackerOneLevel_g_rt_device_main<shortIteration, rotationOnly>(para.accu, para.matches, para.depth, para.approxInvPose, para.pointsMap, para.normalsMap, para.sceneIntrinsics, para.sceneImageSize, para.scenePose, para.viewIntrinsics, para.viewImageSize, para.distThresh);
 }
 

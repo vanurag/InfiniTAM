@@ -18,7 +18,7 @@ namespace ITMLib
 			AccuCell *accu_device;
 
 		protected:
-			int ComputeGandH(float &f, float *nabla, float *hessian, Matrix4f approxInvPose);
+			std::pair<Vector4f*, int> ComputeGandH(float &f, float *nabla, float *hessian, Matrix4f approxInvPose);
 
 		public:
 			ITMDepthTracker_CUDA(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels, int noICPRunTillLevel, float distThresh,

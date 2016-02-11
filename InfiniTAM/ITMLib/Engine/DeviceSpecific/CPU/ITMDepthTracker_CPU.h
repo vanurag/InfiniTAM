@@ -11,7 +11,7 @@ namespace ITMLib
 		class ITMDepthTracker_CPU : public ITMDepthTracker
 		{
 		protected:
-			int ComputeGandH(float &f, float *nabla, float *hessian, Matrix4f approxInvPose);
+		  std::pair<Vector4f*, int> ComputeGandH(float &f, float *nabla, float *hessian, Matrix4f approxInvPose);
 
 			template<bool shortIteration, bool rotationOnly>
 			Vector4f computePerPointGH_Depth_NN(THREADPTR(float) *localNabla, THREADPTR(float) *localHessian, THREADPTR(float) &localF,

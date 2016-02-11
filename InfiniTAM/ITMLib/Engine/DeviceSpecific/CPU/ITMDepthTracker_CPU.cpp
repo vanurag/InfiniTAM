@@ -11,19 +11,22 @@ ITMDepthTracker_CPU::ITMDepthTracker_CPU(Vector2i imgSize, TrackerIterationType 
 
 ITMDepthTracker_CPU::~ITMDepthTracker_CPU(void) { }
 
-int ITMDepthTracker_CPU::ComputeGandH(float &f, float *nabla, float *hessian, Matrix4f approxInvPose)
+std::pair<Vector4f*, int> ITMDepthTracker_CPU::ComputeGandH(float &f, float *nabla, float *hessian, Matrix4f approxInvPose)
 {
 
 	Vector4f *pointsMap = sceneHierarchyLevel->pointsMap->GetData(MEMORYDEVICE_CPU);
 	Vector4f *normalsMap = sceneHierarchyLevel->normalsMap->GetData(MEMORYDEVICE_CPU);
 	Vector4f sceneIntrinsics = sceneHierarchyLevel->intrinsics;
 	Vector2i sceneImageSize = sceneHierarchyLevel->pointsMap->noDims;
+	Vector4f* matches;
 
 	float *depth = viewHierarchyLevel->depth->GetData(MEMORYDEVICE_CPU);
 	Vector4f viewIntrinsics = viewHierarchyLevel->intrinsics;
 	Vector2i viewImageSize = viewHierarchyLevel->depth->noDims;
 
-	if (iterationType == TRACKER_ITERATION_NONE) return 0;
+	if (iterationType == TRACKER_ITERATION_NONE) {
+	  return std::make_pair(matches, 0);
+	}
 
 	bool shortIteration = (iterationType == TRACKER_ITERATION_ROTATION) || (iterationType == TRACKER_ITERATION_TRANSLATION);
 
@@ -33,6 +36,7 @@ int ITMDepthTracker_CPU::ComputeGandH(float &f, float *nabla, float *hessian, Ma
 	noValidPoints = 0; sumF = 0.0f;
 	memset(sumHessian, 0, sizeof(float) * noParaSQ);
 	memset(sumNabla, 0, sizeof(float) * noPara);
+	memset(matches, 0, sizeof(Vector4f) * viewImageSize.height * viewImageSize.width);
 
 	for (int y = 0; y < viewImageSize.y; y++) for (int x = 0; x < viewImageSize.x; x++)
 	{
@@ -65,6 +69,8 @@ int ITMDepthTracker_CPU::ComputeGandH(float &f, float *nabla, float *hessian, Ma
 			break;
 		}
 
+		matches[x + y * viewImageSize.x] = match;
+
 		if (match.w != 0.0) {
 		  isValidPoint = true;
 		}
@@ -83,7 +89,7 @@ int ITMDepthTracker_CPU::ComputeGandH(float &f, float *nabla, float *hessian, Ma
 	memcpy(nabla, sumNabla, noPara * sizeof(float));
 	f = (noValidPoints > 100) ? sqrt(sumF) / noValidPoints : 1e5f;
 
-	return noValidPoints;
+	return std::make_pair(matches, noValidPoints);
 }
 
 
