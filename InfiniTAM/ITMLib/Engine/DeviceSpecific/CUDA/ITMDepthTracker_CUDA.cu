@@ -129,12 +129,16 @@ __device__ void depthTrackerOneLevel_g_rt_device_main(ITMDepthTracker_CUDA::Accu
 	const int noPara = shortIteration ? 3 : 6;
 	const int noParaSQ = shortIteration ? 3 + 2 + 1 : 6 + 5 + 4 + 3 + 2 + 1;
 	float A[noPara]; float b;
+	Vector4f match;
 	bool isValidPoint = false;
 
 	if (x < viewImageSize.x && y < viewImageSize.y)
 	{
-		isValidPoint = computePerPointGH_Depth_Ab<shortIteration, rotationOnly>(A, b, x, y, depth[x + y * viewImageSize.x],
+		match = computePerPointGH_Depth_Ab<shortIteration, rotationOnly>(A, b, x, y, depth[x + y * viewImageSize.x],
 			viewImageSize, viewIntrinsics, sceneImageSize, sceneIntrinsics, approxInvPose, scenePose, pointsMap, normalsMap, distThresh);
+		if (match.w != 0.0) {
+			isValidPoint = true;
+		}
 		if (isValidPoint) should_prefix = true;
 	}
 
