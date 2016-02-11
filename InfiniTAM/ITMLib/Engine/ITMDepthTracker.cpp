@@ -43,10 +43,10 @@ ITMDepthTracker::ITMDepthTracker(Vector2i imgSize, TrackerIterationType *trackin
     pc_viewer.setBackgroundColor(0, 0, 0);
     pc_viewer.addPointCloud<pcl::PointXYZRGB>(scene_cloud_pointer, "scene cloud");
     pc_viewer.setPointCloudRenderingProperties(
-        pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "scene cloud");
+        pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "scene cloud");
     pc_viewer.addPointCloud<pcl::PointXYZRGB>(current_view_cloud_pointer, "current scan");
     pc_viewer.setPointCloudRenderingProperties(
-        pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "current scan");
+        pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "current scan");
 	}
 
 }
@@ -225,9 +225,6 @@ void ITMDepthTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 			trackingState->pose_d->Coerce();
 			approxInvPose = trackingState->pose_d->GetInvM();
 
-			// if step is small, assume it's going to decrease the error and finish
-			if (HasConverged(step)) break;
-
 			// Visualization
 			if (viz_icp) {
 			  Matrix4f* T1 = &approxInvPose;
@@ -237,6 +234,10 @@ void ITMDepthTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 			  tf_chain.push_back(T2);
         visualizeTracker(this->sceneHierarchyLevel->pointsMap, this->viewHierarchyLevel->depth,
                          this->viewHierarchyLevel->intrinsics, memory_type, tf_chain);
+
+      // if step is small, assume it's going to decrease the error and finish
+      if (HasConverged(step)) break;
+
 			}
 		}
 	}
