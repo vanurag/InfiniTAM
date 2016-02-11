@@ -230,8 +230,13 @@ void ITMDepthTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 
 			// Visualization
 			if (viz_icp) {
+			  Matrix4f* T1 = &approxInvPose;
+			  Matrix4f* T2 = &scenePose;
+			  std::vector<Matrix4f*> tf_chain;
+			  tf_chain.push_back(T1);
+			  tf_chain.push_back(T2);
         visualizeTracker(this->sceneHierarchyLevel->pointsMap, this->viewHierarchyLevel->depth,
-                         this->viewHierarchyLevel->intrinsics, memory_type);
+                         this->viewHierarchyLevel->intrinsics, memory_type, tf_chain);
 			}
 		}
 	}
@@ -282,7 +287,7 @@ const void ITMDepthTracker::Float4ImagetoPclPointCloud(
 // Depth Map to PCL point cloud
 const void ITMDepthTracker::FloatImagetoPclPointCloud(
     const ITMFloatImage* im, pcl::PointCloud<pcl::PointXYZRGB>& cloud,
-    const Vector4f intrinsics, Vector3i color, int memory_type) {
+    const Vector4f intrinsics, Vector3i color, int memory_type, std::vector<Matrix4f*>& tf_chain) {
 
   cloud.clear();
   const float* v = im->GetData(MemoryDeviceType(memory_type));
@@ -297,9 +302,19 @@ const void ITMDepthTracker::FloatImagetoPclPointCloud(
   point = v[row*im->noDims.width + col];
 #endif
 //      std::cout << "Float point: " << row << " " << col << " size: " << im->noDims << std::endl;
-      pc_point.x = point * ((float(col) - intrinsics.z) / intrinsics.x);
-      pc_point.y = point * ((float(row) - intrinsics.w) / intrinsics.y);
-      pc_point.z = point;
+      Vector4f vec_point(point * ((float(col) - intrinsics.z) / intrinsics.x),
+                         point * ((float(row) - intrinsics.w) / intrinsics.y),
+                         point, 1.0);
+
+      // apply transform chain
+      for (std::vector<Matrix4f*>::iterator it = tf_chain.begin(); it != tf_chain.end(); ++it) {
+        vec_point = (**it) * vec_point;
+        vec_point.w = 1.0;
+      }
+
+      pc_point.x = vec_point.x;
+      pc_point.y = vec_point.y;
+      pc_point.z = vec_point.z;
 
       pc_point.r = color[0];
       pc_point.g = color[1];
@@ -313,7 +328,7 @@ const void ITMDepthTracker::FloatImagetoPclPointCloud(
 // Tracker Visualization
 const void ITMDepthTracker::visualizeTracker(
     const ITMFloat4Image* scene, const ITMFloatImage* current_view,
-    const Vector4f intrinsics, int memory_type) {
+    const Vector4f intrinsics, int memory_type, std::vector<Matrix4f*>& tf_chain) {
 
 //  pc_viewer.removeAllPointClouds();
   // scene
@@ -321,7 +336,7 @@ const void ITMDepthTracker::visualizeTracker(
 
   // current view
   FloatImagetoPclPointCloud(current_view, current_view_cloud, intrinsics,
-                            Vector3i(0, 0, 255), memory_type);
+                            Vector3i(0, 0, 255), memory_type, tf_chain);
 
   pc_viewer.updatePointCloud(scene_cloud_pointer, "scene cloud");
   pc_viewer.updatePointCloud(current_view_cloud_pointer, "current scan");

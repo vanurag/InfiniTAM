@@ -90,11 +90,12 @@ namespace ITMLib
 			// Depth Map to PCL point cloud
 			const void FloatImagetoPclPointCloud(
 			    const ITMFloatImage* im, pcl::PointCloud<pcl::PointXYZRGB>& cloud,
-			    const Vector4f intrinsics, Vector3i color, int memory_type);
+			    const Vector4f intrinsics, Vector3i color, int memory_type, std::vector<Matrix4f*>& tf_chain);
 
 			// Tracker Visualization
-			const void visualizeTracker(const ITMFloat4Image* scene, const ITMFloatImage* current_view,
-			                            const Vector4f intrinsics, int memory_type);
+			const void visualizeTracker(
+			    const ITMFloat4Image* scene, const ITMFloatImage* current_view,
+			    const Vector4f intrinsics, int memory_type, std::vector<Matrix4f*>& tf_chain);
 
 		public:
 			void TrackCamera(ITMTrackingState *trackingState, const ITMView *view);
