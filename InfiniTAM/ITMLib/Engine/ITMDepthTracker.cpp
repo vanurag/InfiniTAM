@@ -236,15 +236,8 @@ void ITMDepthTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 			  std::vector<Matrix4f*> tf_chain;
 			  tf_chain.push_back(T1);
 			  tf_chain.push_back(T2);
-			  std::vector<bool> update_flags{false, true};
-
-			  // Render scene only for the first time since it's static.
-			  if (levelId == viewHierarchy->noLevels - 1 && iterNo == 0) {
-			    update_flags[0] = true;
-			  }
-			  visualizeTracker(this->sceneHierarchyLevel->pointsMap, this->viewHierarchyLevel->depth,
-                         this->viewHierarchyLevel->intrinsics, memory_type, tf_chain, converged,
-                         update_flags);
+        visualizeTracker(this->sceneHierarchyLevel->pointsMap, this->viewHierarchyLevel->depth,
+                         this->viewHierarchyLevel->intrinsics, memory_type, tf_chain, converged);
 			}
 
 			// if step is small, assume it's going to decrease the error and finish
@@ -338,24 +331,19 @@ const void ITMDepthTracker::FloatImagetoPclPointCloud(
 
 // Tracker Visualization
 const void ITMDepthTracker::visualizeTracker(
-    const ITMFloat4Image* scene, const ITMFloatImage* current_view, const Vector4f intrinsics,
-    int memory_type, std::vector<Matrix4f*>& tf_chain, bool converged, std::vector<bool>& update_flags) {
+    const ITMFloat4Image* scene, const ITMFloatImage* current_view,
+    const Vector4f intrinsics, int memory_type, std::vector<Matrix4f*>& tf_chain, bool converged) {
 
+//  pc_viewer.removeAllPointClouds();
   // scene
-  std:: cout << "Scene size: " << scene_cloud.size() << std::endl;
-  if (update_flags[0]) {
-    std::cout << "Updating scene" << std::endl;
-    Float4ImagetoPclPointCloud(scene, scene_cloud, Vector3i(255, 0, 0), memory_type);
-    pc_viewer.updatePointCloud(scene_cloud_pointer, "scene cloud");
-  }
+  Float4ImagetoPclPointCloud(scene, scene_cloud, Vector3i(255, 0, 0), memory_type);
 
   // current view
-  if (update_flags[1]) {
-    std::cout << "Updating view" << std::endl;
-    FloatImagetoPclPointCloud(current_view, current_view_cloud, intrinsics,
-                              Vector3i(0, 0, 255), memory_type, tf_chain);
-    pc_viewer.updatePointCloud(current_view_cloud_pointer, "current scan");
-  }
+  FloatImagetoPclPointCloud(current_view, current_view_cloud, intrinsics,
+                            Vector3i(0, 0, 255), memory_type, tf_chain);
+
+  pc_viewer.updatePointCloud(scene_cloud_pointer, "scene cloud");
+  pc_viewer.updatePointCloud(current_view_cloud_pointer, "current scan");
 
   // Message
   if (converged) {
@@ -367,7 +355,7 @@ const void ITMDepthTracker::visualizeTracker(
   boost::thread t(boost::bind(&ITMDepthTracker::pcl_render_loop, this));
   if (std::cin.get() == '\n') {
     std::cout << "Pressed ENTER" << std::endl;
-//    pc_viewer.removeAllShapes();
+    pc_viewer.removeAllShapes();
     pcl_render_stop = true;
   }
 //  pc_viewer.spinOnce (100);
