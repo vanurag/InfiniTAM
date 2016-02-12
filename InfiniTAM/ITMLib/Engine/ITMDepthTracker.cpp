@@ -240,10 +240,6 @@ void ITMDepthTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 			// if step is small, assume it's going to decrease the error and finish
 			bool converged = HasConverged(step);
 
-			if (converged) {
-			  std:: cout << "Has converged!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
-			}
-
 			// Visualization
 			if (viz_icp) {
 			  std::cout << "here1" << std::endl;
@@ -351,32 +347,17 @@ void ITMDepthTracker::DrawPointMatches(
 
   std::cout << "scan cloud size: " << cloud.size() << " " << viewHierarchyLevel->depth->noDims.height * viewHierarchyLevel->depth->noDims.width << std::endl;
   for (int i = 0; i < cloud.size(); ++i) {
-//    if (matches[i].w != 0.0) {
-    if (true) {
+    if (matches[i].w != 0.0) {
       pcl::PointXYZ m;
       m.x = matches[i].x;
       m.y = matches[i].y;
       m.z = matches[i].z;
       std::string l_string("line");
       l_string += std::to_string(i);
-
-      std::cout << l_string << "c: " << cloud[i] << std::endl;
-      std::cout << l_string << "m: " << m << std::endl << std::endl;
-
       if (!pcl::isFinite(cloud[i]) || !pcl::isFinite(m)) std::cout << "NOT FINITE POINT!!!!!!!!!!!" << std::endl;
       if (cloud[i].x == m.x && cloud[i].y == m.y && cloud[i].z == m.z) std::cout << "ZERO LENGTH LINE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
-//      pc_viewer.addLine(cloud[i], m, color.r, color.g, color.b, l_string);
-      pc_viewer.addLine(pcl::PointXYZ(0,0,0),
-                        pcl::PointXYZ(0.5,0.5,0.5),
-                        color.r, color.g, color.b, l_string);
       if (cloud[i].x != m.x || cloud[i].y != m.y || cloud[i].z != m.z) {
-//        pc_viewer.addLine(cloud[i], m, color.r, color.g, color.b, l_string);
-
-//        pc_viewer.addLine(pcl::PointXYZ(-1.30446,0.207605,2.32036),
-//                          pcl::PointXYZ(-1.34755,0.214462,2.39701),
-//                          color.r, color.g, color.b, l_string);
-//        c: (-1.30446,0.207605,2.32036 - 0,0,255)
-//        m: (-1.34755,0.214462,2.39701)
+        pc_viewer.addLine(cloud[i], m, color.r, color.g, color.b, l_string);
       }
     }
   }
@@ -408,6 +389,9 @@ void ITMDepthTracker::visualizeTracker(
   if (std::cin.get() == '\n') {
     std::cout << "Pressed ENTER" << std::endl;
     pcl_render_stop = true;
+    std::cout << "waiting to join...." << std::endl;
+//    t.join();
+    std::cout << "joined!!!" << std::endl;
     pc_viewer.removeAllShapes();
   }
 }
@@ -431,22 +415,15 @@ void ITMDepthTracker::visualizeTracker(
   // matches
   DrawPointMatches(current_view_cloud, matches, Vector3i(255, 255, 255));
 
-//  pcl_render_stop = false;
-//  boost::thread t(boost::bind(&ITMDepthTracker::pcl_render_loop, this));
+  pcl_render_stop = false;
+  boost::thread t(boost::bind(&ITMDepthTracker::pcl_render_loop, this));
   if (std::cin.get() == '\n') {
     std::cout << "Pressed ENTER" << std::endl;
-//    pcl_render_stop = true;
-    std::cout << "here -0.5" << std::endl;
-
-    for (int i = 0; i < current_view_cloud.size(); ++i) {
-      std::string l_string("line");
-      l_string += std::to_string(i);
-      std::cout << "rm-ing " << i << " " << pc_viewer.contains(l_string) << std::endl;
-      if (pc_viewer.contains(l_string)) {
-        std:: cout << "rm-res: " << pc_viewer.removeShape(l_string) << std::endl;
-      }
-    }
-//    pc_viewer.removeAllShapes();
+    pcl_render_stop = true;
+    std::cout << "waiting to join...." << std::endl;
+//    t.join();
+    std::cout << "joined!!!" << std::endl;
+    pc_viewer.removeAllShapes();
     std::cout << "here -1" << std::endl;
   }
 //  pc_viewer.spinOnce (100);
