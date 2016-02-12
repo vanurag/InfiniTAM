@@ -73,6 +73,7 @@ std::pair<Vector4f*, int> ITMDepthTracker_CUDA::ComputeGandH(float &f, float *na
 	ITMSafeCall(cudaMemset(accu_device, 0, sizeof(AccuCell)));
 	Vector4f* device_matches = new Vector4f;
 	ITMSafeCall(cudaMalloc((void**)&device_matches, viewImageSize.height * viewImageSize.width * sizeof(Vector4f)));
+	ITMSafeCall(cudaMemset(device_matches, 0, viewImageSize.height * viewImageSize.width * sizeof(Vector4f)));
 
 	struct ITMDepthTracker_KernelParameters args;
 	args.accu = accu_device;

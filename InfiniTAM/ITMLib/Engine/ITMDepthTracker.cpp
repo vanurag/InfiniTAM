@@ -206,6 +206,14 @@ void ITMDepthTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 		  matches = res.first;
 			noValidPoints_new = res.second;
 
+			if (viz_icp) {
+			  std::vector<Matrix4f*> tf_chain{&approxInvPose, &scenePose};
+			  // visualize matches
+        visualizeTracker(this->sceneHierarchyLevel->pointsMap, this->viewHierarchyLevel->depth,
+                         this->viewHierarchyLevel->intrinsics, matches, memory_type, tf_chain);
+			}
+
+			std::cout << "here0" << std::endl;
 			// check if error increased. If so, revert
 			if ((noValidPoints_new <= 0)||(f_new > f_old)) {
 				trackingState->pose_d->SetFrom(&lastKnownGoodPose);
@@ -234,14 +242,13 @@ void ITMDepthTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 
 			// Visualization
 			if (viz_icp) {
-			  Matrix4f* T1 = &approxInvPose;
-			  Matrix4f* T2 = &scenePose;
-			  std::vector<Matrix4f*> tf_chain;
-			  tf_chain.push_back(T1);
-			  tf_chain.push_back(T2);
+			  std::cout << "here1" << std::endl;
+			  std::vector<Matrix4f*> tf_chain{&approxInvPose, &scenePose};
+			  // visualize TF update
+			  std::cout << "vizing updated tf" << std::endl;
         visualizeTracker(
             this->sceneHierarchyLevel->pointsMap, this->viewHierarchyLevel->depth,
-            this->viewHierarchyLevel->intrinsics, matches, memory_type, tf_chain, converged);
+            this->viewHierarchyLevel->intrinsics, memory_type, tf_chain, converged);
 			}
 
 			// if step is small, assume it's going to decrease the error and finish
@@ -264,7 +271,7 @@ const Eigen::MatrixXf ITMDepthTracker::ITMVectorToEigenMatrix(
 }
 
 // 3D point vector to PCL point cloud
-const void ITMDepthTracker::Float4ImagetoPclPointCloud(
+void ITMDepthTracker::Float4ImagetoPclPointCloud(
     const ITMFloat4Image* im, pcl::PointCloud<pcl::PointXYZRGB>& cloud, Vector3i color,
     int memory_type) {
 
@@ -293,7 +300,7 @@ const void ITMDepthTracker::Float4ImagetoPclPointCloud(
 }
 
 // Depth Map to PCL point cloud
-const void ITMDepthTracker::FloatImagetoPclPointCloud(
+void ITMDepthTracker::FloatImagetoPclPointCloud(
     const ITMFloatImage* im, pcl::PointCloud<pcl::PointXYZRGB>& cloud,
     const Vector4f intrinsics, Vector3i color, int memory_type, std::vector<Matrix4f*>& tf_chain) {
 
@@ -352,10 +359,40 @@ void ITMDepthTracker::DrawPointMatches(
 }
 
 
-// Tracker Visualization
-const void ITMDepthTracker::visualizeTracker(
+// Tracker TF Update Visualization
+void ITMDepthTracker::visualizeTracker(
+    const ITMFloat4Image* scene, const ITMFloatImage* current_view, const Vector4f intrinsics,
+    int memory_type, std::vector<Matrix4f*>& tf_chain, bool converged) {
+
+  // scene
+  Float4ImagetoPclPointCloud(scene, scene_cloud, Vector3i(255, 0, 0), memory_type);
+  pc_viewer.updatePointCloud(scene_cloud_pointer, "scene cloud");
+
+  // current view
+  FloatImagetoPclPointCloud(current_view, current_view_cloud, intrinsics,
+                            Vector3i(0, 0, 255), memory_type, tf_chain);
+  pc_viewer.updatePointCloud(current_view_cloud_pointer, "current scan");
+
+  // Message
+  if (converged) {
+    std::string msg("msg0");
+    pc_viewer.addText("ICP converged", 50, 50, 30, 1.0, 1.0, 1.0, msg);
+  }
+
+  pcl_render_stop = false;
+  boost::thread t(boost::bind(&ITMDepthTracker::pcl_render_loop, this));
+  if (std::cin.get() == '\n') {
+    std::cout << "Pressed ENTER" << std::endl;
+    pcl_render_stop = true;
+    pc_viewer.removeAllShapes();
+  }
+}
+
+
+// Tracker Matches Visualization
+void ITMDepthTracker::visualizeTracker(
     const ITMFloat4Image* scene, const ITMFloatImage* current_view,
-    const Vector4f intrinsics, Vector4f* matches, int memory_type, std::vector<Matrix4f*>& tf_chain, bool converged) {
+    const Vector4f intrinsics, Vector4f* matches, int memory_type, std::vector<Matrix4f*>& tf_chain) {
 
 //  pc_viewer.removeAllPointClouds();
   // scene
@@ -370,18 +407,13 @@ const void ITMDepthTracker::visualizeTracker(
   // matches
   DrawPointMatches(current_view_cloud, matches, Vector3i(255, 255, 255));
 
-  // Message
-  if (converged) {
-    std::string msg("msg0");
-    pc_viewer.addText("ICP converged", 50, 50, 30, 1.0, 1.0, 1.0, msg);
-  }
-
   pcl_render_stop = false;
   boost::thread t(boost::bind(&ITMDepthTracker::pcl_render_loop, this));
   if (std::cin.get() == '\n') {
     std::cout << "Pressed ENTER" << std::endl;
-    pc_viewer.removeAllShapes();
     pcl_render_stop = true;
+    pc_viewer.removeAllShapes();
+    std::cout << "here -1" << std::endl;
   }
 //  pc_viewer.spinOnce (100);
 }
