@@ -36,6 +36,7 @@ std::pair<Vector4f*, int> ITMDepthTracker_CPU::ComputeGandH(float &f, float *nab
 	noValidPoints = 0; sumF = 0.0f;
 	memset(sumHessian, 0, sizeof(float) * noParaSQ);
 	memset(sumNabla, 0, sizeof(float) * noPara);
+	matches = (Vector4f*) malloc(sizeof(Vector4f) * viewImageSize.height * viewImageSize.width);
 	memset(matches, 0, sizeof(Vector4f) * viewImageSize.height * viewImageSize.width);
 
 	for (int y = 0; y < viewImageSize.y; y++) for (int x = 0; x < viewImageSize.x; x++)
