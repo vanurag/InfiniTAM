@@ -27,6 +27,17 @@ namespace ITMLib
 			  const CONSTPTR(Vector4f) & sceneIntrinsics, const CONSTPTR(Matrix4f) & approxInvPose, const CONSTPTR(Matrix4f) & scenePose, const CONSTPTR(Vector4f) *pointsMap,
 			  const CONSTPTR(Vector4f) *normalsMap, float distThresh, const boost::shared_ptr<Nabo::NNSearchF>& nns);
 
+			// Libpointmatcher
+      PM::ICP icp;
+
+			// Use libpointmatcher for ICP routine
+			Matrix4f getLPMICPTF(Matrix4f& prevInvPose);
+
+			// Flaot4Image to LPM Point cloud
+      DP Float4ImagetoLPMPointCloud(const ITMFloat4Image* im);
+
+      // FlaotImage to LPM Point cloud
+      DP FloatImagetoLPMPointCloud(const ITMFloatImage* im, const Vector4f intrinsics);
 		public:
 			ITMDepthTracker_CPU(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels, int noICPRunTillLevel, float distThresh,
 				float terminationThreshold, bool visualize_icp, const ITMLowLevelEngine *lowLevelEngine);

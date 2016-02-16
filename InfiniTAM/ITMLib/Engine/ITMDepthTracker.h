@@ -59,9 +59,6 @@ namespace ITMLib
 			pcl::PointCloud<pcl::PointXYZRGB>::Ptr scene_cloud_pointer, current_view_cloud_pointer;
 			void pcl_render_loop();
 
-			// Libpointmatcher
-			PM::ICP icp;
-
 			void PrepareForEvaluation();
 			void SetEvaluationParams(int levelId);
 
@@ -78,7 +75,7 @@ namespace ITMLib
 			int levelId;
 			TrackerIterationType iterationType;
 
-			Matrix4f scenePose;
+			Matrix4f scenePose, sceneInvPose;
 			ITMSceneHierarchyLevel *sceneHierarchyLevel;
 			ITMTemplatedHierarchyLevel<ITMFloatImage> *viewHierarchyLevel;
 
@@ -87,12 +84,8 @@ namespace ITMLib
 //      Nabo::NNSearchF* nns;
 
 			virtual std::pair<Vector4f*, int> ComputeGandH(float &f, float *nabla, float *hessian, Matrix4f approxInvPose) = 0;
-
-			// Flaot4Image to LPM Point cloud
-			DP Float4ImagetoLPMPointCloud(const ITMFloat4Image* im, int memory_type);
-
-			// FlaotImage to LPM Point cloud
-			DP FloatImagetoLPMPointCloud(const ITMFloatImage* im, int memory_type, const Vector4f intrinsics);
+			// Use libpointmatcher for ICP routine
+      virtual Matrix4f getLPMICPTF(Matrix4f& prevInvPose) = 0;
 
 			// 3D point vector to PCL point cloud
 			void Float4ImagetoPclPointCloud(

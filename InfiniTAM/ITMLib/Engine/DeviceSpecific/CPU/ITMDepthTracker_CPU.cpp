@@ -94,11 +94,7 @@ std::pair<Vector4f*, int> ITMDepthTracker_CPU::ComputeGandH(float &f, float *nab
 }
 
 
-
-
-
-
-
+// Use Libnabo for computing matches and corresponding A, b, G, H
 template<bool shortIteration, bool rotationOnly>
 Vector4f ITMDepthTracker_CPU::computePerPointGH_Depth_Ab_NN(THREADPTR(float) *A, THREADPTR(float) &b,
   const THREADPTR(int) & x, const THREADPTR(int) & y,
@@ -214,6 +210,8 @@ Vector4f ITMDepthTracker_CPU::computePerPointGH_Depth_Ab_NN(THREADPTR(float) *A,
   return curr3Dpoint;
 }
 
+
+// Use Libnabo for computing matches and corresponding G, H
 template<bool shortIteration, bool rotationOnly>
 Vector4f ITMDepthTracker_CPU::computePerPointGH_Depth_NN(THREADPTR(float) *localNabla, THREADPTR(float) *localHessian, THREADPTR(float) &localF,
   const THREADPTR(int) & x, const THREADPTR(int) & y,
@@ -244,4 +242,148 @@ Vector4f ITMDepthTracker_CPU::computePerPointGH_Depth_NN(THREADPTR(float) *local
   }
 
   return match;
+}
+
+
+// Use libpointmatcher for ICP routine
+Matrix4f ITMDepthTracker_CPU::getLPMICPTF(Matrix4f& prevInvPose) {
+  DP scene_lpm = Float4ImagetoLPMPointCloud(this->sceneHierarchyLevel->pointsMap);
+  DP current_view_lpm = FloatImagetoLPMPointCloud(
+      this->viewHierarchyLevel->depth, this->viewHierarchyLevel->intrinsics);
+
+  // Read Write Directory for LPM metadata
+  std::string BaseDir("/media/anurag/DATA-EXT/kinect-data/ITM_scan/");
+
+  // load YAML config
+  std::ifstream conf((BaseDir+std::string("icp_cfg_point-plane.yaml")).c_str());
+  if (!conf.good())
+  {
+    std::cerr << "Cannot open ICP config file"; exit(1);
+  }
+  icp.loadFromYaml(conf);
+
+  // Camera inverse pose
+  PM::TransformationParameters prev_cam_tf = PM::TransformationParameters::Identity(4, 4);
+  for (int row = 0; row < 3; ++row) {
+    for (int col = 0; col < 4; ++col) {
+      prev_cam_tf(row, col) = prevInvPose(col, row);
+    }
+  }
+  // Scene inverse pose
+  PM::TransformationParameters prev_scene_tf = PM::TransformationParameters::Identity(4, 4);
+  for (int row = 0; row < 3; ++row) {
+    for (int col = 0; col < 4; ++col) {
+      prev_scene_tf(row, col) = sceneInvPose(col, row);
+    }
+  }
+
+  PM::Transformation* rigidTrans;
+  rigidTrans = PM::get().REG(Transformation).create("RigidTransformation");
+
+  // TF sanity check
+  if (!rigidTrans->checkParameters(prev_cam_tf)) {
+    std::cerr << std::endl
+       << "Initial camera transformation is not rigid, identity will be used"
+       << std::endl;
+    prev_cam_tf = PM::TransformationParameters::Identity(4, 4);
+  }
+  if (!rigidTrans->checkParameters(prev_scene_tf)) {
+    std::cerr << std::endl
+       << "Initial scene transformation is not rigid, identity will be used"
+       << std::endl;
+    prev_scene_tf = PM::TransformationParameters::Identity(4, 4);
+  }
+
+  // initialize current scan by best pose estimate from previous run
+  // Also transform scene to global ref frame
+  const DP GlobalScan = rigidTrans->compute(current_view_lpm, prev_cam_tf);
+  const DP GlobalScene = rigidTrans->compute(scene_lpm, prev_scene_tf);
+
+  // Compute the transformation to express scan in ref
+  PM::TransformationParameters T = icp(GlobalScan, GlobalScene);
+  std::cout << "LPM match ratio: " << icp.errorMinimizer->getWeightedPointUsedRatio() << std::endl;
+
+  // Transform data to express it in ref
+  DP data_out(GlobalScan);
+  icp.transformations.apply(data_out, T);
+
+  // Safe files to see the results
+  GlobalScene.save(BaseDir + "test_ref.vtk");
+  GlobalScan.save(BaseDir + "test_data_in.vtk");
+  data_out.save(BaseDir + "test_data_out.vtk");
+
+  // Refined Camera inverse pose
+  Matrix4f newInvPose = prevInvPose;
+  PM::TransformationParameters new_cam_tf = prev_scene_tf * T;
+  for (int row = 0; row < 3; ++row) {
+    for (int col = 0; col < 4; ++col) {
+      newInvPose(col, row) = new_cam_tf(row, col);
+    }
+  }
+  return newInvPose;
+}
+
+
+// Flaot4Image to LPM Point cloud
+DP ITMDepthTracker_CPU::Float4ImagetoLPMPointCloud(const ITMFloat4Image* im) {
+
+  DP::Labels feature_labels;
+  feature_labels.push_back(DP::Label("x"));
+  feature_labels.push_back(DP::Label("y"));
+  feature_labels.push_back(DP::Label("z"));
+
+  const Vector4f* v = im->GetData(MemoryDeviceType(MEMORYDEVICE_CPU));
+  Vector4f point;
+  PM::Matrix features(4, im->noDims.width * im->noDims.height);
+  for (int i = 0; i < im->noDims.width * im->noDims.height; ++i) {
+
+#ifndef COMPILE_WITHOUT_CUDA
+    ITMSafeCall(cudaMemcpy(&point, &v[i], sizeof(Vector4f), cudaMemcpyDeviceToHost));
+#else
+    point = v[i];
+#endif
+
+    features(0, i) = point.x;
+    features(1, i) = point.y;
+    features(2, i) = point.z;
+    features(3, i) = 1.0;
+  }
+
+  return DP(features, feature_labels);
+}
+
+
+// FlaotImage to LPM Point cloud
+DP ITMDepthTracker_CPU::FloatImagetoLPMPointCloud(const ITMFloatImage* im, const Vector4f intrinsics) {
+
+  DP::Labels feature_labels;
+  feature_labels.push_back(DP::Label("x"));
+  feature_labels.push_back(DP::Label("y"));
+  feature_labels.push_back(DP::Label("z"));
+
+  const float* v = im->GetData(MemoryDeviceType(MEMORYDEVICE_CPU));
+  float point;
+  PM::Matrix features(4, im->noDims.width * im->noDims.height);
+  for (int row = 0; row < im->noDims.height; ++row) {
+    for (int col = 0; col < im->noDims.width; ++col) {
+
+#ifndef COMPILE_WITHOUT_CUDA
+      ITMSafeCall(cudaMemcpy(&point, &v[row*im->noDims.width + col], sizeof(float),
+                             cudaMemcpyDeviceToHost));
+#else
+      point = v[row*im->noDims.width + col];
+#endif
+
+      Vector4f vec_point(point * ((float(col) - intrinsics.z) / intrinsics.x),
+                         point * ((float(row) - intrinsics.w) / intrinsics.y),
+                         point, 1.0);
+
+      features(0, row*im->noDims.width + col) = vec_point.x;
+      features(1, row*im->noDims.width + col) = vec_point.y;
+      features(2, row*im->noDims.width + col) = vec_point.z;
+      features(3, row*im->noDims.width + col) = 1.0;
+    }
+  }
+
+  return DP(features, feature_labels);
 }
