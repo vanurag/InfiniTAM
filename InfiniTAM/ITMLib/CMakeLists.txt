@@ -221,6 +221,7 @@ else()
   add_library(ITMLib ${ITMLIB_CPU_OBJECTS} ${ITMLIB_COMMON_OBJECTS})
 endif()
 
-target_link_libraries(ITMLib ${libnabo_LIBRARIES} ${PCL_LIBRARIES})
+target_link_libraries(ITMLib ${libpointmatcher_LIBRARIES})
+target_link_libraries(ITMLib ${PCL_LIBRARIES})
 target_link_libraries(ITMLib ORUtils)
 target_link_libraries(ITMLib Utils)

@@ -197,6 +197,21 @@ void ITMDepthTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
       std::cout << "Tree Prepared......................................... " << nns->cloud.cols() << std::endl;
     }
 
+    // Libpointmatcher
+    if (memory_type == MEMORYDEVICE_CPU) {
+      DP scene_lpm = Float4ImagetoLPMPointCloud(this->sceneHierarchyLevel->pointsMap, memory_type);
+      DP current_view_lpm = FloatImagetoLPMPointCloud(
+          this->viewHierarchyLevel->depth, memory_type, this->viewHierarchyLevel->intrinsics);
+
+      // load YAML config
+      std::ifstream conf("/media/anurag/DATA-EXT/kinect-data/ITM_scan/icp_cfg_point-plane.yaml");
+      if (!conf.good())
+      {
+        std::cerr << "Cannot open ICP config file"; exit(1);
+      }
+      icp.loadFromYaml(conf);
+    }
+
 		for (int iterNo = 0; iterNo < noIterationsPerLevel[levelId]; iterNo++)
 		{
 		  std::cout << "[ Level ID, Iteration no ]: " << "[ " << levelId << ", "
@@ -270,7 +285,7 @@ const Eigen::MatrixXf ITMDepthTracker::ITMVectorToEigenMatrix(
   return m;
 }
 
-// 3D point vector to PCL point cloud
+// Float4Image to PCL point cloud
 void ITMDepthTracker::Float4ImagetoPclPointCloud(
     const ITMFloat4Image* im, pcl::PointCloud<pcl::PointXYZRGB>& cloud, Vector3i color,
     int memory_type) {
@@ -280,13 +295,13 @@ void ITMDepthTracker::Float4ImagetoPclPointCloud(
   Vector4f point;
   pcl::PointXYZRGB pc_point;
   for (int i = 0; i < im->noDims.width * im->noDims.height; ++i) {
+
 #ifndef COMPILE_WITHOUT_CUDA
-  ITMSafeCall(cudaMemcpy(&point, &v[i], sizeof(Vector4f), cudaMemcpyDeviceToHost));
+    ITMSafeCall(cudaMemcpy(&point, &v[i], sizeof(Vector4f), cudaMemcpyDeviceToHost));
 #else
-  point = v[i];
+    point = v[i];
 #endif
-//    std::cout << "Float4 point: " << i << " size: " << im->noDims << std::endl;
-//    std::cout << "value: " << point << std::endl;
+
     pc_point.x = point.x;
     pc_point.y = point.y;
     pc_point.z = point.z;
@@ -299,7 +314,36 @@ void ITMDepthTracker::Float4ImagetoPclPointCloud(
   }
 }
 
-// Depth Map to PCL point cloud
+
+// Flaot4Image to LPM Point cloud
+DP Float4ImagetoLPMPointCloud(const ITMFloat4Image* im, int memory_type) {
+
+  DP::Labels feature_labels;
+  feature_labels.push_back(DP::Label("x"));
+  feature_labels.push_back(DP::Label("y"));
+  feature_labels.push_back(DP::Label("z"));
+
+  const Vector4f* v = im->GetData(MemoryDeviceType(memory_type));
+  Vector4f point;
+  PM::Matrix features(4, im->noDims.width * im->noDims.height);
+  for (int i = 0; i < im->noDims.width * im->noDims.height; ++i) {
+
+#ifndef COMPILE_WITHOUT_CUDA
+    ITMSafeCall(cudaMemcpy(&point, &v[i], sizeof(Vector4f), cudaMemcpyDeviceToHost));
+#else
+    point = v[i];
+#endif
+
+    features(0, i) = point.x;
+    features(1, i) = point.y;
+    features(2, i) = point.z;
+    features(3, i) = 1.0;
+  }
+
+  return DP(features, feature_labels);
+}
+
+// FloatImage to PCL point cloud
 void ITMDepthTracker::FloatImagetoPclPointCloud(
     const ITMFloatImage* im, pcl::PointCloud<pcl::PointXYZRGB>& cloud,
     const Vector4f intrinsics, Vector3i color, int memory_type, std::vector<Matrix4f*>& tf_chain) {
@@ -310,13 +354,14 @@ void ITMDepthTracker::FloatImagetoPclPointCloud(
   pcl::PointXYZRGB pc_point;
   for (int row = 0; row < im->noDims.height; ++row) {
     for (int col = 0; col < im->noDims.width; ++col) {
+
 #ifndef COMPILE_WITHOUT_CUDA
-  ITMSafeCall(cudaMemcpy(&point, &v[row*im->noDims.width + col], sizeof(float),
-                         cudaMemcpyDeviceToHost));
+      ITMSafeCall(cudaMemcpy(&point, &v[row*im->noDims.width + col], sizeof(float),
+                             cudaMemcpyDeviceToHost));
 #else
-  point = v[row*im->noDims.width + col];
+      point = v[row*im->noDims.width + col];
 #endif
-//      std::cout << "Float point: " << row << " " << col << " size: " << im->noDims << std::endl;
+
       Vector4f vec_point(point * ((float(col) - intrinsics.z) / intrinsics.x),
                          point * ((float(row) - intrinsics.w) / intrinsics.y),
                          point, 1.0);
@@ -340,6 +385,41 @@ void ITMDepthTracker::FloatImagetoPclPointCloud(
   }
 }
 
+
+// FlaotImage to LPM Point cloud
+DP FloatImagetoLPMPointCloud(const ITMFloatImage* im, int memory_type, const Vector4f intrinsics) {
+
+  DP::Labels feature_labels;
+  feature_labels.push_back(DP::Label("x"));
+  feature_labels.push_back(DP::Label("y"));
+  feature_labels.push_back(DP::Label("z"));
+
+  const float* v = im->GetData(MemoryDeviceType(memory_type));
+  float point;
+  PM::Matrix features(4, im->noDims.width * im->noDims.height);
+  for (int row = 0; row < im->noDims.height; ++row) {
+    for (int col = 0; col < im->noDims.width; ++col) {
+
+#ifndef COMPILE_WITHOUT_CUDA
+      ITMSafeCall(cudaMemcpy(&point, &v[row*im->noDims.width + col], sizeof(float),
+                             cudaMemcpyDeviceToHost));
+#else
+      point = v[row*im->noDims.width + col];
+#endif
+
+      Vector4f vec_point(point * ((float(col) - intrinsics.z) / intrinsics.x),
+                         point * ((float(row) - intrinsics.w) / intrinsics.y),
+                         point, 1.0);
+
+      features(0, row*im->noDims.width + col) = vec_point.x;
+      features(1, row*im->noDims.width + col) = vec_point.y;
+      features(2, row*im->noDims.width + col) = vec_point.z;
+      features(3, row*im->noDims.width + col) = 1.0;
+    }
+  }
+
+  return DP(features, feature_labels);
+}
 
 // Draw ICP point matches
 void ITMDepthTracker::DrawPointMatches(

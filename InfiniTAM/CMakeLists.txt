@@ -61,12 +61,12 @@ find_package(PNG QUIET)
 CANONIFY_BOOL(PNG_FOUND)
 message(STATUS "libpng found: ${PNG_FOUND}")
 
-#--------------------
-# DEPENDENCY: nabo
-#--------------------
-find_package(libnabo REQUIRED)
-include_directories(${libnabo_INCLUDE_DIRS})
-message("-- libnabo found, version ${libnabo_VERSION}")
+#----------------------------
+# DEPENDENCY: libpointmatcher
+#----------------------------
+find_package(libpointmatcher REQUIRED) 
+include_directories(${libpointmatcher_INCLUDE_DIRS}) 
+message("-- libpointmatcher found, version ${libpointmatcher_VERSION}")
 
 #--------------------
 # DEPENDENCY: PCL
