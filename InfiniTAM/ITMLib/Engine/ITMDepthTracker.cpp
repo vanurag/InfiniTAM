@@ -174,6 +174,17 @@ void ITMDepthTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 	float nabla_good[6], nabla_new[6];
 	float step[6];
 
+	// Libpointmatcher
+  if (memory_type == MEMORYDEVICE_CPU) {
+    this->SetEvaluationParams(0);
+    Matrix4f approxInvPose = trackingState->pose_d->GetInvM();
+    approxInvPose = this->getLPMICPTF(approxInvPose);
+    trackingState->pose_d->SetInvM(approxInvPose);
+    trackingState->pose_d->Coerce();
+    approxInvPose = trackingState->pose_d->GetInvM();
+    return;
+  }
+
 	for (int levelId = viewHierarchy->noLevels - 1; levelId >= noICPLevel; levelId--)
 	{
 		this->SetEvaluationParams(levelId);
@@ -186,84 +197,85 @@ void ITMDepthTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 		float lambda = 1.0;
 
 		// Libnabo
-    //  delete nns;
-    Eigen::MatrixXf M;
-    if (memory_type == MEMORYDEVICE_CPU) {
-      M = ITMVectorToEigenMatrix(
-          sceneHierarchy->levels[0]->pointsMap->GetData(MEMORYDEVICE_CPU),
-          sceneHierarchy->levels[0]->pointsMap->noDims);
-      //  Eigen::MatrixXf M(1, 1);
-      nns.reset(Nabo::NNSearchF::createKDTreeLinearHeap(M, M.rows()));
-      //    nns = Nabo::NNSearchF::createKDTreeLinearHeap(M, M.rows());
-      std::cout << "Tree Prepared......................................... " << nns->cloud.cols() << std::endl;
-    }
+//      delete nns;
+//    Eigen::MatrixXf M;
+//    if (memory_type == MEMORYDEVICE_CPU) {
+//      M = ITMVectorToEigenMatrix(
+//          sceneHierarchy->levels[0]->pointsMap->GetData(MEMORYDEVICE_CPU),
+//          sceneHierarchy->levels[0]->pointsMap->noDims);
+//      //  Eigen::MatrixXf M(1, 1);
+//      nns.reset(Nabo::NNSearchF::createKDTreeLinearHeap(M, M.rows()));
+//      //    nns = Nabo::NNSearchF::createKDTreeLinearHeap(M, M.rows());
+//      std::cout << "Tree Prepared......................................... " << nns->cloud.cols() << std::endl;
+//    }
 
     // Libpointmatcher
     if (memory_type == MEMORYDEVICE_CPU) {
+      std::cout << "Level ID: " << levelId << std::endl;
       approxInvPose = this->getLPMICPTF(approxInvPose);
       trackingState->pose_d->SetInvM(approxInvPose);
       trackingState->pose_d->Coerce();
       approxInvPose = trackingState->pose_d->GetInvM();
-    }
+    } else {
+      for (int iterNo = 0; iterNo < noIterationsPerLevel[levelId]; iterNo++)
+      {
+        std::cout << "[ Level ID, Iteration no ]: " << "[ " << levelId << ", "
+            << iterNo << " ]" << std::endl;
+        // evaluate error function and gradients
+        std::pair<Vector4f*, int> res = this->ComputeGandH(f_new, nabla_new, hessian_new, approxInvPose);
+        matches = res.first;
+        noValidPoints_new = res.second;
 
-		for (int iterNo = 0; iterNo < noIterationsPerLevel[levelId]; iterNo++)
-		{
-		  std::cout << "[ Level ID, Iteration no ]: " << "[ " << levelId << ", "
-		      << iterNo << " ]" << std::endl;
-		  // evaluate error function and gradients
-		  std::pair<Vector4f*, int> res = this->ComputeGandH(f_new, nabla_new, hessian_new, approxInvPose);
-		  matches = res.first;
-			noValidPoints_new = res.second;
+        if (viz_icp) {
+          std::vector<Matrix4f*> tf_chain{&approxInvPose, &scenePose};
+          // visualize matches
+          visualizeTracker(this->sceneHierarchyLevel->pointsMap, this->viewHierarchyLevel->depth,
+                           this->viewHierarchyLevel->intrinsics, matches, memory_type, tf_chain);
+        }
 
-			if (viz_icp) {
-			  std::vector<Matrix4f*> tf_chain{&approxInvPose, &scenePose};
-			  // visualize matches
-        visualizeTracker(this->sceneHierarchyLevel->pointsMap, this->viewHierarchyLevel->depth,
-                         this->viewHierarchyLevel->intrinsics, matches, memory_type, tf_chain);
-			}
+        std::cout << "here0" << std::endl;
+        // check if error increased. If so, revert
+        if ((noValidPoints_new <= 0)||(f_new > f_old)) {
+          trackingState->pose_d->SetFrom(&lastKnownGoodPose);
+          approxInvPose = trackingState->pose_d->GetInvM();
+          lambda *= 10.0f;
+        } else {
+          lastKnownGoodPose.SetFrom(trackingState->pose_d);
+          f_old = f_new;
 
-			std::cout << "here0" << std::endl;
-			// check if error increased. If so, revert
-			if ((noValidPoints_new <= 0)||(f_new > f_old)) {
-				trackingState->pose_d->SetFrom(&lastKnownGoodPose);
-				approxInvPose = trackingState->pose_d->GetInvM();
-				lambda *= 10.0f;
-			} else {
-				lastKnownGoodPose.SetFrom(trackingState->pose_d);
-				f_old = f_new;
+          for (int i = 0; i < 6*6; ++i) hessian_good[i] = hessian_new[i] / noValidPoints_new;
+          for (int i = 0; i < 6; ++i) nabla_good[i] = nabla_new[i] / noValidPoints_new;
+          lambda /= 10.0f;
+        }
+        for (int i = 0; i < 6*6; ++i) A[i] = hessian_good[i];
+        for (int i = 0; i < 6; ++i) A[i+i*6] *= 1.0f + lambda;
 
-				for (int i = 0; i < 6*6; ++i) hessian_good[i] = hessian_new[i] / noValidPoints_new;
-				for (int i = 0; i < 6; ++i) nabla_good[i] = nabla_new[i] / noValidPoints_new;
-				lambda /= 10.0f;
-			}
-			for (int i = 0; i < 6*6; ++i) A[i] = hessian_good[i];
-			for (int i = 0; i < 6; ++i) A[i+i*6] *= 1.0f + lambda;
+        // compute a new step and make sure we've got an SE3
+        ComputeDelta(step, nabla_good, A, iterationType != TRACKER_ITERATION_BOTH);
+        ApplyDelta(approxInvPose, step, approxInvPose);
+        trackingState->pose_d->SetInvM(approxInvPose);
+        trackingState->pose_d->Coerce();
+        approxInvPose = trackingState->pose_d->GetInvM();
 
-			// compute a new step and make sure we've got an SE3
-			ComputeDelta(step, nabla_good, A, iterationType != TRACKER_ITERATION_BOTH);
-			ApplyDelta(approxInvPose, step, approxInvPose);
-			trackingState->pose_d->SetInvM(approxInvPose);
-			trackingState->pose_d->Coerce();
-			approxInvPose = trackingState->pose_d->GetInvM();
+        // if step is small, assume it's going to decrease the error and finish
+        bool converged = HasConverged(step);
 
-			// if step is small, assume it's going to decrease the error and finish
-			bool converged = HasConverged(step);
+        // Visualization
+        if (viz_icp) {
+          std::cout << "here1" << std::endl;
+          std::vector<Matrix4f*> tf_chain{&approxInvPose, &scenePose};
+          // visualize TF update
+          std::cout << "vizing updated tf" << std::endl;
+          visualizeTracker(
+              this->sceneHierarchyLevel->pointsMap, this->viewHierarchyLevel->depth,
+              this->viewHierarchyLevel->intrinsics, memory_type, tf_chain, converged);
+        }
 
-			// Visualization
-			if (viz_icp) {
-			  std::cout << "here1" << std::endl;
-			  std::vector<Matrix4f*> tf_chain{&approxInvPose, &scenePose};
-			  // visualize TF update
-			  std::cout << "vizing updated tf" << std::endl;
-        visualizeTracker(
-            this->sceneHierarchyLevel->pointsMap, this->viewHierarchyLevel->depth,
-            this->viewHierarchyLevel->intrinsics, memory_type, tf_chain, converged);
-			}
-
-			// if step is small, assume it's going to decrease the error and finish
-      if (converged) break;
-		}
-	}
+        // if step is small, assume it's going to decrease the error and finish
+        if (converged) break;
+      } // iterations
+    } // memory_type
+	} // level change
 }
 
 
