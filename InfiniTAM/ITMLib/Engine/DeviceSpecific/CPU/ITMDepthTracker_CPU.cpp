@@ -255,7 +255,7 @@ Matrix4f ITMDepthTracker_CPU::getLPMICPTF(Matrix4f& prevInvPose) {
   std::string BaseDir("/media/anurag/DATA-EXT/kinect-data/ITM_scan/");
 
   // load YAML config
-  std::ifstream conf((BaseDir+std::string("icp_cfg_point-point-run.yaml")).c_str());
+  std::ifstream conf((BaseDir+std::string("icp_cfg_point-plane-run.yaml")).c_str());
   if (!conf.good())
   {
     std::cerr << "Cannot open ICP config file"; exit(1);
@@ -302,6 +302,7 @@ Matrix4f ITMDepthTracker_CPU::getLPMICPTF(Matrix4f& prevInvPose) {
   // Compute the transformation to express scan in ref
   PM::TransformationParameters T = icp(GlobalScan, GlobalScene);
   std::cout << "LPM match ratio: " << icp.errorMinimizer->getWeightedPointUsedRatio() << std::endl;
+  std::cout << "ICP transformation:" << std::endl << T << std::endl;
 
   // Transform data to express it in ref
   DP data_out(GlobalScan);
