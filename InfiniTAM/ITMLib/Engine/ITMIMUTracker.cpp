@@ -18,6 +18,12 @@ void ITMIMUTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView *
 {
 	calibrator->RegisterMeasurement(((ITMViewIMU*)view)->imu->R);
 
-	trackingState->pose_d->SetR(calibrator->GetDifferentialRotationChange() *
-	                            trackingState->pose_d->GetR());
+	Matrix4f T = ((ITMViewIMU*)view)->calib->trafo_rgb_to_depth.calib;
+	Matrix3f R_rgb_to_depth(T.m00, T.m01, T.m02, T.m10, T.m11, T.m12, T.m20, T.m21, T.m22);
+	Matrix3f R_depth_to_rgb(T.m00, T.m10, T.m20, T.m01, T.m11, T.m21, T.m02, T.m12, T.m22);
+	trackingState->pose_d->SetR(
+	    R_rgb_to_depth *
+	    calibrator->GetDifferentialRotationChange() *
+	    R_depth_to_rgb *
+      trackingState->pose_d->GetR());
 }

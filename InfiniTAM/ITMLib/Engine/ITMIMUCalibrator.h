@@ -81,10 +81,11 @@ namespace ITMLib
 			}
 		};
 
-		class ITMIMUCalibrator_DRZ : public ITMIMUCalibrator
+		// Kinect - VI-sensor ROVIO RIG
+    class ITMIMUCalibrator_DRZ : public ITMIMUCalibrator
     {
     private:
-      Matrix3f differential_rotation_change;
+      ITMPose *imuPose_imucoords, *camPose_imucoords, *diffImuPose_cameracoords;
       Vector3f t_imu, r_imu;
       Matrix3f inv_oldR_imu;
       Matrix3f newR_imu, oldR_imu;
@@ -93,7 +94,15 @@ namespace ITMLib
     public:
       void RegisterMeasurement(const Matrix3f & R)
       {
-        newR_imu = R;
+        oldR_imu = imuPose_imucoords->GetR();
+
+        imuPose_imucoords->SetR(R);
+
+        // (TODO) needs to be calibrated
+        Matrix3f T_rgb_imu(-1.0, 0.0, 0.0,
+                           0.0, -1.0, 0.0,
+                           0.0, 0.0, 1.0);
+        camPose_imucoords->SetR(T_rgb_imu*R);
       }
 
       Matrix3f GetDifferentialRotationChange()
@@ -101,25 +110,43 @@ namespace ITMLib
         if (hasTwoFrames)
         {
           oldR_imu.inv(inv_oldR_imu);
-          differential_rotation_change = newR_imu * inv_oldR_imu;
-        } else {
-          differential_rotation_change.setIdentity();
+
+          // (TODO) needs to be calibrated
+          Matrix3f T_imu_rgb(-1.0, 0.0, 0.0,
+                             0.0, -1.0, 0.0,
+                             0.0, 0.0, 1.0);
+          diffImuPose_cameracoords->SetR(camPose_imucoords->GetR() * inv_oldR_imu * T_imu_rgb);
         }
+
         hasTwoFrames = true;
-        oldR_imu = newR_imu;
-        return differential_rotation_change;
+        return diffImuPose_cameracoords->GetR();
       }
 
       ITMIMUCalibrator_DRZ() : ITMIMUCalibrator()
       {
         hasTwoFrames = false;
+
+        imuPose_imucoords = new ITMPose();
+        imuPose_imucoords->SetFrom(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+
+        diffImuPose_cameracoords = new ITMPose();
+        diffImuPose_cameracoords->SetFrom(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+
+        camPose_imucoords = new ITMPose();
+        camPose_imucoords->SetFrom(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+
         oldR_imu.setIdentity();
-        newR_imu.setIdentity();
       }
 
-      ~ITMIMUCalibrator_DRZ(void) {}
+      ~ITMIMUCalibrator_DRZ(void)
+      {
+        delete imuPose_imucoords;
+        delete camPose_imucoords;
+        delete diffImuPose_cameracoords;
+      }
     };
 
+		// Realsense - VI-sensor ROVIO RIG
 		class ITMIMUCalibrator_DRZ2 : public ITMIMUCalibrator
     {
     private:
@@ -136,8 +163,10 @@ namespace ITMLib
 
         imuPose_imucoords->SetR(R);
 
-        Matrix3f T_cam_imu(-1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0);
-        camPose_imucoords->SetR(T_cam_imu*R);
+        Matrix3f T_rgb_imu(-0.99485704, -0.04357693, 0.09143589,
+                           0.05709121, -0.98691011, 0.1508278,
+                           0.08366639, 0.15527229, 0.98432233);
+        camPose_imucoords->SetR(T_rgb_imu*R);
       }
 
       Matrix3f GetDifferentialRotationChange()
@@ -145,8 +174,10 @@ namespace ITMLib
         if (hasTwoFrames)
         {
           oldR_imu.inv(inv_oldR_imu);
-          Matrix3f T_imu_cam(-1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0);
-          diffImuPose_cameracoords->SetR(camPose_imucoords->GetR() * inv_oldR_imu * T_imu_cam);
+          Matrix3f T_imu_rgb(-0.99485704, 0.05709121, 0.08366639,
+                             -0.04357693, -0.98691011, 0.15527229,
+                             0.09143589, 0.1508278, 0.98432233);
+          diffImuPose_cameracoords->SetR(camPose_imucoords->GetR() * inv_oldR_imu * T_imu_rgb);
         }
 
         hasTwoFrames = true;
