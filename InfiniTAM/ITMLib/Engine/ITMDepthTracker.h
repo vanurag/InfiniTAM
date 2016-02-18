@@ -8,6 +8,8 @@
 #include "../Objects/ITMTemplatedHierarchyLevel.h"
 #include "../Objects/ITMSceneHierarchyLevel.h"
 
+#include "../Utils/ITMLibSettings.h"
+
 #include "../Engine/ITMTracker.h"
 #include "../Engine/ITMLowLevelEngine.h"
 
@@ -72,6 +74,9 @@ namespace ITMLib
 		protected:
 			float *distThresh;
 
+			// tracker type
+			ITMLibSettings::DepthTrackerType type;
+
 			int levelId;
 			TrackerIterationType iterationType;
 
@@ -118,7 +123,7 @@ namespace ITMLib
       boost::shared_ptr<Nabo::NNSearchF> nns;
 
 			ITMDepthTracker(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels, int noICPRunTillLevel, float distThresh,
-				float terminationThreshold, bool visualize_icp, const ITMLowLevelEngine *lowLevelEngine, MemoryDeviceType memoryType);
+				float terminationThreshold, ITMLibSettings::DepthTrackerType tracker_type, bool visualize_icp, const ITMLowLevelEngine *lowLevelEngine, MemoryDeviceType memoryType);
 			virtual ~ITMDepthTracker(void);
 
 

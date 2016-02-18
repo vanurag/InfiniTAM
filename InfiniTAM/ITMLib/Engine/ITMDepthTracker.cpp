@@ -8,7 +8,7 @@
 using namespace ITMLib::Engine;
 
 ITMDepthTracker::ITMDepthTracker(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels, int noICPRunTillLevel, float distThresh,
-	float terminationThreshold, bool visualize_icp, const ITMLowLevelEngine *lowLevelEngine, MemoryDeviceType memoryType)
+	float terminationThreshold, ITMLibSettings::DepthTrackerType tracker_type, bool visualize_icp, const ITMLowLevelEngine *lowLevelEngine, MemoryDeviceType memoryType)
     : pc_viewer("ICP visualizer"), scene_cloud_pointer(&scene_cloud),
       current_view_cloud_pointer(&current_view_cloud)
 {
@@ -37,6 +37,8 @@ ITMDepthTracker::ITMDepthTracker(Vector2i imgSize, TrackerIterationType *trackin
 	this->terminationThreshold = terminationThreshold;
 
 	this->memory_type = memoryType;
+
+	type = tracker_type;
 
 	// PCL viewer
 	viz_icp = visualize_icp;
@@ -175,15 +177,20 @@ void ITMDepthTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 	float step[6];
 
 	// Libpointmatcher
-//  if (memory_type == MEMORYDEVICE_CPU) {
-//    this->SetEvaluationParams(0);
-//    Matrix4f approxInvPose = trackingState->pose_d->GetInvM();
-//    approxInvPose = this->getLPMICPTF(approxInvPose);
-//    trackingState->pose_d->SetInvM(approxInvPose);
-//    trackingState->pose_d->Coerce();
-//    approxInvPose = trackingState->pose_d->GetInvM();
-//    return;
-//  }
+	if (type == ITMLibSettings::TRACKER_LPM) {
+    if (memory_type == MEMORYDEVICE_CPU) {
+      this->SetEvaluationParams(0);
+      Matrix4f approxInvPose = trackingState->pose_d->GetInvM();
+      approxInvPose = this->getLPMICPTF(approxInvPose);
+      trackingState->pose_d->SetInvM(approxInvPose);
+      trackingState->pose_d->Coerce();
+      approxInvPose = trackingState->pose_d->GetInvM();
+      return;
+    } else {
+      std::cout << "LPM tracker only supported for CPU architecture!" << std::endl;
+      exit(1);
+    }
+	}
 
 	for (int levelId = viewHierarchy->noLevels - 1; levelId >= noICPLevel; levelId--)
 	{
@@ -197,25 +204,38 @@ void ITMDepthTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 		float lambda = 1.0;
 
 		// Libnabo
-//      delete nns;
-    Eigen::MatrixXf M;
-    if (memory_type == MEMORYDEVICE_CPU) {
-//      M = ITMVectorToEigenMatrix(
-//          sceneHierarchy->levels[0]->pointsMap->GetData(MEMORYDEVICE_CPU),
-//          sceneHierarchy->levels[0]->pointsMap->noDims);
-      Eigen::MatrixXf M(1, 1);
-      nns.reset(Nabo::NNSearchF::createKDTreeLinearHeap(M, M.rows()));
-      //    nns = Nabo::NNSearchF::createKDTreeLinearHeap(M, M.rows());
-      std::cout << "Tree Prepared......................................... " << nns->cloud.cols() << std::endl;
+		Eigen::MatrixXf M;
+		if (type == ITMLibSettings::TRACKER_NABO) {
+		  if (memory_type == MEMORYDEVICE_CPU) {
+    //      delete nns;
+        Eigen::MatrixXf M1 = ITMVectorToEigenMatrix(
+            sceneHierarchy->levels[0]->pointsMap->GetData(MemoryDeviceType(memory_type)),
+            sceneHierarchy->levels[0]->pointsMap->noDims);
+        M = M1;
+		  } else {
+		    std::cout << "NABO tracker only supported for CPU architecture!" << std::endl;
+		    exit(1);
+		  }
+    } else {
+      Eigen::MatrixXf M1(1, 1);
+      M = M1;
     }
+		nns.reset(Nabo::NNSearchF::createKDTreeLinearHeap(M, M.rows()));
+    //    nns = Nabo::NNSearchF::createKDTreeLinearHeap(M, M.rows());
+    std::cout << "Tree Prepared......................................... " << nns->cloud.cols() << std::endl;
 
     // Libpointmatcher
-    if (false) { //memory_type == MEMORYDEVICE_CPU) {
-      std::cout << "Level ID: " << levelId << std::endl;
-      approxInvPose = this->getLPMICPTF(approxInvPose);
-      trackingState->pose_d->SetInvM(approxInvPose);
-      trackingState->pose_d->Coerce();
-      approxInvPose = trackingState->pose_d->GetInvM();
+    if (type == ITMLibSettings::TRACKER_LPM_HIERARCHY) {
+      if (memory_type == MEMORYDEVICE_CPU) {
+        std::cout << "Level ID: " << levelId << std::endl;
+        approxInvPose = this->getLPMICPTF(approxInvPose);
+        trackingState->pose_d->SetInvM(approxInvPose);
+        trackingState->pose_d->Coerce();
+        approxInvPose = trackingState->pose_d->GetInvM();
+      } else {
+        std::cout << "LPM_HIERARCHY tracker only supported for CPU architecture!" << std::endl;
+        exit(1);
+      }
     } else {
       for (int iterNo = 0; iterNo < noIterationsPerLevel[levelId]; iterNo++)
       {
@@ -282,10 +302,16 @@ void ITMDepthTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 const Eigen::MatrixXf ITMDepthTracker::ITMVectorToEigenMatrix(
     const Vector4f* vector, const Vector2i dim) {
   Eigen::MatrixXf m(3, dim.height * dim.width);
+  Vector4f point;
   for (int i = 0; i < dim.width * dim.height; ++i) {
-    m(0, i) = vector[i].x;
-    m(1, i) = vector[i].y;
-    m(2, i) = vector[i].z;
+#ifndef COMPILE_WITHOUT_CUDA
+    ITMSafeCall(cudaMemcpy(&point, &vector[i], sizeof(Vector4f), cudaMemcpyDeviceToHost));
+#else
+    point = vector[i];
+#endif
+    m(0, i) = point.x;
+    m(1, i) = point.y;
+    m(2, i) = point.z;
   }
 
   return m;

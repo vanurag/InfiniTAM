@@ -47,8 +47,21 @@ namespace ITMLib
 				TRACKER_WICP
 			} TrackerType;
 
+			/// Depth Tracker types
+      typedef enum {
+        //! InfiniTAM default depth tracker on image hierarchy
+        TRACKER_ITM,
+        //! TRACKER_ITM but uses libnabo for point associations
+        TRACKER_NABO,
+        //! Using Libpointmatcher for ICP (only CPU)
+        TRACKER_LPM,
+        //! TRACKER_LPM but operates on image hierarchy (only CPU)
+        TRACKER_LPM_HIERARCHY,
+      } DepthTrackerType;
+
 			/// Select the type of tracker to use
 			TrackerType trackerType;
+			DepthTrackerType depthTrackerType;
 
 			/// The tracking regime used by the tracking controller
 			TrackerIterationType *trackingRegime;

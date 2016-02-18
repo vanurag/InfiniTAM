@@ -35,8 +35,8 @@ __global__ void depthTrackerOneLevel_g_rt_device(ITMDepthTracker_KernelParameter
 // host methods
 
 ITMDepthTracker_CUDA::ITMDepthTracker_CUDA(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels, int noICPRunTillLevel,
-	float distThresh, float terminationThreshold, bool visualize_icp, const ITMLowLevelEngine *lowLevelEngine)
-	:ITMDepthTracker(imgSize, trackingRegime, noHierarchyLevels, noICPRunTillLevel, distThresh, terminationThreshold, visualize_icp, lowLevelEngine, MEMORYDEVICE_CUDA)
+	float distThresh, float terminationThreshold, ITMLibSettings::DepthTrackerType tracker_type, bool visualize_icp, const ITMLowLevelEngine *lowLevelEngine)
+	:ITMDepthTracker(imgSize, trackingRegime, noHierarchyLevels, noICPRunTillLevel, distThresh, terminationThreshold, tracker_type, visualize_icp, lowLevelEngine, MEMORYDEVICE_CUDA)
 {
 	ITMSafeCall(cudaMallocHost((void**)&accu_host, sizeof(AccuCell)));
 	ITMSafeCall(cudaMalloc((void**)&accu_device, sizeof(AccuCell)));

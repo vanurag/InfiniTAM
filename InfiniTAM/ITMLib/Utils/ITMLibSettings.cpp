@@ -45,6 +45,8 @@ ITMLibSettings::ITMLibSettings(void)
 	//trackerType = TRACKER_IMU;
 	//trackerType = TRACKER_WICP;
 
+	depthTrackerType = TRACKER_ITM;
+
 	// ICP visualization
 	visualizeICP = false;
 

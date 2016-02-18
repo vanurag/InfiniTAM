@@ -6,8 +6,8 @@
 using namespace ITMLib::Engine;
 
 ITMDepthTracker_CPU::ITMDepthTracker_CPU(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels, int noICPRunTillLevel,
-	float distThresh, float terminationThreshold, bool visualize_icp, const ITMLowLevelEngine *lowLevelEngine) :ITMDepthTracker(imgSize, trackingRegime, noHierarchyLevels,
-	noICPRunTillLevel, distThresh, terminationThreshold, visualize_icp, lowLevelEngine, MEMORYDEVICE_CPU) { }
+	float distThresh, float terminationThreshold, ITMLibSettings::DepthTrackerType tracker_type, bool visualize_icp, const ITMLowLevelEngine *lowLevelEngine) :ITMDepthTracker(imgSize, trackingRegime, noHierarchyLevels,
+	noICPRunTillLevel, distThresh, terminationThreshold, tracker_type, visualize_icp, lowLevelEngine, MEMORYDEVICE_CPU) { }
 
 ITMDepthTracker_CPU::~ITMDepthTracker_CPU(void) { }
 
@@ -142,15 +142,15 @@ Vector4f ITMDepthTracker_CPU::computePerPointGH_Depth_Ab_NN(THREADPTR(float) *A,
 
   // project into previous rendered image -> point match pairs for ICP
   if (nns->cloud.cols() > 1) {
-    std::cout << "Using Libnabo NN " << nns->cloud.cols() << std::endl << std::endl;
-    std::cout << "Sample cloud: " << std::endl;
-    for (int c = 0, i = 0; c < 3 && i < nns->cloud.cols(); ++i) {
-      if (nns->cloud.col(i).sum() != 0) {
-        c += 1;
-        std::cout << "Col " << i << ": " << nns->cloud.col(i) << std::endl;
-      }
-    }
-    std::cout << std::endl;
+//    std::cout << "Using Libnabo NN " << nns->cloud.cols() << std::endl << std::endl;
+//    std::cout << "Sample cloud: " << std::endl;
+//    for (int c = 0, i = 0; c < 3 && i < nns->cloud.cols(); ++i) {
+//      if (nns->cloud.col(i).sum() != 0) {
+//        c += 1;
+//        std::cout << "Col " << i << ": " << nns->cloud.col(i) << std::endl;
+//      }
+//    }
+//    std::cout << std::endl;
 
     Eigen::Vector3f query(tmp3Dpoint_reproj.x, tmp3Dpoint_reproj.y, tmp3Dpoint_reproj.z);
     Eigen::VectorXi index(1);  // 1 nearest neighbour index required
@@ -163,15 +163,15 @@ Vector4f ITMDepthTracker_CPU::computePerPointGH_Depth_Ab_NN(THREADPTR(float) *A,
     curr3Dpoint.w = 1.0;
 
     if (curr3Dpoint.x != 0.0 || curr3Dpoint.y != 0.0 || curr3Dpoint.z != 0.0) {
-      std::cout << curr3Dpoint.x << ", " << curr3Dpoint.y << ", " << curr3Dpoint.z << ", " << std::endl;
-      std::cout << "NN YAYYYYYYYYY " << index.coeff(0) << " " << dists2.coeff(0) << std::endl;
+//      std::cout << curr3Dpoint.x << ", " << curr3Dpoint.y << ", " << curr3Dpoint.z << ", " << std::endl;
+//      std::cout << "NN YAYYYYYYYYY " << index.coeff(0) << " " << dists2.coeff(0) << std::endl;
     } else {
-      std::cout << "NN ZEROSSSSSSS " << index.coeff(0) << " " << dists2.coeff(0) << std::endl;
+//      std::cout << "NN ZEROSSSSSSS " << index.coeff(0) << " " << dists2.coeff(0) << std::endl;
       curr3Dpoint.w = 0.0;
       return curr3Dpoint;
     }
   } else {
-    std::cout << "NOT Using Libnabo NN" << std::endl;
+//    std::cout << "NOT Using Libnabo NN" << std::endl;
     tmp2Dpoint.x = sceneIntrinsics.x * tmp3Dpoint_reproj.x / tmp3Dpoint_reproj.z + sceneIntrinsics.z;
     tmp2Dpoint.y = sceneIntrinsics.y * tmp3Dpoint_reproj.y / tmp3Dpoint_reproj.z + sceneIntrinsics.w;
 

@@ -40,7 +40,7 @@ namespace ITMLib
       DP FloatImagetoLPMPointCloud(const ITMFloatImage* im, const Vector4f intrinsics);
 		public:
 			ITMDepthTracker_CPU(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels, int noICPRunTillLevel, float distThresh,
-				float terminationThreshold, bool visualize_icp, const ITMLowLevelEngine *lowLevelEngine);
+				float terminationThreshold, ITMLibSettings::DepthTrackerType tracker_type, bool visualize_icp, const ITMLowLevelEngine *lowLevelEngine);
 			~ITMDepthTracker_CPU(void);
 		};
 	}
