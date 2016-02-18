@@ -123,7 +123,7 @@ namespace ITMLib
 		class ITMIMUCalibrator_DRZ2 : public ITMIMUCalibrator
     {
     private:
-      ITMPose *imuPose_imucoords, *imuPose_cameracoords;
+      ITMPose *imuPose_imucoords, *camPose_imucoords, *diffImuPose_cameracoords;
       Vector3f t_imu, r_imu;
       Matrix3f inv_oldR_imu;
       Matrix3f newR_imu, oldR_imu;
@@ -138,12 +138,10 @@ namespace ITMLib
 
         imuPose_imucoords->GetParams(t_imu, r_imu);
         float rx, ry, rz;
-        rx = r_imu.x;
-        ry = r_imu.z;
-        rz = r_imu.y;
-        imuPose_imucoords->SetFrom(t_imu, Vector3f(rx, ry, rz));
-
-        newR_imu = imuPose_imucoords->GetR();
+        rx = -r_imu.x;
+        ry = -r_imu.y;
+        rz = r_imu.z;
+        camPose_imucoords->SetFrom(t_imu, Vector3f(rx, ry, rz));
       }
 
       Matrix3f GetDifferentialRotationChange()
@@ -151,18 +149,18 @@ namespace ITMLib
         if (hasTwoFrames)
         {
           oldR_imu.inv(inv_oldR_imu);
-          imuPose_cameracoords->SetR(imuPose_imucoords->GetR() * inv_oldR_imu);
+          diffImuPose_cameracoords->SetR(camPose_imucoords->GetR() * inv_oldR_imu);
 
-          imuPose_cameracoords->GetParams(t_imu, r_imu);
+          diffImuPose_cameracoords->GetParams(t_imu, r_imu);
           float rx, ry, rz;
-          rx = r_imu.x;
-          ry = r_imu.z;
-          rz = r_imu.y;
-          imuPose_cameracoords->SetFrom(t_imu.x, t_imu.y, t_imu.z, rx, ry, -rz);
+          rx = -r_imu.x;
+          ry = -r_imu.y;
+          rz = r_imu.z;
+          diffImuPose_cameracoords->SetFrom(t_imu.x, t_imu.y, t_imu.z, rx, ry, rz);
         }
 
         hasTwoFrames = true;
-        return imuPose_cameracoords->GetR();
+        return diffImuPose_cameracoords->GetR();
       }
 
       ITMIMUCalibrator_DRZ2() : ITMIMUCalibrator()
@@ -172,8 +170,11 @@ namespace ITMLib
         imuPose_imucoords = new ITMPose();
         imuPose_imucoords->SetFrom(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 
-        imuPose_cameracoords = new ITMPose();
-        imuPose_cameracoords->SetFrom(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+        diffImuPose_cameracoords = new ITMPose();
+        diffImuPose_cameracoords->SetFrom(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+
+        camPose_imucoords = new ITMPose();
+        camPose_imucoords->SetFrom(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 
         oldR_imu.setIdentity();
       }
@@ -181,7 +182,8 @@ namespace ITMLib
       ~ITMIMUCalibrator_DRZ2(void)
       {
         delete imuPose_imucoords;
-        delete imuPose_cameracoords;
+        delete camPose_imucoords;
+        delete diffImuPose_cameracoords;
       }
     };
 	}
