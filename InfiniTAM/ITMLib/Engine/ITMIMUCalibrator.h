@@ -136,12 +136,8 @@ namespace ITMLib
 
         imuPose_imucoords->SetR(R);
 
-        imuPose_imucoords->GetParams(t_imu, r_imu);
-        float rx, ry, rz;
-        rx = -r_imu.x;
-        ry = -r_imu.y;
-        rz = r_imu.z;
-        camPose_imucoords->SetFrom(t_imu, Vector3f(rx, ry, rz));
+        Matrix3f T_cam_imu(-1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0);
+        camPose_imucoords->SetR(T_cam_imu*R);
       }
 
       Matrix3f GetDifferentialRotationChange()
@@ -149,14 +145,8 @@ namespace ITMLib
         if (hasTwoFrames)
         {
           oldR_imu.inv(inv_oldR_imu);
-          diffImuPose_cameracoords->SetR(camPose_imucoords->GetR() * inv_oldR_imu);
-
-          diffImuPose_cameracoords->GetParams(t_imu, r_imu);
-          float rx, ry, rz;
-          rx = -r_imu.x;
-          ry = -r_imu.y;
-          rz = r_imu.z;
-          diffImuPose_cameracoords->SetFrom(t_imu.x, t_imu.y, t_imu.z, rx, ry, rz);
+          Matrix3f T_imu_cam(-1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0);
+          diffImuPose_cameracoords->SetR(camPose_imucoords->GetR() * inv_oldR_imu * T_imu_cam);
         }
 
         hasTwoFrames = true;

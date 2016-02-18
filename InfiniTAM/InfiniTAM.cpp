@@ -234,8 +234,8 @@ try
 	} else if (arg2 == std::string("kinect+imu")) { // Kinect2
     internalSettings->sceneParams.viewFrustum_min = 0.5f;
     internalSettings->sceneParams.viewFrustum_max = 8.0f;
-        internalSettings->trackerType = ITMLibSettings::TRACKER_STRICT_IMU;
-//    internalSettings->trackerType = ITMLibSettings::TRACKER_IMU;
+//        internalSettings->trackerType = ITMLibSettings::TRACKER_STRICT_IMU;
+    internalSettings->trackerType = ITMLibSettings::TRACKER_IMU;
 	} else if (arg2 == std::string("realsense")) { // R200
 	  internalSettings->sceneParams.viewFrustum_min = 0.5f;
 	  internalSettings->sceneParams.viewFrustum_max = 2.0f; // 4.0f
