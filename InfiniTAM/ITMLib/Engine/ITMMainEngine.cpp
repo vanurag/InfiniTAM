@@ -125,7 +125,7 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 	trackingController->Track(trackingState, view);
 
   // VIZ ITM Tracker estimate
-  Matrix4f itm_pose = trackingState->pose_d->GetM();
+  Matrix4f itm_pose = trackingState->pose_d->GetInvM();
   cv::Affine3f viz_itm_pose;
   cv::Mat pose_mat(3, 3, CV_32F);
   float* mat_pointer = (float*)pose_mat.data;
