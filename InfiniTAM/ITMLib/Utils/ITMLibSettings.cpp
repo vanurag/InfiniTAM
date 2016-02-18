@@ -56,6 +56,7 @@ ITMLibSettings::ITMLibSettings(void)
 	// builds the tracking regime. level 0 is full resolution
 	if (trackerType == TRACKER_IMU)
 	{
+	  std::cout << "Yo setting IMU tracker!!" << std::endl;
 		noHierarchyLevels = 2;
 		trackingRegime = new TrackerIterationType[noHierarchyLevels];
 
@@ -73,6 +74,7 @@ ITMLibSettings::ITMLibSettings(void)
   }
 	else
 	{
+	  std::cout << "Yo setting ICP tracker!!" << std::endl;
 		noHierarchyLevels = 5;
 		trackingRegime = new TrackerIterationType[noHierarchyLevels];
 

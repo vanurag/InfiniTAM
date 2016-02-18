@@ -108,6 +108,7 @@ std::pair<Vector4f*, int> ITMDepthTracker_CUDA::ComputeGandH(float &f, float *na
 	ITMSafeCall(cudaMallocHost((void**)&host_matches, viewImageSize.height * viewImageSize.width * sizeof(Vector4f)));
 	ITMSafeCall(cudaMemcpy(host_matches, device_matches,
 			viewImageSize.height * viewImageSize.width * sizeof(Vector4f), cudaMemcpyDeviceToHost));
+	ITMSafeCall(cudaFree(device_matches));
 
 	for (int r = 0, counter = 0; r < noPara; r++) for (int c = 0; c <= r; c++, counter++) hessian[r + c * 6] = accu_host->h[counter];
 	for (int r = 0; r < noPara; ++r) for (int c = r + 1; c < noPara; c++) hessian[r + c * 6] = hessian[c + r * 6];

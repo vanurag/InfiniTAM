@@ -53,16 +53,31 @@ std::pair<Vector4f*, int> ITMDepthTracker_CPU::ComputeGandH(float &f, float *nab
 		switch (iterationType)
 		{
 		case TRACKER_ITERATION_ROTATION:
-		  match = computePerPointGH_Depth_NN<true, true>(localNabla, localHessian, localF, x, y, depth[x + y * viewImageSize.x], viewImageSize,
-				viewIntrinsics, sceneImageSize, sceneIntrinsics, approxInvPose, scenePose, pointsMap, normalsMap, distThresh[levelId], nns);
+		  if (nns->cloud.cols() > 1) {
+        match = computePerPointGH_Depth_NN<true, true>(localNabla, localHessian, localF, x, y, depth[x + y * viewImageSize.x], viewImageSize,
+          viewIntrinsics, sceneImageSize, sceneIntrinsics, approxInvPose, scenePose, pointsMap, normalsMap, distThresh[levelId], nns);
+		  } else {
+		    match = computePerPointGH_Depth<true, true>(localNabla, localHessian, localF, x, y, depth[x + y * viewImageSize.x], viewImageSize,
+          viewIntrinsics, sceneImageSize, sceneIntrinsics, approxInvPose, scenePose, pointsMap, normalsMap, distThresh[levelId]);
+      }
 			break;
 		case TRACKER_ITERATION_TRANSLATION:
-		  match = computePerPointGH_Depth_NN<true, false>(localNabla, localHessian, localF, x, y, depth[x + y * viewImageSize.x], viewImageSize,
-				viewIntrinsics, sceneImageSize, sceneIntrinsics, approxInvPose, scenePose, pointsMap, normalsMap, distThresh[levelId], nns);
+		  if (nns->cloud.cols() > 1) {
+        match = computePerPointGH_Depth_NN<true, false>(localNabla, localHessian, localF, x, y, depth[x + y * viewImageSize.x], viewImageSize,
+          viewIntrinsics, sceneImageSize, sceneIntrinsics, approxInvPose, scenePose, pointsMap, normalsMap, distThresh[levelId], nns);
+		  } else {
+		    match = computePerPointGH_Depth<true, false>(localNabla, localHessian, localF, x, y, depth[x + y * viewImageSize.x], viewImageSize,
+          viewIntrinsics, sceneImageSize, sceneIntrinsics, approxInvPose, scenePose, pointsMap, normalsMap, distThresh[levelId]);
+		  }
 			break;
 		case TRACKER_ITERATION_BOTH:
-		  match = computePerPointGH_Depth_NN<false, false>(localNabla, localHessian, localF, x, y, depth[x + y * viewImageSize.x], viewImageSize,
-				viewIntrinsics, sceneImageSize, sceneIntrinsics, approxInvPose, scenePose, pointsMap, normalsMap, distThresh[levelId], nns);
+		  if (nns->cloud.cols() > 1) {
+        match = computePerPointGH_Depth_NN<false, false>(localNabla, localHessian, localF, x, y, depth[x + y * viewImageSize.x], viewImageSize,
+          viewIntrinsics, sceneImageSize, sceneIntrinsics, approxInvPose, scenePose, pointsMap, normalsMap, distThresh[levelId], nns);
+		  } else {
+		    match = computePerPointGH_Depth<false, false>(localNabla, localHessian, localF, x, y, depth[x + y * viewImageSize.x], viewImageSize,
+          viewIntrinsics, sceneImageSize, sceneIntrinsics, approxInvPose, scenePose, pointsMap, normalsMap, distThresh[levelId]);
+		  }
 			break;
 		default:
 		  match.w = 0.0;

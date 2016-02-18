@@ -175,15 +175,15 @@ void ITMDepthTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 	float step[6];
 
 	// Libpointmatcher
-  if (memory_type == MEMORYDEVICE_CPU) {
-    this->SetEvaluationParams(0);
-    Matrix4f approxInvPose = trackingState->pose_d->GetInvM();
-    approxInvPose = this->getLPMICPTF(approxInvPose);
-    trackingState->pose_d->SetInvM(approxInvPose);
-    trackingState->pose_d->Coerce();
-    approxInvPose = trackingState->pose_d->GetInvM();
-    return;
-  }
+//  if (memory_type == MEMORYDEVICE_CPU) {
+//    this->SetEvaluationParams(0);
+//    Matrix4f approxInvPose = trackingState->pose_d->GetInvM();
+//    approxInvPose = this->getLPMICPTF(approxInvPose);
+//    trackingState->pose_d->SetInvM(approxInvPose);
+//    trackingState->pose_d->Coerce();
+//    approxInvPose = trackingState->pose_d->GetInvM();
+//    return;
+//  }
 
 	for (int levelId = viewHierarchy->noLevels - 1; levelId >= noICPLevel; levelId--)
 	{
@@ -198,19 +198,19 @@ void ITMDepthTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 
 		// Libnabo
 //      delete nns;
-//    Eigen::MatrixXf M;
-//    if (memory_type == MEMORYDEVICE_CPU) {
+    Eigen::MatrixXf M;
+    if (memory_type == MEMORYDEVICE_CPU) {
 //      M = ITMVectorToEigenMatrix(
 //          sceneHierarchy->levels[0]->pointsMap->GetData(MEMORYDEVICE_CPU),
 //          sceneHierarchy->levels[0]->pointsMap->noDims);
-//      //  Eigen::MatrixXf M(1, 1);
-//      nns.reset(Nabo::NNSearchF::createKDTreeLinearHeap(M, M.rows()));
-//      //    nns = Nabo::NNSearchF::createKDTreeLinearHeap(M, M.rows());
-//      std::cout << "Tree Prepared......................................... " << nns->cloud.cols() << std::endl;
-//    }
+      Eigen::MatrixXf M(1, 1);
+      nns.reset(Nabo::NNSearchF::createKDTreeLinearHeap(M, M.rows()));
+      //    nns = Nabo::NNSearchF::createKDTreeLinearHeap(M, M.rows());
+      std::cout << "Tree Prepared......................................... " << nns->cloud.cols() << std::endl;
+    }
 
     // Libpointmatcher
-    if (memory_type == MEMORYDEVICE_CPU) {
+    if (false) { //memory_type == MEMORYDEVICE_CPU) {
       std::cout << "Level ID: " << levelId << std::endl;
       approxInvPose = this->getLPMICPTF(approxInvPose);
       trackingState->pose_d->SetInvM(approxInvPose);
@@ -369,7 +369,7 @@ void ITMDepthTracker::DrawPointMatches(
     pcl::PointCloud<pcl::PointXYZRGB>& cloud, Vector4f* matches, Vector3i color) {
 
   std::cout << "scan cloud size: " << cloud.size() << " " << viewHierarchyLevel->depth->noDims.height * viewHierarchyLevel->depth->noDims.width << std::endl;
-  for (int i = 0; i < cloud.size(); ++i) {
+  for (int i = 0; i < cloud.size(); i+=10) {
     if (matches[i].w != 0.0) {
       pcl::PointXYZ m;
       m.x = matches[i].x;
@@ -413,9 +413,8 @@ void ITMDepthTracker::visualizeTracker(
     std::cout << "Pressed ENTER" << std::endl;
     pcl_render_stop = true;
     std::cout << "waiting to join...." << std::endl;
-//    t.join();
+    t.join();
     std::cout << "joined!!!" << std::endl;
-    pc_viewer.removeAllShapes();
   }
 }
 
@@ -444,12 +443,10 @@ void ITMDepthTracker::visualizeTracker(
     std::cout << "Pressed ENTER" << std::endl;
     pcl_render_stop = true;
     std::cout << "waiting to join...." << std::endl;
-//    t.join();
+    t.join();
     std::cout << "joined!!!" << std::endl;
-    pc_viewer.removeAllShapes();
     std::cout << "here -1" << std::endl;
   }
-//  pc_viewer.spinOnce (100);
 }
 
 void ITMDepthTracker::pcl_render_loop() {
@@ -458,4 +455,5 @@ void ITMDepthTracker::pcl_render_loop() {
     std::cout << "SPINNING......." << std::endl;
     pc_viewer.spinOnce (100);
   }
+  pc_viewer.removeAllShapes();
 }

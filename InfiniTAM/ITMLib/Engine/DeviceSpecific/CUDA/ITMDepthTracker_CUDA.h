@@ -19,6 +19,7 @@ namespace ITMLib
 
 		protected:
 			std::pair<Vector4f*, int> ComputeGandH(float &f, float *nabla, float *hessian, Matrix4f approxInvPose);
+			Matrix4f getLPMICPTF(Matrix4f& prevInvPose) {};
 
 		public:
 			ITMDepthTracker_CUDA(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels, int noICPRunTillLevel, float distThresh,
