@@ -114,7 +114,7 @@ void ROSOdometrySourceEngine::quat2ITMIMU(const Quaternion odom_pose) {
 //  cached_imu->R.m12 = 2.0*cam_pose.y*cam_pose.z + 2.0*cam_pose.x*cam_pose.w;
 //  cached_imu->R.m22 = 1.0 - 2*pow(cam_pose.x, 2) - 2*pow(cam_pose.y, 2);
 
-  VisualizePose();
+//  VisualizePose();
 
 }
 

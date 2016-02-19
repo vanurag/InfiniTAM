@@ -4,8 +4,11 @@
 
 using namespace ITMLib::Engine;
 
+cv::viz::Viz3d ITMMainEngine::viz_window_ = cv::viz::Viz3d("ITM Tracking Pose");
+cv::Affine3f ITMMainEngine::viz_itm_pose_ = cv::Affine3f();
+
 ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib *calib, Vector2i imgSize_rgb, Vector2i imgSize_d)
-  : viz_window_("ITM Tracking Pose")
+  : viz_key_event(cv::viz::KeyboardEvent::Action::KEY_DOWN, "A", cv::viz::KeyboardEvent::ALT, 1)
 {
 	// create all the things required for marching cubes and mesh extraction
 	// - uses additional memory (lots!)
@@ -70,6 +73,7 @@ ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib 
 	mainProcessingActive = true;
 
 	// VIZ
+	viz_window_.registerKeyboardCallback(VizKeyboardCallback);
 	viz_window_.setWindowSize(cv::Size(600, 600));
   viz_window_.showWidget("ITM Tracking Pose", cv::viz::WCoordinateSystem(100.0));
 }
@@ -178,7 +182,6 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 // VIZ ITM Tracker camera pose estimate
 void ITMMainEngine::VisualizeCameraPose() {
   Matrix4f itm_pose = trackingState->pose_d->GetInvM();
-  cv::Affine3f viz_itm_pose;
   cv::Mat pose_mat(3, 3, CV_32F);
   float* mat_pointer = (float*)pose_mat.data;
   for (int row = 0; row < 3; ++row) {
@@ -186,9 +189,9 @@ void ITMMainEngine::VisualizeCameraPose() {
       mat_pointer[3*row + col] = itm_pose(col, row);
     }
   }
-  viz_itm_pose.rotation(pose_mat);
-  viz_itm_pose = viz_itm_pose.translate(cv::Vec3f(100.0*itm_pose.m30, 100.0*itm_pose.m31, 100.0*itm_pose.m32));
-  viz_window_.setWidgetPose("ITM Tracking Pose", viz_itm_pose);
+  viz_itm_pose_.rotation(pose_mat);
+  viz_itm_pose_.translation(cv::Vec3f(100.0*itm_pose.m30, 100.0*itm_pose.m31, 100.0*itm_pose.m32));
+  viz_window_.setWidgetPose("ITM Tracking Pose", viz_itm_pose_);
   viz_window_.spinOnce(1, true);
 }
 

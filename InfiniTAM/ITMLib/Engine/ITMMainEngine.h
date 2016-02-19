@@ -76,7 +76,15 @@ namespace ITMLib
 			ITMRenderState *renderState_freeview;
 
 			// VIZ
-			cv::viz::Viz3d viz_window_;
+			cv::viz::KeyboardEvent viz_key_event;
+			static cv::viz::Viz3d viz_window_;
+			static cv::Affine3f viz_itm_pose_;
+			static void VizKeyboardCallback(const cv::viz::KeyboardEvent&, void*) {
+        std::cout << "Setting VIZ viewing angle to camera's viewing direction" << std::endl;
+        cv::Affine3f viz_viewer_pose = viz_itm_pose_;
+        viz_viewer_pose = viz_viewer_pose.translate(cv::Vec3f(0.0, 0.0, -100.0));
+        viz_window_.setViewerPose(viz_viewer_pose);
+      }
 
 		public:
 			enum GetImageType
