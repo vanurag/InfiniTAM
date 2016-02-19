@@ -234,16 +234,30 @@ try
 	} else if (arg2 == std::string("kinect+imu")) { // Kinect2
     internalSettings->sceneParams.viewFrustum_min = 0.5f;
     internalSettings->sceneParams.viewFrustum_max = 8.0f;
-//        internalSettings->trackerType = ITMLibSettings::TRACKER_STRICT_IMU;
     internalSettings->trackerType = ITMLibSettings::TRACKER_IMU;
+	} else if (arg2 == std::string("kinect+odom")) { // Kinect2
+    internalSettings->sceneParams.viewFrustum_min = 0.5f;
+    internalSettings->sceneParams.viewFrustum_max = 8.0f;
+    internalSettings->trackerType = ITMLibSettings::TRACKER_ODOMETRY;
+	} else if (arg2 == std::string("kinect+strict_odom")) { // Kinect2
+    internalSettings->sceneParams.viewFrustum_min = 0.5f;
+    internalSettings->sceneParams.viewFrustum_max = 8.0f;
+    internalSettings->trackerType = ITMLibSettings::TRACKER_STRICT_ODOMETRY;
 	} else if (arg2 == std::string("realsense")) { // R200
 	  internalSettings->sceneParams.viewFrustum_min = 0.5f;
 	  internalSettings->sceneParams.viewFrustum_max = 2.0f; // 4.0f
 	} else if (arg2 == std::string("realsense+imu")) { // R200
     internalSettings->sceneParams.viewFrustum_min = 0.5f;
     internalSettings->sceneParams.viewFrustum_max = 2.0f; // 4.0f
-//    internalSettings->trackerType = ITMLibSettings::TRACKER_STRICT_IMU;
     internalSettings->trackerType = ITMLibSettings::TRACKER_IMU;
+	} else if (arg2 == std::string("realsense+odom")) { // R200
+    internalSettings->sceneParams.viewFrustum_min = 0.5f;
+    internalSettings->sceneParams.viewFrustum_max = 2.0f; // 4.0f
+    internalSettings->trackerType = ITMLibSettings::TRACKER_ODOMETRY;
+	} else if (arg2 == std::string("realsense+strict_odom")) { // R200
+    internalSettings->sceneParams.viewFrustum_min = 0.5f;
+    internalSettings->sceneParams.viewFrustum_max = 2.0f; // 4.0f
+    internalSettings->trackerType = ITMLibSettings::TRACKER_STRICT_ODOMETRY;
 	} else if (arg2 == std::string("vi-sensor")) {
 	  internalSettings->sceneParams.viewFrustum_min = 0.2f;
     internalSettings->sceneParams.viewFrustum_max = 20.0f;
