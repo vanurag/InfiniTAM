@@ -124,19 +124,7 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
   trackingController->Track(trackingState, view);
 
   // VIZ ITM Tracker estimate
-  Matrix4f itm_pose = trackingState->pose_d->GetInvM();
-  cv::Affine3f viz_itm_pose;
-  cv::Mat pose_mat(3, 3, CV_32F);
-  float* mat_pointer = (float*)pose_mat.data;
-  for (int row = 0; row < 3; ++row) {
-    for (int col = 0; col < 3; ++col) {
-      mat_pointer[3*row + col] = itm_pose(col, row);
-    }
-  }
-  viz_itm_pose.rotation(pose_mat);
-  viz_itm_pose.translate(cv::Vec3f(0.0, 0.0, 0.0));
-  viz_window_.setWidgetPose("ITM Tracking Pose", viz_itm_pose);
-  viz_window_.spinOnce(1, true);
+  VisualizeCameraPose();
 
   // fusion
   if (fusionActive) denseMapper->ProcessFrame(view, trackingState, scene, renderState_live);
@@ -157,19 +145,7 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 	trackingController->Track(trackingState, view);
 
   // VIZ ITM Tracker estimate
-  Matrix4f itm_pose = trackingState->pose_d->GetInvM();
-  cv::Affine3f viz_itm_pose;
-  cv::Mat pose_mat(3, 3, CV_32F);
-  float* mat_pointer = (float*)pose_mat.data;
-  for (int row = 0; row < 3; ++row) {
-    for (int col = 0; col < 3; ++col) {
-      mat_pointer[3*row + col] = itm_pose(col, row);
-    }
-  }
-  viz_itm_pose.rotation(pose_mat);
-  viz_itm_pose.translate(cv::Vec3f(0.0, 0.0, 0.0));
-  viz_window_.setWidgetPose("ITM Tracking Pose", viz_itm_pose);
-  viz_window_.spinOnce(1, true);
+	VisualizeCameraPose();
 
 	// fusion
 	if (fusionActive) denseMapper->ProcessFrame(view, trackingState, scene, renderState_live);
@@ -190,6 +166,17 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
   trackingController->Track(trackingState, view);
 
   // VIZ ITM Tracker estimate
+  VisualizeCameraPose();
+
+  // fusion
+  if (fusionActive) denseMapper->ProcessFrame(view, trackingState, scene, renderState_live);
+
+  // raycast to renderState_live for tracking and free visualisation
+  trackingController->Prepare(trackingState, view, renderState_live);
+}
+
+// VIZ ITM Tracker camera pose estimate
+void ITMMainEngine::VisualizeCameraPose() {
   Matrix4f itm_pose = trackingState->pose_d->GetInvM();
   cv::Affine3f viz_itm_pose;
   cv::Mat pose_mat(3, 3, CV_32F);
@@ -200,15 +187,9 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
     }
   }
   viz_itm_pose.rotation(pose_mat);
-  viz_itm_pose.translate(cv::Vec3f(0.0, 0.0, 0.0));
+  viz_itm_pose = viz_itm_pose.translate(cv::Vec3f(100.0*itm_pose.m30, 100.0*itm_pose.m31, 100.0*itm_pose.m32));
   viz_window_.setWidgetPose("ITM Tracking Pose", viz_itm_pose);
   viz_window_.spinOnce(1, true);
-
-  // fusion
-  if (fusionActive) denseMapper->ProcessFrame(view, trackingState, scene, renderState_live);
-
-  // raycast to renderState_live for tracking and free visualisation
-  trackingController->Prepare(trackingState, view, renderState_live);
 }
 
 Vector2i ITMMainEngine::GetImageSize(void) const

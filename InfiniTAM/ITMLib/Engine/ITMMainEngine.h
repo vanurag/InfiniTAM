@@ -99,6 +99,9 @@ namespace ITMLib
 			/// Gives access to the internal world representation
 			ITMScene<ITMVoxel, ITMVoxelIndex>* GetScene(void) { return scene; }
 
+			// VIZ ITM Tracker camera pose estimate
+			void VisualizeCameraPose();
+
 			/// Process a frame with rgb and depth images and optionally a corresponding imu measurement
 			void ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage);
 			void ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage, ITMIMUMeasurement *imuMeasurement);
