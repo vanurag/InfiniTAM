@@ -325,7 +325,7 @@ void UIEngine::glutMouseWheelFunction(int button, int dir, int x, int y)
 	uiEngine->needsRefresh = true;
 }
 
-void UIEngine::Initialise(int & argc, char** argv, ImageSourceEngine *imageSource, IMUSourceEngine *imuSource, ITMMainEngine *mainEngine,
+void UIEngine::Initialise(int & argc, char** argv, ImageSourceEngine *imageSource, IMUSourceEngine *imuSource, OdometrySourceEngine *odomSource, ITMMainEngine *mainEngine,
 	const char *outFolder, ITMLibSettings* itmSettings)
 {
 	this->freeviewActive = false;
@@ -337,6 +337,7 @@ void UIEngine::Initialise(int & argc, char** argv, ImageSourceEngine *imageSourc
 
 	this->imageSource = imageSource;
 	this->imuSource = imuSource;
+	this->odomSource = odomSource;
 	this->mainEngine = mainEngine;
 	{
 		size_t len = strlen(outFolder);
@@ -394,6 +395,7 @@ void UIEngine::Initialise(int & argc, char** argv, ImageSourceEngine *imageSourc
 	inputRGBImage = new ITMUChar4Image(imageSource->getRGBImageSize(), true, allocateGPU);
 	inputRawDepthImage = new ITMShortImage(imageSource->getDepthImageSize(), true, allocateGPU);
 	inputIMUMeasurement = new ITMIMUMeasurement();
+	inputOdometryMeasurement = new ITMOdometryMeasurement();
 
 	saveImage = new ITMUChar4Image(imageSource->getDepthImageSize(), true, false);
 
@@ -447,6 +449,9 @@ void UIEngine::ProcessFrame()
 	if (imuSource != NULL) {
 		if (!imuSource->hasMoreMeasurements()) return;
 		else imuSource->getMeasurement(inputIMUMeasurement);
+	} else if (odomSource != NULL) {
+	  if (!odomSource->hasMoreMeasurements()) return;
+    else odomSource->getMeasurement(inputOdometryMeasurement);
 	}
 
 	if (isRecording)
@@ -466,8 +471,13 @@ void UIEngine::ProcessFrame()
 	sdkStartTimer(&timer_instant); sdkStartTimer(&timer_average);
 
 	//actual processing on the mailEngine
-	if (imuSource != NULL) mainEngine->ProcessFrame(inputRGBImage, inputRawDepthImage, inputIMUMeasurement);
-	else mainEngine->ProcessFrame(inputRGBImage, inputRawDepthImage);
+	if (imuSource != NULL) {
+	  mainEngine->ProcessFrame(inputRGBImage, inputRawDepthImage, inputIMUMeasurement);
+	} else if (odomSource != NULL) {
+	  mainEngine->ProcessFrame(inputRGBImage, inputRawDepthImage, inputOdometryMeasurement);
+	}	else {
+	  mainEngine->ProcessFrame(inputRGBImage, inputRawDepthImage);
+	}
 
 #ifndef COMPILE_WITHOUT_CUDA
 	ITMSafeCall(cudaThreadSynchronize());
@@ -492,6 +502,7 @@ void UIEngine::Shutdown()
 	delete inputRGBImage;
 	delete inputRawDepthImage;
 	delete inputIMUMeasurement;
+	delete inputOdometryMeasurement;
 
 	delete[] outFolder;
 	delete saveImage;

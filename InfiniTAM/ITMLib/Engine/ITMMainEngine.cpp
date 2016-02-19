@@ -113,6 +113,38 @@ void ITMMainEngine::SaveSceneToMesh(const char *objFileName)
 	mesh->WriteSTL(objFileName);
 }
 
+void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage)
+{
+  // prepare image and turn it into a depth image
+  viewBuilder->UpdateView(&view, rgbImage, rawDepthImage, settings->useBilateralFilter,settings->modelSensorNoise);
+
+  if (!mainProcessingActive) return;
+
+  // tracking
+  trackingController->Track(trackingState, view);
+
+  // VIZ ITM Tracker estimate
+  Matrix4f itm_pose = trackingState->pose_d->GetInvM();
+  cv::Affine3f viz_itm_pose;
+  cv::Mat pose_mat(3, 3, CV_32F);
+  float* mat_pointer = (float*)pose_mat.data;
+  for (int row = 0; row < 3; ++row) {
+    for (int col = 0; col < 3; ++col) {
+      mat_pointer[3*row + col] = itm_pose(col, row);
+    }
+  }
+  viz_itm_pose.rotation(pose_mat);
+  viz_itm_pose.translate(cv::Vec3f(0.0, 0.0, 0.0));
+  viz_window_.setWidgetPose("ITM Tracking Pose", viz_itm_pose);
+  viz_window_.spinOnce(1, true);
+
+  // fusion
+  if (fusionActive) denseMapper->ProcessFrame(view, trackingState, scene, renderState_live);
+
+  // raycast to renderState_live for tracking and free visualisation
+  trackingController->Prepare(trackingState, view, renderState_live);
+}
+
 void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage, ITMIMUMeasurement *imuMeasurement)
 {
 	// prepare image and turn it into a depth image
@@ -144,6 +176,39 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 
 	// raycast to renderState_live for tracking and free visualisation
 	trackingController->Prepare(trackingState, view, renderState_live);
+}
+
+void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage, ITMOdometryMeasurement *odomMeasurement)
+{
+  // prepare image and turn it into a depth image
+  if (odomMeasurement==NULL) viewBuilder->UpdateView(&view, rgbImage, rawDepthImage, settings->useBilateralFilter,settings->modelSensorNoise);
+  else viewBuilder->UpdateView(&view, rgbImage, rawDepthImage, settings->useBilateralFilter, odomMeasurement);
+
+  if (!mainProcessingActive) return;
+
+  // tracking
+  trackingController->Track(trackingState, view);
+
+  // VIZ ITM Tracker estimate
+  Matrix4f itm_pose = trackingState->pose_d->GetInvM();
+  cv::Affine3f viz_itm_pose;
+  cv::Mat pose_mat(3, 3, CV_32F);
+  float* mat_pointer = (float*)pose_mat.data;
+  for (int row = 0; row < 3; ++row) {
+    for (int col = 0; col < 3; ++col) {
+      mat_pointer[3*row + col] = itm_pose(col, row);
+    }
+  }
+  viz_itm_pose.rotation(pose_mat);
+  viz_itm_pose.translate(cv::Vec3f(0.0, 0.0, 0.0));
+  viz_window_.setWidgetPose("ITM Tracking Pose", viz_itm_pose);
+  viz_window_.spinOnce(1, true);
+
+  // fusion
+  if (fusionActive) denseMapper->ProcessFrame(view, trackingState, scene, renderState_live);
+
+  // raycast to renderState_live for tracking and free visualisation
+  trackingController->Prepare(trackingState, view, renderState_live);
 }
 
 Vector2i ITMMainEngine::GetImageSize(void) const

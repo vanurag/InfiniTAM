@@ -91,6 +91,23 @@ void ITMViewBuilder_CPU::UpdateView(ITMView **view_ptr, ITMUChar4Image *rgbImage
 	this->UpdateView(view_ptr, rgbImage, depthImage, useBilateralFilter);
 }
 
+void ITMViewBuilder_CPU::UpdateView(ITMView **view_ptr, ITMUChar4Image *rgbImage, ITMShortImage *depthImage, bool useBilateralFilter, ITMOdometryMeasurement *odomMeasurement)
+{
+  if (*view_ptr == NULL)
+  {
+    *view_ptr = new ITMViewOdometry(calib, rgbImage->noDims, depthImage->noDims, false);
+    if (this->shortImage != NULL) delete this->shortImage;
+    this->shortImage = new ITMShortImage(depthImage->noDims, true, false);
+    if (this->floatImage != NULL) delete this->floatImage;
+    this->floatImage = new ITMFloatImage(depthImage->noDims, true, false);
+  }
+
+  ITMViewOdometry* odomView = (ITMViewOdometry*)(*view_ptr);
+  odomView->odom->SetFrom(odomMeasurement);
+
+  this->UpdateView(view_ptr, rgbImage, depthImage, useBilateralFilter);
+}
+
 void ITMViewBuilder_CPU::ConvertDisparityToDepth(ITMFloatImage *depth_out, const ITMShortImage *depth_in, const ITMIntrinsics *depthIntrinsics,
 	Vector2f disparityCalibParams)
 {

@@ -93,7 +93,8 @@ static void CreateDefaultImageSource(
 
 
 	if (imageSource == NULL &&
-	    (source == std::string("realsense") || source == std::string("realsense+imu")))
+	    (source == std::string("realsense") || source == std::string("realsense+imu") ||
+       source == std::string("realsense+odom") || source == std::string("realsense+strict_odom")))
   {
     printf("trying Intel Realsense device\n");
     imageSource = new RealsenseEngine(calibFile);
@@ -136,7 +137,8 @@ static void CreateDefaultImageSource(
     }
   }
 	if (imageSource == NULL &&
-	    (source == std::string("kinect") || source == std::string("kinect+imu")))
+	    (source == std::string("kinect") || source == std::string("kinect+imu") ||
+       source == std::string("kinect+odom") || source == std::string("kinect+strict_odom")))
   {
     printf("trying MS Kinect 2 device\n");
     imageSource = new Kinect2Engine(calibFile);
@@ -287,7 +289,7 @@ try
       << internalSettings->sceneParams.viewFrustum_max << " ]" << std::endl;
 	ITMMainEngine *mainEngine = new ITMMainEngine(internalSettings, &imageSource->calib, imageSource->getRGBImageSize(), imageSource->getDepthImageSize());
 
-	UIEngine::Instance()->Initialise(argc, argv, imageSource, imuSource, mainEngine, "./Files/Out", internalSettings);
+	UIEngine::Instance()->Initialise(argc, argv, imageSource, imuSource, odomSource, mainEngine, "./Files/Out", internalSettings);
 	UIEngine::Instance()->Run();
 	UIEngine::Instance()->Shutdown();
 

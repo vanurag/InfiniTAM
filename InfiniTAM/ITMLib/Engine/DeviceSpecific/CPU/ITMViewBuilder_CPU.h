@@ -23,6 +23,8 @@ namespace ITMLib
 
 			void UpdateView(ITMView **view, ITMUChar4Image *rgbImage, ITMShortImage *depthImage, bool useBilateralFilter, ITMIMUMeasurement *imuMeasurement);
 
+			void UpdateView(ITMView **view, ITMUChar4Image *rgbImage, ITMShortImage *depthImage, bool useBilateralFilter, ITMOdometryMeasurement *odomMeasurement);
+
 			ITMViewBuilder_CPU(const ITMRGBDCalib *calib);
 			~ITMViewBuilder_CPU(void);
 		};
