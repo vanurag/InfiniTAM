@@ -16,6 +16,7 @@ ITMIMUTracker::~ITMIMUTracker(void)
 
 void ITMIMUTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView *view)
 {
+  std::cout << "Using IMU Tracker!!!!!!!!!!!" << std::endl;
 	calibrator->RegisterMeasurement(((ITMViewIMU*)view)->imu->R);
 
 	Matrix4f T = ((ITMViewIMU*)view)->calib->trafo_rgb_to_depth.calib;

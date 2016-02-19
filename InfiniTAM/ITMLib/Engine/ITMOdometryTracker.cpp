@@ -21,6 +21,7 @@ ITMOdometryTracker::~ITMOdometryTracker(void)
 
 void ITMOdometryTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView *view)
 {
+  std::cout << "Using ODOM Tracker!!!!!!!!!!!" << std::endl;
   calibrator->RegisterMeasurement(((ITMViewOdometry*)view)->odom->GetM());
 
   Matrix4f T_rgb_to_depth = ((ITMViewOdometry*)view)->calib->trafo_rgb_to_depth.calib;
