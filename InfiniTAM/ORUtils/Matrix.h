@@ -224,17 +224,14 @@ namespace ORUtils {
     // get values
     _CPU_AND_GPU_CODE_ inline Vector4<T> getRow(int r) const { Vector4<T> v; for (int x = 0; x < 4; x++) v[x] = at(x, r); return v; }
     _CPU_AND_GPU_CODE_ inline Vector4<T> getColumn(int c) const { Vector4<T> v; memcpy(v.v, this->m + 4 * c, sizeof(T) * 4); return v; }
-    _CPU_AND_GPU_CODE_ inline const Matrix3<T> &getRot() const { // Top-Left 3x3 sub-matrix
-      Matrix3<T> R;
-      for (int col = 0; col < 3; ++col) {
-        for (int row = 0; row < 3; ++row) {
-          R.at(col, row) = this->m[row | (col << 2)];
-        }
-      }
+    _CPU_AND_GPU_CODE_ inline Matrix3<T> getRot() const { // Top-Left 3x3 sub-matrix
+      Matrix3<T> R(at(0, 0), at(0, 1), at(0, 2),
+                   at(1, 0), at(1, 1), at(1, 2),
+                   at(2, 0), at(2, 1), at(2, 2));
       return R;
     }
-    _CPU_AND_GPU_CODE_ inline const Vector3<T> &getTrans() const { // Top-Right 3x1 sub-vector
-      Vector3<T> t(this->m30, this->m31, this->m32);
+    _CPU_AND_GPU_CODE_ inline Vector3<T> getTrans() const { // Top-Right 3x1 sub-vector
+      Vector3<T> t(at(3, 0), at(3, 1), at(3, 2));
       return t;
     }
     _CPU_AND_GPU_CODE_ inline Matrix4 t() { // transpose

@@ -78,6 +78,7 @@
 #endif
 
 #include "Engine/ITMIMUTracker.h"
+#include "Engine/ITMOdometryTracker.h"
 #include "Engine/ITMCompositeTracker.h"
 #include "Engine/ITMTrackingController.h"
 

@@ -164,12 +164,12 @@ namespace ITMLib
         R_rgb_imu = T_rgb_imu.getRot(); R_imu_rgb = T_imu_rgb.getRot();
         t_rgb_imu = T_rgb_imu.getTrans(); t_imu_rgb = T_imu_rgb.getTrans();
         Vector3f temp = t_rgb_imu + R_rgb_imu*t_imu_rgb;  // should be all zeros ideally
-        const Matrix3f bla_R = R_rgb_imu.t();
-        const Matrix3f bla_R2 = R_imu_rgb;
-        if (bla_R != bla_R2 ||
+        if (R_rgb_imu.t() != R_imu_rgb ||
             abs(temp.x) + abs(temp.y) + abs(temp.z) >
                 3*std::numeric_limits<float>::epsilon()) {
           std::cout << "IMU-Cam Calibration matrices not consistent" << std::endl;
+          std::cout << "check 1: " << (R_rgb_imu.t() != R_imu_rgb) << std::endl;
+          std::cout << "check 2: " << abs(temp.x) + abs(temp.y) + abs(temp.z) << std::endl;
           exit(1);
         }
 
@@ -264,11 +264,12 @@ namespace ITMLib
         R_rgb_imu = T_rgb_imu.getRot(); R_imu_rgb = T_imu_rgb.getRot();
         t_rgb_imu = T_rgb_imu.getTrans(); t_imu_rgb = T_imu_rgb.getTrans();
         Vector3f temp = t_rgb_imu + R_rgb_imu*t_imu_rgb;  // should be all zeros ideally
-        const Matrix3f bla_R = R_rgb_imu.t();
-        if (bla_R != R_imu_rgb ||
+        if (R_rgb_imu.t() != R_imu_rgb ||
             abs(temp.x) + abs(temp.y) + abs(temp.z) >
                 3*std::numeric_limits<float>::epsilon()) {
           std::cout << "IMU-Cam Calibration matrices not consistent" << std::endl;
+          std::cout << "check 1: " << (R_rgb_imu.t() != R_imu_rgb) << std::endl;
+          std::cout << "check 2: " << abs(temp.x) + abs(temp.y) + abs(temp.z) << std::endl;
           exit(1);
         }
 

@@ -47,8 +47,12 @@ ImageSourceEngine.cpp
 ImageSourceEngine.h
 IMUSourceEngine.cpp
 IMUSourceEngine.h
+OdometrySourceEngine.cpp
+OdometrySourceEngine.h
 ROSIMUSourceEngine.cpp
 ROSIMUSourceEngine.h
+ROSOdometrySourceEngine.cpp
+ROSOdometrySourceEngine.h
 Kinect2Engine.cpp
 Kinect2Engine.h
 RealsenseEngine.cpp

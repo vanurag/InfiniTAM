@@ -6,12 +6,12 @@
 #include "Engine/UIEngine.h"
 #include "Engine/ImageSourceEngine.h"
 #include "Engine/ROSIMUSourceEngine.h"
+#include "Engine/ROSOdometrySourceEngine.h"
 #include "Engine/OpenNIEngine.h"
 #include "Engine/Kinect2Engine.h"
 #include "Engine/RealsenseEngine.h"
 #include "Engine/VISensorEngine.h"
 #include "Engine/LibUVCEngine.h"
-#include "Engine/ROSIMUSourceEngine.h"
 #include "Engine/RealSenseEngine.h"
 
 using namespace InfiniTAM::Engine;
@@ -23,12 +23,13 @@ using namespace InfiniTAM::Engine;
     be tried.
 */
 static void CreateDefaultImageSource(
-    ImageSourceEngine* & imageSource, IMUSourceEngine* & imuSource, const char *arg1,
-    const char *arg2, const char *arg3, const char *arg4, const char *arg5)
+    ImageSourceEngine* & imageSource, IMUSourceEngine* & imuSource, OdometrySourceEngine* & odomSource,
+    const char *arg1, const char *arg2, const char *arg3, const char *arg4, const char *arg5)
 {
 	const char *calibFile = arg1;
 	const char *source = arg2;
 	const char *imu_source = arg3;
+	const char *odom_source = arg3;
 	const char *filename1 = arg4;
 	const char *filename2 = arg5;
 
@@ -110,6 +111,15 @@ static void CreateDefaultImageSource(
         return;
       }
     }
+    if (source == std::string("realsense+odom") || source == std::string("realsense+strict_odom")) {
+      if (odom_source != NULL) {
+        printf("using Odometry ROS topic: %s\n", odom_source);
+        odomSource = new ROSOdometrySourceEngine(odom_source);
+      } else {
+        printf("Odometry source not provided! aborting.");
+        return;
+      }
+    }
   }
 	if (imageSource == NULL && source == std::string("vi-sensor"))
   {
@@ -144,6 +154,15 @@ static void CreateDefaultImageSource(
         return;
       }
     }
+    if (source == std::string("kinect+odom") || source == std::string("kinect+strict_odom")) {
+      if (odom_source != NULL) {
+        printf("using Odometry ROS topic: %s\n", odom_source);
+        odomSource = new ROSOdometrySourceEngine(odom_source);
+      } else {
+        printf("Odometry source not provided! aborting.");
+        return;
+      }
+    }
   }
 	if (imageSource == NULL && filename2 != NULL && source == std::string("offline"))
   {
@@ -175,11 +194,11 @@ try
 
   if (argc < 3) {
     printf("usage: %s [<calibfile>] [<source>] [optional:<imusource>] [optional:metadata]\n"
-           "  <calibfile>   : path to a file containing intrinsic calibration parameters\n"
-           "  <source>      : source input device 'any'/'realsense'/'vi-sensor'\n"
-           "  <imusource>   : ROS IMU topic/file containing transformations\n"
-           "  <metadata>    : either one argument to specify OpenNI device ID\n"
-           "                  or two arguments specifying rgb and depth file masks\n"
+           "  <calibfile>    : path to a file containing intrinsic calibration parameters\n"
+           "  <source>       : source input device 'any'/'realsense'/'vi-sensor'\n"
+           "  <posesource>   : ROS IMU/Odometry topic/file containing transformations\n"
+           "  <metadata>     : either one argument to specify OpenNI device ID\n"
+           "                   or two arguments specifying rgb and depth file masks\n"
            "\n"
            "examples:\n"
            "  %s ./Files/Teddy/calib.txt any ./Files/Teddy/Frames/%%04i.ppm ./Files/Teddy/Frames/%%04i.pgm\n"
@@ -193,7 +212,7 @@ try
 
 	const char *arg1 = "";    // calib
 	const char *arg2 = NULL;  // source device
-	const char *arg3 = NULL;  // IMU source
+	const char *arg3 = NULL;  // IMU/Odometry source
 	const char *arg4 = NULL;  // metadata-1
 	const char *arg5 = NULL;  // metadata-2
 
@@ -213,16 +232,17 @@ try
 	printf("initialising ...\n");
 	ImageSourceEngine *imageSource = NULL;
 	IMUSourceEngine *imuSource = NULL;
+	OdometrySourceEngine *odomSource = NULL;
 
-	CreateDefaultImageSource(imageSource, imuSource, arg1, arg2, arg3, arg4, arg5);
+	CreateDefaultImageSource(imageSource, imuSource, odomSource, arg1, arg2, arg3, arg4, arg5);
 	if (imageSource==NULL)
 	{
 		std::cout << "failed to open any image stream" << std::endl;
 		return -1;
 	}
-	if (imuSource==NULL)
+	if (imuSource==NULL && odomSource == NULL)
   {
-    std::cout << "Proceeding without an IMU source" << std::endl;
+    std::cout << "Proceeding without a pose source" << std::endl;
   }
 
 	ITMLibSettings *internalSettings = new ITMLibSettings();
@@ -278,6 +298,7 @@ try
 	delete internalSettings;
 	delete imageSource;
 	if (imuSource != NULL) delete imuSource;
+	if (odomSource != NULL) delete odomSource;
 	return 0;
 }
 catch(std::exception& e)
