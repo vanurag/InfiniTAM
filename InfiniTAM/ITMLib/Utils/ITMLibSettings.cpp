@@ -65,14 +65,19 @@ ITMLibSettings::ITMLibSettings(void)
 		trackingRegime[0] = TRACKER_ITERATION_BOTH;
 		trackingRegime[1] = TRACKER_ITERATION_TRANSLATION;
 	    //trackingRegime[2] = TRACKER_ITERATION_TRANSLATION;
-	} else if (trackerType == TRACKER_STRICT_IMU)
+	} else if (trackerType == TRACKER_ODOMETRY)
   {
-    noHierarchyLevels = 1;
+    std::cout << "Yo setting ODOM tracker!!" << std::endl;
+    noHierarchyLevels = 2;
     trackingRegime = new TrackerIterationType[noHierarchyLevels];
 
-//    trackingRegime[0] = TRACKER_ITERATION_BOTH;
-    trackingRegime[0] = TRACKER_ITERATION_TRANSLATION;
-//    trackingRegime[1] = TRACKER_ITERATION_ROTATION;
+    trackingRegime[0] = TRACKER_ITERATION_BOTH;
+    trackingRegime[1] = TRACKER_ITERATION_TRANSLATION;
+      //trackingRegime[2] = TRACKER_ITERATION_TRANSLATION;
+  } else if (trackerType == TRACKER_STRICT_ODOMETRY)
+  {
+    noHierarchyLevels = 0;
+    trackingRegime = new TrackerIterationType[noHierarchyLevels];
   }
 	else
 	{

@@ -7,6 +7,7 @@
 
 #include "ITMCompositeTracker.h"
 #include "ITMIMUTracker.h"
+#include "ITMOdometryTracker.h"
 #include "ITMLowLevelEngine.h"
 #include "ITMTracker.h"
 
@@ -55,9 +56,10 @@ namespace ITMLib
       {
         makers.insert(std::make_pair(ITMLibSettings::TRACKER_COLOR, &MakeColourTracker));
         makers.insert(std::make_pair(ITMLibSettings::TRACKER_ICP, &MakeICPTracker));
-		makers.insert(std::make_pair(ITMLibSettings::TRACKER_WICP, &MakeWeightedICPTracker));
+        makers.insert(std::make_pair(ITMLibSettings::TRACKER_WICP, &MakeWeightedICPTracker));
         makers.insert(std::make_pair(ITMLibSettings::TRACKER_IMU, &MakeIMUTracker));
-        makers.insert(std::make_pair(ITMLibSettings::TRACKER_STRICT_IMU, &MakeStrictIMUTracker));
+        makers.insert(std::make_pair(ITMLibSettings::TRACKER_ODOMETRY, &MakeOdometryTracker));
+        makers.insert(std::make_pair(ITMLibSettings::TRACKER_STRICT_ODOMETRY, &MakeStrictOdometryTracker));
         makers.insert(std::make_pair(ITMLibSettings::TRACKER_REN, &MakeRenTracker));
       }
 
@@ -320,14 +322,92 @@ namespace ITMLib
 
 
       /**
-       * \brief Makes an IMU tracker.
+       * \brief Makes an Odometry tracker + Depth Tracker.
        */
-      static ITMTracker *MakeStrictIMUTracker(
+      static ITMTracker *MakeOdometryTracker(const Vector2i& trackedImageSize, const ITMLibSettings *settings, const ITMLowLevelEngine *lowLevelEngine,
+                                             ITMIMUCalibrator *imuCalibrator, ITMScene<TVoxel,TIndex> *scene)
+      {
+        switch(settings->deviceType)
+        {
+          case ITMLibSettings::DEVICE_CPU:
+          {
+            ITMCompositeTracker *compositeTracker = new ITMCompositeTracker(2);
+            compositeTracker->SetTracker(new ITMOdometryTracker(imuCalibrator), 0);
+            compositeTracker->SetTracker(
+              new ITMDepthTracker_CPU(
+                trackedImageSize,
+                settings->trackingRegime,
+                settings->noHierarchyLevels,
+                settings->noICPRunTillLevel,
+                settings->depthTrackerICPThreshold,
+                settings->depthTrackerTerminationThreshold,
+                settings->depthTrackerType,
+                settings->visualizeICP,
+                lowLevelEngine
+              ), 1
+            );
+            return compositeTracker;
+          }
+          case ITMLibSettings::DEVICE_CUDA:
+          {
+#ifndef COMPILE_WITHOUT_CUDA
+            ITMCompositeTracker *compositeTracker = new ITMCompositeTracker(2);
+            compositeTracker->SetTracker(new ITMOdometryTracker(imuCalibrator), 0);
+            compositeTracker->SetTracker(
+              new ITMDepthTracker_CUDA(
+                trackedImageSize,
+                settings->trackingRegime,
+                settings->noHierarchyLevels,
+                settings->noICPRunTillLevel,
+                settings->depthTrackerICPThreshold,
+                settings->depthTrackerTerminationThreshold,
+                settings->depthTrackerType,
+                settings->visualizeICP,
+                lowLevelEngine
+              ), 1
+            );
+            return compositeTracker;
+#else
+            break;
+#endif
+          }
+          case ITMLibSettings::DEVICE_METAL:
+          {
+#ifdef COMPILE_WITH_METAL
+            ITMCompositeTracker *compositeTracker = new ITMCompositeTracker(2);
+            compositeTracker->SetTracker(new ITMOdometryTracker(imuCalibrator), 0);
+            compositeTracker->SetTracker(
+              new ITMDepthTracker_Metal(
+                trackedImageSize,
+                settings->trackingRegime,
+                settings->noHierarchyLevels,
+                settings->noICPRunTillLevel,
+                settings->depthTrackerICPThreshold,
+                settings->depthTrackerTerminationThreshold,
+                lowLevelEngine
+              ), 1
+            );
+            return compositeTracker;
+#else
+            break;
+#endif
+          }
+          default: break;
+        }
+
+        DIEWITHEXCEPTION("Failed to make Odometry tracker");
+      }
+
+
+      /**
+       * \brief Makes a Strict Odometry tracker.
+       */
+      static ITMTracker *MakeStrictOdometryTracker(
           const Vector2i& trackedImageSize, const ITMLibSettings *settings,
           const ITMLowLevelEngine *lowLevelEngine,
           ITMIMUCalibrator *imuCalibrator, ITMScene<TVoxel,TIndex> *scene)
       {
-        return new ITMIMUTracker(imuCalibrator);
+        return new ITMOdometryTracker(imuCalibrator);
       }
 
 
