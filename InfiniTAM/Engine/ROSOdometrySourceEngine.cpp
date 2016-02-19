@@ -53,9 +53,12 @@ void ROSOdometrySourceEngine::ROSOdometryCallback(const nav_msgs::Odometry::Cons
            msg->pose.pose.orientation.w);
   quat2ITMIMU(Quaternion(msg->pose.pose.orientation.x, msg->pose.pose.orientation.y,
                          msg->pose.pose.orientation.z, msg->pose.pose.orientation.w));
-  cached_odom->t.x = msg->pose.pose.position.x;
-  cached_odom->t.y = msg->pose.pose.position.y;
-  cached_odom->t.z = msg->pose.pose.position.z;
+  Vector3f t_imu_G = cached_odom->R * Vector3f(-msg->pose.pose.position.x,
+                                               -msg->pose.pose.position.y,
+                                               -msg->pose.pose.position.z);
+  cached_odom->t.x = t_imu_G.x;
+  cached_odom->t.y = t_imu_G.y;
+  cached_odom->t.z = t_imu_G.z;
 }
 
 void ROSOdometrySourceEngine::ROSTFCallback(
@@ -66,9 +69,12 @@ void ROSOdometrySourceEngine::ROSTFCallback(
            msg->transform.rotation.z, msg->transform.rotation.w);
   quat2ITMIMU(Quaternion(msg->transform.rotation.x, msg->transform.rotation.y,
                          msg->transform.rotation.z, msg->transform.rotation.w));
-  cached_odom->t.x = msg->transform.translation.x;
-  cached_odom->t.y = msg->transform.translation.y;
-  cached_odom->t.z = msg->transform.translation.z;
+  Vector3f t_imu_G = cached_odom->R * Vector3f(-msg->transform.translation.x,
+                                               -msg->transform.translation.y,
+                                               -msg->transform.translation.z);
+  cached_odom->t.x = t_imu_G.x;
+  cached_odom->t.y = t_imu_G.y;
+  cached_odom->t.z = t_imu_G.z;
 }
 
 // conversion from quaternion to rotation matrix
