@@ -281,7 +281,7 @@ try
     internalSettings->sceneParams.viewFrustum_max = 2.0f; // 4.0f
     internalSettings->trackerType = ITMLibSettings::TRACKER_STRICT_ODOMETRY;
 	} else if (arg2 == std::string("vi-sensor")) {
-	  internalSettings->sceneParams.viewFrustum_min = 0.2f;
+	  internalSettings->sceneParams.viewFrustum_min = 0.0f;
     internalSettings->sceneParams.viewFrustum_max = 20.0f;
 	}
 	std::cout << "Setting viewFrustum to the range: [ "

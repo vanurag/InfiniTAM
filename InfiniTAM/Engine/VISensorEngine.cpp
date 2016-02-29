@@ -12,8 +12,8 @@
 using namespace InfiniTAM::Engine;
 
 VISensorEngine::VISensorEngine(const char *calibFilename) : ImageSourceEngine(calibFilename),
-    mf_sub_rgb_(node_, "/stereo_dense_reconstruction/image_fused", 1),
-    mf_sub_depth_(node_, "/stereo_dense_reconstruction/depthmap_fused", 1),
+    mf_sub_rgb_(node_, "/cam0/image_raw", 100),
+    mf_sub_depth_(node_, "/remode/depth", 100),
     sync_(MySyncPolicy(10), mf_sub_rgb_, mf_sub_depth_)
 {
   imageSize_d_ = Vector2i(752, 480);
