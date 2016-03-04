@@ -97,15 +97,15 @@ void ROSIMUSourceEngine::quat2ITMIMU(const Quaternion imu_pose) {
   // So, no need to convert to camera reference frame.
   Quaternion cam_pose = imu_pose;
   // JPL Convention quaternion -> ORUtils Matrix
-  cached_imu->R.m00 = pow(cam_pose.w, 2) + pow(cam_pose.x, 2) - 0.5;
-  cached_imu->R.m01 = cam_pose.x*cam_pose.y + cam_pose.z*cam_pose.w;
-  cached_imu->R.m02 = cam_pose.x*cam_pose.z - cam_pose.y*cam_pose.w;
-  cached_imu->R.m10 = cam_pose.x*cam_pose.y - cam_pose.z*cam_pose.w;
-  cached_imu->R.m11 = pow(cam_pose.y, 2) + pow(cam_pose.w, 2) - 0.5;
-  cached_imu->R.m12 = cam_pose.y*cam_pose.z + cam_pose.x*cam_pose.w;
-  cached_imu->R.m20 = cam_pose.x*cam_pose.z + cam_pose.y*cam_pose.w;
-  cached_imu->R.m21 = cam_pose.y*cam_pose.z - cam_pose.x*cam_pose.w;
-  cached_imu->R.m22 = pow(cam_pose.w, 2) + pow(cam_pose.z, 2) - 0.5;
+  cached_imu->R.m00 = 2*pow(cam_pose.w, 2) + 2*pow(cam_pose.x, 2) - 1.0;
+  cached_imu->R.m01 = 2*cam_pose.x*cam_pose.y + 2*cam_pose.z*cam_pose.w;
+  cached_imu->R.m02 = 2*cam_pose.x*cam_pose.z - 2*cam_pose.y*cam_pose.w;
+  cached_imu->R.m10 = 2*cam_pose.x*cam_pose.y - 2*cam_pose.z*cam_pose.w;
+  cached_imu->R.m11 = 2*pow(cam_pose.y, 2) + 2*pow(cam_pose.w, 2) - 1.0;
+  cached_imu->R.m12 = 2*cam_pose.y*cam_pose.z + 2*cam_pose.x*cam_pose.w;
+  cached_imu->R.m20 = 2*cam_pose.x*cam_pose.z + 2*cam_pose.y*cam_pose.w;
+  cached_imu->R.m21 = 2*cam_pose.y*cam_pose.z - 2*cam_pose.x*cam_pose.w;
+  cached_imu->R.m22 = 2*pow(cam_pose.w, 2) + 2*pow(cam_pose.z, 2) - 1.0;
 
   // Non-JPL Convention quaternion --> ORUtils Matrix
 //  cached_imu->R.m00 = 1.0 - 2*pow(cam_pose.y, 2) - 2*pow(cam_pose.z, 2);
