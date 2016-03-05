@@ -76,6 +76,9 @@ ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib 
 	viz_window_.registerKeyboardCallback(VizKeyboardCallback);
 	viz_window_.setWindowSize(cv::Size(600, 600));
   viz_window_.showWidget("ITM Tracking Pose", cv::viz::WCoordinateSystem(100.0));
+
+  // ROS
+  pubITMPose = nh.advertise<geometry_msgs::TransformStamped>("itm/pose", 1);
 }
 
 ITMMainEngine::~ITMMainEngine()
@@ -127,6 +130,9 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
   // tracking
   trackingController->Track(trackingState, view);
 
+  // publish ITM tracker pose
+  PublishROSPoseMsg();
+
   // VIZ ITM Tracker estimate
   VisualizeCameraPose();
 
@@ -148,6 +154,9 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 	// tracking
 	trackingController->Track(trackingState, view);
 
+	// publish ITM tracker pose
+  PublishROSPoseMsg();
+
   // VIZ ITM Tracker estimate
 	VisualizeCameraPose();
 
@@ -168,6 +177,9 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 
   // tracking
   trackingController->Track(trackingState, view);
+
+  // publish ITM tracker pose
+  PublishROSPoseMsg();
 
   // VIZ ITM Tracker estimate
   VisualizeCameraPose();
@@ -194,6 +206,31 @@ void ITMMainEngine::VisualizeCameraPose() {
   viz_window_.setWidgetPose("ITM Tracking Pose", viz_itm_pose_);
   viz_window_.spinOnce(1, true);
 }
+
+// Publish ITM ROS pose message
+void ITMMainEngine::PublishROSPoseMsg() {
+  if(pubITMPose.getNumSubscribers() > 0){
+  ITMPoseMsg.header.stamp = ros::Time::now();
+  // TODO: convert pose_d -> pose_imu
+  Vector3f t_inv;// = trackingState->pose_d->GetR().t() * trackingState->pose_d->GetT();
+//  t_inv *= -1.0;
+  ITMPoseMsg.transform.translation.x = t_inv.x;
+  ITMPoseMsg.transform.translation.y = t_inv.y;
+  ITMPoseMsg.transform.translation.z = t_inv.z;
+  Matrix3f r = trackingState->pose_d->GetR();
+  MPD R(r.m00, r.m10, r.m20,
+        r.m01, r.m11, r.m21,
+        r.m02, r.m12, r.m22);
+  QPD q(R);
+  ITMPoseMsg.transform.rotation.x = -q.x(); // JPL form
+  ITMPoseMsg.transform.rotation.y = -q.y();
+  ITMPoseMsg.transform.rotation.z = -q.z();
+  ITMPoseMsg.transform.rotation.w = q.w();
+
+  pubITMPose.publish(ITMPoseMsg);
+  }
+}
+
 
 Vector2i ITMMainEngine::GetImageSize(void) const
 {

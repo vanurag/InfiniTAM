@@ -8,6 +8,15 @@
 #include <opencv2/viz/types.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 
+#include "kindr/rotations/RotationEigen.hpp"
+#include <ros/ros.h>
+#include <geometry_msgs/TransformStamped.h>
+
+namespace rot = kindr::rotations::eigen_impl;
+
+typedef rot::RotationQuaternionPD QPD;
+typedef rot::RotationMatrixPD MPD;
+
 /** \mainpage
     This is the API reference documentation for InfiniTAM. For a general
     overview additional documentation can be found in the included Technical
@@ -74,6 +83,13 @@ namespace ITMLib
 			ITMScene<ITMVoxel, ITMVoxelIndex> *scene;
 			ITMRenderState *renderState_live;
 			ITMRenderState *renderState_freeview;
+
+			// ROS
+			ros::NodeHandle nh;
+			ros::Publisher pubITMPose;
+			geometry_msgs::TransformStamped ITMPoseMsg;
+			// Publish ITM ROS pose message
+			void PublishROSPoseMsg();
 
 			// VIZ
 			cv::viz::KeyboardEvent viz_key_event;
