@@ -212,12 +212,19 @@ void ITMMainEngine::PublishROSPoseMsg() {
   if(pubITMPose.getNumSubscribers() > 0){
   ITMPoseMsg.header.stamp = ros::Time::now();
   // TODO: convert pose_d -> pose_imu
-  Vector3f t_inv;// = trackingState->pose_d->GetR().t() * trackingState->pose_d->GetT();
-//  t_inv *= -1.0;
+  Matrix4f T_imu_rgb(-0.99485704, 0.05709121, 0.08366639, 0.0,
+                     -0.04357693, -0.98691011, 0.15527229, 0.0,
+                      0.09143589, 0.1508278, 0.98432233, 0.0,
+                      0.14204364, -0.00021269, 0.48260592, 1.0);
+
+  std::cout << "trafo hceck: " << view->calib->trafo_rgb_to_depth.calib_inv.m01 << std::endl;
+
+  Matrix4f pose_imu = T_imu_rgb * view->calib->trafo_rgb_to_depth.calib_inv * trackingState->pose_d->GetM();
+  Vector3f t_inv = pose_imu.getRot().t() * (-1.0 * pose_imu.getTrans());
   ITMPoseMsg.transform.translation.x = t_inv.x;
   ITMPoseMsg.transform.translation.y = t_inv.y;
   ITMPoseMsg.transform.translation.z = t_inv.z;
-  Matrix3f r = trackingState->pose_d->GetR();
+  Matrix3f r = pose_imu.getRot();
   MPD R(r.m00, r.m10, r.m20,
         r.m01, r.m11, r.m21,
         r.m02, r.m12, r.m22);

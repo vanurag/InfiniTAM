@@ -149,7 +149,6 @@ namespace ITMLib
       }
 
       ITMIMUCalibrator_DRZ() : ITMIMUCalibrator(),
-          // TODO: use T_depth_imu and T_imu_depth instead
           T_rgb_imu(-1.0, 0.0, 0.0, 0.0,     // (TODO) needs to be calibrated
                     0.0, -1.0, 0.0, 0.0,
                     0.0, 0.0, 1.0, 0.0,
@@ -250,7 +249,6 @@ namespace ITMLib
       }
 
       ITMIMUCalibrator_DRZ2() : ITMIMUCalibrator(),
-          // TODO: use T_depth_imu and T_imu_depth instead
           T_rgb_imu(-0.99485704, -0.04357693, 0.09143589, 0.0,
                     0.05709121, -0.98691011, 0.1508278, 0.0,
                     0.08366639, 0.15527229, 0.98432233, 0.0,
