@@ -59,8 +59,7 @@ ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib 
 	denseMapper = new ITMDenseMapper<ITMVoxel, ITMVoxelIndex>(settings);
 	denseMapper->ResetScene(scene);
 
-	// TODO(vanurag): Make this a user choice
-	imuCalibrator = new ITMIMUCalibrator_DRZ2();
+	imuCalibrator = new ITMIMUCalibrator_DRZ(view->calib->trafo_rgb_to_imu);
 	tracker = ITMTrackerFactory<ITMVoxel, ITMVoxelIndex>::Instance().Make(trackedImageSize, settings, lowLevelEngine, imuCalibrator, scene);
 	trackingController = new ITMTrackingController(tracker, visualisationEngine, lowLevelEngine, settings);
 
@@ -210,31 +209,26 @@ void ITMMainEngine::VisualizeCameraPose() {
 // Publish ITM ROS pose message
 void ITMMainEngine::PublishROSPoseMsg() {
   if(pubITMPose.getNumSubscribers() > 0){
-  ITMPoseMsg.header.stamp = ros::Time::now();
-  // TODO: convert pose_d -> pose_imu
-  Matrix4f T_imu_rgb(-0.99485704, 0.05709121, 0.08366639, 0.0,
-                     -0.04357693, -0.98691011, 0.15527229, 0.0,
-                      0.09143589, 0.1508278, 0.98432233, 0.0,
-                      0.14204364, -0.00021269, 0.48260592, 1.0);
+    ITMPoseMsg.header.stamp = ros::Time::now();
 
-  std::cout << "trafo hceck: " << view->calib->trafo_rgb_to_depth.calib_inv.m01 << std::endl;
+    std::cout << "trafo check: " << view->calib->trafo_rgb_to_imu.calib.m01 << std::endl;
 
-  Matrix4f pose_imu = T_imu_rgb * view->calib->trafo_rgb_to_depth.calib_inv * trackingState->pose_d->GetM();
-  Vector3f t_inv = pose_imu.getRot().t() * (-1.0 * pose_imu.getTrans());
-  ITMPoseMsg.transform.translation.x = t_inv.x;
-  ITMPoseMsg.transform.translation.y = t_inv.y;
-  ITMPoseMsg.transform.translation.z = t_inv.z;
-  Matrix3f r = pose_imu.getRot();
-  MPD R(r.m00, r.m10, r.m20,
-        r.m01, r.m11, r.m21,
-        r.m02, r.m12, r.m22);
-  QPD q(R);
-  ITMPoseMsg.transform.rotation.x = -q.x(); // JPL form
-  ITMPoseMsg.transform.rotation.y = -q.y();
-  ITMPoseMsg.transform.rotation.z = -q.z();
-  ITMPoseMsg.transform.rotation.w = q.w();
+    Matrix4f pose_imu = view->calib->trafo_rgb_to_imu.calib * view->calib->trafo_rgb_to_depth.calib_inv * trackingState->pose_d->GetM();
+    Vector3f t_inv = pose_imu.getRot().t() * (-1.0 * pose_imu.getTrans());
+    ITMPoseMsg.transform.translation.x = t_inv.x;
+    ITMPoseMsg.transform.translation.y = t_inv.y;
+    ITMPoseMsg.transform.translation.z = t_inv.z;
+    Matrix3f r = pose_imu.getRot();
+    MPD R(r.m00, r.m10, r.m20,
+          r.m01, r.m11, r.m21,
+          r.m02, r.m12, r.m22);
+    QPD q(R);
+    ITMPoseMsg.transform.rotation.x = -q.x(); // JPL form
+    ITMPoseMsg.transform.rotation.y = -q.y();
+    ITMPoseMsg.transform.rotation.z = -q.z();
+    ITMPoseMsg.transform.rotation.w = q.w();
 
-  pubITMPose.publish(ITMPoseMsg);
+    pubITMPose.publish(ITMPoseMsg);
   }
 }
 
