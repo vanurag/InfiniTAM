@@ -193,8 +193,9 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 // VIZ ITM Tracker camera pose estimate
 void ITMMainEngine::VisualizeCameraPose() {
   Matrix4f itm_pose = trackingState->pose_d->GetInvM();
-  cv::Mat pose_mat(3, 3, CV_32F);
-  float* mat_pointer = (float*)pose_mat.data;
+//  cv::Mat pose_mat(3, 3, CV_32F);
+  cv::Matx<float, 3, 3> pose_mat;
+  float* mat_pointer = (float*)pose_mat.val;
   for (int row = 0; row < 3; ++row) {
     for (int col = 0; col < 3; ++col) {
       mat_pointer[3*row + col] = itm_pose(col, row);
