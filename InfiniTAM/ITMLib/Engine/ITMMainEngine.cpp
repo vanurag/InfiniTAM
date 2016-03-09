@@ -59,7 +59,7 @@ ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib 
 	denseMapper = new ITMDenseMapper<ITMVoxel, ITMVoxelIndex>(settings);
 	denseMapper->ResetScene(scene);
 
-	imuCalibrator = new ITMIMUCalibrator_DRZ(view->calib->trafo_rgb_to_imu);
+	imuCalibrator = new ITMIMUCalibrator_DRZ(calib->trafo_rgb_to_imu);
 	tracker = ITMTrackerFactory<ITMVoxel, ITMVoxelIndex>::Instance().Make(trackedImageSize, settings, lowLevelEngine, imuCalibrator, scene);
 	trackingController = new ITMTrackingController(tracker, visualisationEngine, lowLevelEngine, settings);
 
