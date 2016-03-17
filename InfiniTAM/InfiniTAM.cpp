@@ -10,7 +10,6 @@
 #include "Engine/ROSOdometrySourceEngine.h"
 #include "Engine/OpenNIEngine.h"
 #include "Engine/Kinect2Engine.h"
-#include "Engine/RealsenseEngine.h"
 #include "Engine/VISensorEngine.h"
 #include "Engine/LibUVCEngine.h"
 #include "Engine/RealSenseEngine.h"
@@ -139,7 +138,9 @@ static void CreateDefaultImageSource(
        source == std::string("realsense+odom") || source == std::string("realsense+strict_odom")))
   {
     printf("trying Intel Realsense device\n");
-    imageSource = new RealsenseEngine(calibFile);
+//    imageSource = new RealsenseEngine(calibFile);
+    imageSource = new ROSImageSourceEngine(
+        calibFile, filename1, filename2, Vector2i(640, 480), Vector2i(480, 360));
     if (imageSource->getDepthImageSize().x == 0)
     {
       delete imageSource;

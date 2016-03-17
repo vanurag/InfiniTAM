@@ -57,8 +57,6 @@ ROSOdometrySourceEngine.cpp
 ROSOdometrySourceEngine.h
 Kinect2Engine.cpp
 Kinect2Engine.h
-RealsenseEngine.cpp
-RealsenseEngine.h
 VISensorEngine.cpp
 VISensorEngine.h
 OpenNIEngine.cpp
