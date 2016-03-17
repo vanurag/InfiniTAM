@@ -34,6 +34,11 @@ ROSOdometrySourceEngine::ROSOdometrySourceEngine(const char *odomMask) : Odometr
                                     &ROSOdometrySourceEngine::ROSTFCallback, this);
         break;
       }
+      if (topic.datatype == std::string("geometry_msgs/PoseStamped")) {
+        sub_pose_ = node_.subscribe(node_.resolveName(odomMask), 1,
+                                    &ROSOdometrySourceEngine::ROSPoseCallback, this);
+        break;
+      }
     }
   }
   cached_odom = NULL;
@@ -72,6 +77,22 @@ void ROSOdometrySourceEngine::ROSTFCallback(
   Vector3f t_imu_G = cached_odom->R * Vector3f(-msg->transform.translation.x,
                                                -msg->transform.translation.y,
                                                -msg->transform.translation.z);
+  cached_odom->t.x = t_imu_G.x;
+  cached_odom->t.y = t_imu_G.y;
+  cached_odom->t.z = t_imu_G.z;
+}
+
+void ROSOdometrySourceEngine::ROSPoseCallback(
+    const geometry_msgs::PoseStamped::ConstPtr& msg)
+{
+  ROS_INFO("TF Orientation x: [%f], y: [%f], z: [%f], w: [%f]",
+           msg->pose.orientation.x, msg->pose.orientation.y,
+           msg->pose.orientation.z, msg->pose.orientation.w);
+  quat2ITMIMU(Quaternion(msg->pose.orientation.x, msg->pose.orientation.y,
+                         msg->pose.orientation.z, msg->pose.orientation.w));
+  Vector3f t_imu_G = cached_odom->R * Vector3f(-msg->pose.position.x,
+                                               -msg->pose.position.y,
+                                               -msg->pose.position.z);
   cached_odom->t.x = t_imu_G.x;
   cached_odom->t.y = t_imu_G.y;
   cached_odom->t.z = t_imu_G.z;

@@ -17,6 +17,7 @@
 #include <ros/ros.h>
 #include <sensor_msgs/Imu.h>
 #include <nav_msgs/Odometry.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <opencv2/viz/vizcore.hpp>
 #include <opencv2/viz/types.hpp>
@@ -75,6 +76,7 @@ namespace InfiniTAM
       void quat2ITMIMU(const Quaternion q);
       void ROSOdometryCallback(const nav_msgs::Odometry::ConstPtr& msg);
       void ROSTFCallback(const geometry_msgs::TransformStamped::ConstPtr& msg);
+      void ROSPoseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
 
       // Visualization
       cv::viz::KeyboardEvent viz_key_event;

@@ -42,6 +42,11 @@ ROSIMUSourceEngine::ROSIMUSourceEngine(const char *imuMask) : IMUSourceEngine(im
                                     &ROSIMUSourceEngine::ROSTFCallback, this);
         break;
       }
+      if (topic.datatype == std::string("geometry_msgs/PoseStamped")) {
+        sub_pose_ = node_.subscribe(node_.resolveName(imuMask), 1,
+                                    &ROSIMUSourceEngine::ROSPoseCallback, this);
+        break;
+      }
     }
   }
   cached_imu = NULL;
@@ -79,6 +84,16 @@ void ROSIMUSourceEngine::ROSTFCallback(
            msg->transform.rotation.z, msg->transform.rotation.w);
   quat2ITMIMU(Quaternion(msg->transform.rotation.x, msg->transform.rotation.y,
                          msg->transform.rotation.z, msg->transform.rotation.w));
+}
+
+void ROSIMUSourceEngine::ROSPoseCallback(
+    const geometry_msgs::PoseStamped::ConstPtr& msg)
+{
+  ROS_INFO("TF Orientation x: [%f], y: [%f], z: [%f], w: [%f]",
+           msg->pose.orientation.x, msg->pose.orientation.y,
+           msg->pose.orientation.z, msg->pose.orientation.w);
+  quat2ITMIMU(Quaternion(msg->pose.orientation.x, msg->pose.orientation.y,
+                         msg->pose.orientation.z, msg->pose.orientation.w));
 }
 
 // conversion from quaternion to rotation matrix
