@@ -58,7 +58,7 @@ ITMLibSettings::ITMLibSettings(void)
 	// builds the tracking regime. level 0 is full resolution
 	if (trackerType == TRACKER_IMU)
 	{
-	  std::cout << "Yo setting IMU tracker!!" << std::endl;
+	  std::cout << "Setting IMU tracker!!" << std::endl;
 		noHierarchyLevels = 2;
 		trackingRegime = new TrackerIterationType[noHierarchyLevels];
 
@@ -67,7 +67,7 @@ ITMLibSettings::ITMLibSettings(void)
 	    //trackingRegime[2] = TRACKER_ITERATION_TRANSLATION;
 	} else if (trackerType == TRACKER_ODOMETRY)
   {
-    std::cout << "Yo setting ODOM tracker!!" << std::endl;
+    std::cout << "Setting ODOM tracker!!" << std::endl;
     noHierarchyLevels = 2;
     trackingRegime = new TrackerIterationType[noHierarchyLevels];
 
@@ -76,12 +76,13 @@ ITMLibSettings::ITMLibSettings(void)
       //trackingRegime[2] = TRACKER_ITERATION_TRANSLATION;
   } else if (trackerType == TRACKER_STRICT_ODOMETRY)
   {
+    std::cout << "Setting strict ODOM tracker!!" << std::endl;
     noHierarchyLevels = 0;
     trackingRegime = new TrackerIterationType[noHierarchyLevels];
   }
 	else
 	{
-	  std::cout << "Yo setting ICP tracker!!" << std::endl;
+	  std::cout << "Setting ICP tracker!!" << std::endl;
 		noHierarchyLevels = 5;
 		trackingRegime = new TrackerIterationType[noHierarchyLevels];
 
