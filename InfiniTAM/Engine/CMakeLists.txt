@@ -45,6 +45,8 @@ ENDIF()
 add_library(Engine
 ImageSourceEngine.cpp
 ImageSourceEngine.h
+ROSImageSourceEngine.cpp
+ROSImageSourceEngine.h
 IMUSourceEngine.cpp
 IMUSourceEngine.h
 OdometrySourceEngine.cpp

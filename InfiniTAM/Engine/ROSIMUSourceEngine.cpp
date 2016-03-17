@@ -89,7 +89,7 @@ void ROSIMUSourceEngine::ROSTFCallback(
 void ROSIMUSourceEngine::ROSPoseCallback(
     const geometry_msgs::PoseStamped::ConstPtr& msg)
 {
-  ROS_INFO("TF Orientation x: [%f], y: [%f], z: [%f], w: [%f]",
+  ROS_INFO("Pose Orientation x: [%f], y: [%f], z: [%f], w: [%f]",
            msg->pose.orientation.x, msg->pose.orientation.y,
            msg->pose.orientation.z, msg->pose.orientation.w);
   quat2ITMIMU(Quaternion(msg->pose.orientation.x, msg->pose.orientation.y,
