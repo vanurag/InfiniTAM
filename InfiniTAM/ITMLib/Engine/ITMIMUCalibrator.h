@@ -144,6 +144,7 @@ namespace ITMLib
         {
           oldT_imu.inv(inv_oldT_imu);
           diffImuPose_cameracoords->SetM(camPose_imucoords->GetM() * inv_oldT_imu * T_imu_rgb);
+//          diffImuPose_cameracoords->Coerce();
         }
 
         hasTwoFrames = true;

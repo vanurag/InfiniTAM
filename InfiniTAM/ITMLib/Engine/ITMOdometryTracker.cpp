@@ -32,7 +32,5 @@ void ITMOdometryTracker::TrackCamera(ITMTrackingState *trackingState, const ITMV
       calibrator->GetDifferentialTrafoChange() *
       T_depth_to_rgb *
       trackingState->pose_d->GetM());
+  trackingState->pose_d->Coerce();
 }
-
-
-
