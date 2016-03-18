@@ -15,10 +15,48 @@ using namespace InfiniTAM::Engine;
 //cv::viz::Viz3d ROSBagSourceEngine::viz_window = cv::viz::Viz3d("IMU pose");
 //cv::Affine3f ROSBagSourceEngine::viz_pose = cv::Affine3f();
 
-ROSBagSourceEngine::ROSBagImageSourceEngine::ROSBagImageSourceEngine(
-    const char *calibFilename, const Vector2i rgbSize, const Vector2i depthSize) :
-        ROSImageSourceEngine(calibFilename, rgbSize, depthSize) { }
-void ROSBagSourceEngine::ROSBagImageSourceEngine::getImages(
+ROSBagImageSourceEngine::ROSBagImageSourceEngine(
+    ROSBagSourceEngine& source_engine, const char *calibFilename, const char *bagFileName,
+    const char *rgbTopic, const char *depthTopic,
+    const Vector2i rgbSize, const Vector2i depthSize) :
+        ROSImageSourceEngine(calibFilename, rgbSize, depthSize),
+        source_engine_(&source_engine),
+        rgb_topic_(rgbTopic), depth_topic_(depthTopic)
+{
+  rgb_msg_ = nullptr;
+  depth_msg_ = nullptr;
+
+  bag_.open(bagFileName, rosbag::bagmode::Read);
+
+  std::vector<std::string> topics;
+  topics.push_back(rgb_topic_);
+  topics.push_back(depth_topic_);
+
+  bag_view_.addQuery(bag_, rosbag::TopicQuery(topics));
+  current_bag_pos_ = bag_view_.begin();
+}
+ROSBagImageSourceEngine::ROSBagImageSourceEngine(
+    ROSBagSourceEngine& source_engine, const char *calibFilename, const char *bagFileName,
+    const char *rgbTopic, const char *depthTopic, const char *poseTopic,
+    const Vector2i rgbSize, const Vector2i depthSize) :
+        source_engine_(&source_engine),
+        rgb_topic_(rgbTopic), depth_topic_(depthTopic), pose_topic_(poseTopic),
+        ROSImageSourceEngine(calibFilename, rgbSize, depthSize)
+{
+  rgb_msg_ = nullptr;
+  depth_msg_ = nullptr;
+
+  bag_.open(bagFileName, rosbag::bagmode::Read);
+
+  std::vector<std::string> topics;
+  topics.push_back(rgb_topic_);
+  topics.push_back(depth_topic_);
+  topics.push_back(pose_topic_);
+
+  bag_view_.addQuery(bag_, rosbag::TopicQuery(topics));
+  current_bag_pos_ = bag_view_.begin();
+}
+void ROSBagImageSourceEngine::getImages(
     ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage){
 
   for (; current_bag_pos_ != bag_view_.end() && !got_new_image_pair_; ++current_bag_pos_) {
@@ -27,75 +65,87 @@ void ROSBagSourceEngine::ROSBagImageSourceEngine::getImages(
     // Read ROS RGB Image message
     if (message_view.getTopic() == rgb_topic_) {
       rgb_msg_ = message_view.instantiate<sensor_msgs::Image>();
-      CHECK(rgb_msg_ != nullptr)
-          << "Wrong type on topic " << rgb_topic_
-          << " expected sensor_msgs::Image";
+      if(rgb_msg_ == nullptr) {
+        std::cout << "Wrong type on topic " << rgb_topic_
+            << ", expected sensor_msgs::Image" << std::endl;
+        exit(1);
+      }
     }
 
     // Read ROS Depth Image message
     if (message_view.getTopic() == depth_topic_) {
       depth_msg_ = message_view.instantiate<sensor_msgs::Image>();
-      CHECK(depth_msg_ != nullptr)
-          << "Wrong type on topic " << depth_topic_
-          << " expected sensor_msgs::Image";
+      if(depth_msg_ == nullptr) {
+        std::cout << "Wrong type on topic " << depth_topic_
+            << ", expected sensor_msgs::Image" << std::endl;
+        exit(1);
+      }
     }
 
     // Read ROS Pose message
     if (message_view.getTopic() == pose_topic_) {
       if (message_view.getDataType() == std::string("nav_msgs/Odometry")) {
         odom_msg_ = message_view.instantiate<nav_msgs::Odometry>();
-        CHECK(odom_msg_ != nullptr)
-            << "Wrong type on topic " << pose_topic_
-            << " expected nav_msgs::Odometry";
+        if(odom_msg_ == nullptr) {
+          std::cout << "Wrong type on topic " << pose_topic_
+              << ", expected nav_msgs::Odometry" << std::endl;
+          exit(1);
+        }
         // callback
-        if (rosbag_imu_source_engine != NULL) {
-          rosbag_imu_source_engine.ROSOdometryCallback_IMU(odom_msg_);
-        } else if (rosbag_odometry_source_engine != NULL) {
-          rosbag_odometry_source_engine.ROSOdometryCallback_Odom(odom_msg_);
+        if (source_engine_->rosbag_imu_source_engine != NULL) {
+          source_engine_->rosbag_imu_source_engine->ROSOdometryCallback_IMU(odom_msg_);
+        } else if (source_engine_->rosbag_odometry_source_engine != NULL) {
+          source_engine_->rosbag_odometry_source_engine->ROSOdometryCallback_Odom(odom_msg_);
         }
       }
       if (message_view.getDataType() == std::string("sensor_msgs/Imu")) {
         imu_msg_ = message_view.instantiate<sensor_msgs::Imu>();
-        CHECK(imu_msg_ != nullptr)
-            << "Wrong type on topic " << pose_topic_
-            << " expected sensor_msgs::Imu";
+        if(imu_msg_ == nullptr) {
+          std::cout << "Wrong type on topic " << pose_topic_
+              << ", expected sensor_msgs::Imu" << std::endl;
+          exit(1);
+        }
         // callback
-        if (rosbag_imu_source_engine != NULL) {
-          rosbag_imu_source_engine.ROSIMUCallback_IMU(imu_msg_);
+        if (source_engine_->rosbag_imu_source_engine != NULL) {
+          source_engine_->rosbag_imu_source_engine->ROSIMUCallback_IMU(imu_msg_);
         }
       }
       if (message_view.getDataType() == std::string("geometry_msgs/TransformStamped")) {
         tf_msg_ = message_view.instantiate<geometry_msgs::TransformStamped>();
-        CHECK(tf_msg_ != nullptr)
-            << "Wrong type on topic " << pose_topic_
-            << " expected geometry_msgs::TransformStamped";
+        if(tf_msg_ == nullptr) {
+          std::cout << "Wrong type on topic " << pose_topic_
+              << ", expected geometry_msgs::TransformStamped" << std::endl;
+          exit(1);
+        }
         // callback
-        if (rosbag_imu_source_engine != NULL) {
-          rosbag_imu_source_engine.ROSTFCallback_IMU(tf_msg_);
-        } else if (rosbag_odometry_source_engine != NULL) {
-          rosbag_odometry_source_engine.ROSTFCallback_Odom(tf_msg_);
+        if (source_engine_->rosbag_imu_source_engine != NULL) {
+          source_engine_->rosbag_imu_source_engine->ROSTFCallback_IMU(tf_msg_);
+        } else if (source_engine_->rosbag_odometry_source_engine != NULL) {
+          source_engine_->rosbag_odometry_source_engine->ROSTFCallback_Odom(tf_msg_);
         }
       }
       if (message_view.getDataType() == std::string("geometry_msgs/PoseStamped")) {
         pose_msg_ = message_view.instantiate<geometry_msgs::PoseStamped>();
-        CHECK(pose_msg_ != nullptr)
-            << "Wrong type on topic " << pose_topic_
-            << " expected geometry_msgs::PoseStamped";
+        if(pose_msg_ == nullptr) {
+          std::cout << "Wrong type on topic " << pose_topic_
+              << ", expected geometry_msgs::PoseStamped" << std::endl;
+          exit(1);
+        }
         // callback
-        if (rosbag_imu_source_engine != NULL) {
-          rosbag_imu_source_engine.ROSPoseCallback_IMU(pose_msg_);
-        } else if (rosbag_odometry_source_engine != NULL) {
-          rosbag_odometry_source_engine.ROSPoseCallback_Odom(pose_msg_);
+        if (source_engine_->rosbag_imu_source_engine != NULL) {
+          source_engine_->rosbag_imu_source_engine->ROSPoseCallback_IMU(pose_msg_);
+        } else if (source_engine_->rosbag_odometry_source_engine != NULL) {
+          source_engine_->rosbag_odometry_source_engine->ROSPoseCallback_Odom(pose_msg_);
         }
       }
 
       // viz
-      if (rosbag_imu_source_engine != NULL) {
-        viz_cached_pose_ = rosbag_imu_source_engine.cached_imu->R;
-      } else if (rosbag_odometry_source_engine != NULL) {
-        viz_cached_pose_ = rosbag_odometry_source_engine.cached_odom->R;
+      if (source_engine_->rosbag_imu_source_engine != NULL) {
+        source_engine_->viz_cached_pose_ = source_engine_->rosbag_imu_source_engine->cached_imu->R;
+      } else if (source_engine_->rosbag_odometry_source_engine != NULL) {
+        source_engine_->viz_cached_pose_ = source_engine_->rosbag_odometry_source_engine->cached_odom->R;
       } else {
-        viz_cached_pose_ = Matrix3f(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);
+        source_engine_->viz_cached_pose_ = Matrix3f(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0);
       }
     }
 
@@ -104,7 +154,7 @@ void ROSBagSourceEngine::ROSBagImageSourceEngine::getImages(
       if (rgb_msg_->header.stamp.sec == depth_msg_->header.stamp.sec &&
           abs(rgb_msg_->header.stamp.nsec - depth_msg_->header.stamp.nsec) < 200000000) {
         got_new_image_pair_ = true;
-        rosbag_image_source_engine.ROSImageCallback(rgb_msg_, depth_msg_);
+        source_engine_->rosbag_image_source_engine->ROSImageCallback(rgb_msg_, depth_msg_);
 
         // fill up ITM data
         Vector4u *rgb = rgbImage->GetData(MEMORYDEVICE_CPU);
@@ -142,20 +192,20 @@ void ROSBagSourceEngine::ROSBagImageSourceEngine::getImages(
   depth_msg_ = nullptr;
   return /*true*/;
 }
-bool ROSBagSourceEngine::ROSBagImageSourceEngine::hasMoreImages(void) {
+bool ROSBagImageSourceEngine::hasMoreImages(void) {
   return (current_bag_pos_ == bag_view_.end());
 }
-Vector2i ROSBagSourceEngine::ROSBagImageSourceEngine::getDepthImageSize(void) { return imageSize_d_; }
-Vector2i ROSBagSourceEngine::ROSBagImageSourceEngine::getRGBImageSize(void) { return imageSize_rgb_; }
+Vector2i ROSBagImageSourceEngine::getDepthImageSize(void) { return imageSize_d_; }
+Vector2i ROSBagImageSourceEngine::getRGBImageSize(void) { return imageSize_rgb_; }
 
 
 
-ROSBagSourceEngine::ROSBagIMUSourceEngine::ROSBagIMUSourceEngine() : ROSIMUSourceEngine() { }
-bool ROSBagSourceEngine::ROSBagIMUSourceEngine::hasMoreMeasurements(void)
+ROSBagIMUSourceEngine::ROSBagIMUSourceEngine() : ROSIMUSourceEngine() { }
+bool ROSBagIMUSourceEngine::hasMoreMeasurements(void)
 {
   return (cached_imu != NULL);
 }
-void ROSBagSourceEngine::ROSBagIMUSourceEngine::getMeasurement(ITMIMUMeasurement *imu)
+void ROSBagIMUSourceEngine::getMeasurement(ITMIMUMeasurement *imu)
 {
   if (cached_imu != NULL)
   {
@@ -168,13 +218,13 @@ void ROSBagSourceEngine::ROSBagIMUSourceEngine::getMeasurement(ITMIMUMeasurement
 
 
 
-ROSBagSourceEngine::ROSBagOdometrySourceEngine::ROSBagOdometrySourceEngine() :
+ROSBagOdometrySourceEngine::ROSBagOdometrySourceEngine() :
     ROSOdometrySourceEngine() { }
-bool ROSBagSourceEngine::ROSBagOdometrySourceEngine::hasMoreMeasurements(void)
+bool ROSBagOdometrySourceEngine::hasMoreMeasurements(void)
 {
   return (cached_odom != NULL);
 }
-void ROSBagSourceEngine::ROSBagOdometrySourceEngine::getMeasurement(ITMOdometryMeasurement *odom)
+void ROSBagOdometrySourceEngine::getMeasurement(ITMOdometryMeasurement *odom)
 {
   if (cached_odom != NULL)
   {
@@ -187,28 +237,41 @@ void ROSBagSourceEngine::ROSBagOdometrySourceEngine::getMeasurement(ITMOdometryM
 }
 
 
-
 ROSBagSourceEngine::ROSBagSourceEngine(
-    const char *bagFileName, const char *rgbTopic, const char *depthTopic, const char *poseTopic) :
-        rgb_topic_(rgbTopic), depth_topic_(depthTopic), pose_topic_(poseTopic)//,
+    const char *calibFilename, const char *bagFileName,
+    const char *rgbTopic, const char *depthTopic,
+    const Vector2i rgbSize, const Vector2i depthSize)
 //        viz_key_event(cv::viz::KeyboardEvent::Action::KEY_DOWN, "A", cv::viz::KeyboardEvent::ALT, 1)
 {
-  rosbag_image_source_engine = NULL;
+  rosbag_image_source_engine = new ROSBagImageSourceEngine(
+      *this, calibFilename, bagFileName, rgbTopic, depthTopic, rgbSize, depthSize);
   rosbag_imu_source_engine = NULL;
   rosbag_odometry_source_engine = NULL;
-  rgb_msg_ = nullptr;
-  depth_msg_ = nullptr;
 
-  bag_.open(bagFileName, rosbag::bagmode::Read);
+  viz_cached_pose_ = NULL;
 
-  std::vector<std::string> topics;
-  topics.push_back(rgb_topic_);
-  topics.push_back(depth_topic_);
-  topics.push_back(pose_topic_);
+//  // Add camera coordinate axes visualization widget
+//  viz_window.setWindowSize(cv::Size(600, 600));
+////  viz_window.showWidget("Coordinate Widget", cv::viz::WCoordinateSystem(200.0));
+////  viz_window.showWidget("Test Sphere", cv::viz::WSphere(cv::Point3f(100.0, 0.0, 0.0), 5.0));
+//  viz_window.showWidget("Camera Widget", cv::viz::WCoordinateSystem(100.0));
+//  viz_window.registerKeyboardCallback(VizKeyboardCallback);
+}
+ROSBagSourceEngine::ROSBagSourceEngine(
+    const char *calibFilename, const char *bagFileName,
+    const char *rgbTopic, const char *depthTopic, const char *poseTopic,
+    const Vector2i rgbSize, const Vector2i depthSize, const char *pose_type)
+//        viz_key_event(cv::viz::KeyboardEvent::Action::KEY_DOWN, "A", cv::viz::KeyboardEvent::ALT, 1)
+{
+  rosbag_image_source_engine = new ROSBagImageSourceEngine(
+      *this, calibFilename, bagFileName, rgbTopic, depthTopic, poseTopic, rgbSize, depthSize);
+  rosbag_imu_source_engine = new ROSBagIMUSourceEngine();
+  rosbag_odometry_source_engine = new ROSBagOdometrySourceEngine();
 
-  bag_view_.addQuery(bag_, rosbag::TopicQuery(topics));
-  current_bag_pos_ = bag_view_.begin();
-  viz_cached_pose_ == NULL;
+  if (pose_type == std::string("odom")) rosbag_imu_source_engine = NULL;
+  if (pose_type == std::string("imu")) rosbag_odometry_source_engine = NULL;
+
+  viz_cached_pose_ = NULL;
 
 //  // Add camera coordinate axes visualization widget
 //  viz_window.setWindowSize(cv::Size(600, 600));

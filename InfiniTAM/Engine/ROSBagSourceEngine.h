@@ -55,41 +55,11 @@ namespace InfiniTAM
     /** This class provides an interface for reading Images and Pose from
         ROS Bag topics
     */
-    class ROSBagSourceEngine
+    class ROSBagSourceEngine;
+    class ROSBagImageSourceEngine : public ROSImageSourceEngine
     {
     private:
-      struct Quaternion {
-        double x;
-        double y;
-        double z;
-        double w;
-
-        Quaternion() : x(0.0), y(0.0), z(0.0), w(1.0) {}
-        Quaternion(const double a, const double b, const double c, const double d) {
-          x = a;
-          y = b;
-          z = c;
-          w = d;
-        }
-
-        void operator=(const Quaternion& assign) {
-          x = assign.x;
-          y = assign.y;
-          z = assign.z;
-          w = assign.w;
-        }
-
-        Quaternion operator*(const Quaternion& right) const {
-          Quaternion result;
-          result.x = w*right.x + z*right.y - y*right.z + x*right.w;
-          result.y = -z*right.x + w*right.y + x*right.z + y*right.w;
-          result.z = y*right.x - x*right.y + w*right.z + z*right.w;
-          result.w = -x*right.x - y*right.y - z*right.z + w*right.w;
-
-          return result;
-        }
-      };
-
+      ROSBagSourceEngine* source_engine_;   // pointer to the owner source engine
       bool got_new_image_pair_ = false; // indicates if a new <rgb, depth> measurement is available
       rosbag::Bag bag_;
       rosbag::View bag_view_;
@@ -100,9 +70,48 @@ namespace InfiniTAM
       sensor_msgs::Imu::ConstPtr imu_msg_;
       geometry_msgs::TransformStamped::ConstPtr tf_msg_;
       geometry_msgs::PoseStamped::ConstPtr pose_msg_;
+    public:
+      ROSBagImageSourceEngine(
+          ROSBagSourceEngine& source_engine, const char *calibFilename, const char *bagFileName,
+          const char *rgbTopic, const char *depthTopic,
+          const Vector2i rgbSize, const Vector2i depthSize);
+      ROSBagImageSourceEngine(
+          ROSBagSourceEngine& source_engine, const char *calibFilename, const char *bagFileName,
+          const char *rgbTopic, const char *depthTopic, const char *poseTopic,
+          const Vector2i rgbSize, const Vector2i depthSize);
+      ~ROSBagImageSourceEngine() {};
 
+      bool hasMoreImages(void);
+      void getImages(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage);
+      Vector2i getDepthImageSize(void);
+      Vector2i getRGBImageSize(void);
+    };
+
+    class ROSBagIMUSourceEngine : public ROSIMUSourceEngine
+    {
+    public:
+      ROSBagIMUSourceEngine();
+      virtual ~ROSBagIMUSourceEngine() { }
+
+      virtual bool hasMoreMeasurements(void);
+      virtual void getMeasurement(ITMIMUMeasurement *imu);
+    };
+
+    class ROSBagOdometrySourceEngine : public ROSOdometrySourceEngine
+    {
+    public:
+      ROSBagOdometrySourceEngine();
+      virtual ~ROSBagOdometrySourceEngine() { }
+
+      virtual bool hasMoreMeasurements(void);
+      virtual void getMeasurement(ITMOdometryMeasurement *imu);
+    };
+
+    class ROSBagSourceEngine
+    {
+    private:
       // Visualization
-      Matrix3f viz_cached_pose_;
+      Matrix3f* viz_cached_pose_;
 //      cv::viz::KeyboardEvent viz_key_event;
 //      static cv::viz::Viz3d viz_window;
 //      static cv::Affine3f viz_pose;
@@ -115,44 +124,17 @@ namespace InfiniTAM
       void VisualizePose();
 
     public:
-      class ROSBagImageSourceEngine : public ROSImageSourceEngine
-      {
-       public:
-         ROSBagImageSourceEngine(
-             const char *calibFilename, const Vector2i rgbSize, const Vector2i depthSize);
-         ~ROSBagImageSourceEngine() {};
-
-         bool hasMoreImages(void);
-         void getImages(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage);
-         Vector2i getDepthImageSize(void);
-         Vector2i getRGBImageSize(void);
-      };
-
-      class ROSBagIMUSourceEngine : public ROSIMUSourceEngine
-      {
-      public:
-        ROSBagIMUSourceEngine();
-        virtual ~ROSBagIMUSourceEngine() { }
-
-        virtual bool hasMoreMeasurements(void);
-        virtual void getMeasurement(ITMIMUMeasurement *imu);
-      };
-
-      class ROSBagOdometrySourceEngine : public ROSOdometrySourceEngine
-      {
-       public:
-         ROSBagOdometrySourceEngine();
-         virtual ~ROSBagOdometrySourceEngine() { }
-
-         virtual bool hasMoreMeasurements(void);
-         virtual void getMeasurement(ITMOdometryMeasurement *imu);
-      };
-
-      ROSBagImageSourceEngine rosbag_image_source_engine;
-      ROSBagIMUSourceEngine rosbag_imu_source_engine;
-      ROSBagOdometrySourceEngine rosbag_odometry_source_engine;
+      ROSBagImageSourceEngine* rosbag_image_source_engine;
+      ROSBagIMUSourceEngine* rosbag_imu_source_engine;
+      ROSBagOdometrySourceEngine* rosbag_odometry_source_engine;
       ROSBagSourceEngine(
-          const char *bagFileName, const char *rgbTopic, const char *depthTopic, const char *poseTopic);
+          const char *calibFilename, const char *bagFileName,
+          const char *rgbTopic, const char *depthTopic,
+          const Vector2i rgbSize, const Vector2i depthSize);
+      ROSBagSourceEngine(
+          const char *calibFilename, const char *bagFileName,
+          const char *rgbTopic, const char *depthTopic, const char *poseTopic,
+          const Vector2i rgbSize, const Vector2i depthSize, const char *pose_type);
       ~ROSBagSourceEngine() {};
     };
   }
