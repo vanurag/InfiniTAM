@@ -12,8 +12,8 @@
 
 using namespace InfiniTAM::Engine;
 
-//cv::viz::Viz3d ROSBagSourceEngine::viz_window = cv::viz::Viz3d("IMU pose");
-//cv::Affine3f ROSBagSourceEngine::viz_pose = cv::Affine3f();
+cv::viz::Viz3d ROSBagSourceEngine::viz_window = cv::viz::Viz3d("IMU pose");
+cv::Affine3f ROSBagSourceEngine::viz_pose = cv::Affine3f();
 
 ROSBagImageSourceEngine::ROSBagImageSourceEngine(
     ROSBagSourceEngine& source_engine, const char *calibFilename, const char *bagFileName,
@@ -145,6 +145,7 @@ void ROSBagImageSourceEngine::getImages(
       } else if (source_engine_->rosbag_odometry_source_engine != NULL) {
         source_engine_->viz_cached_pose_ = source_engine_->rosbag_odometry_source_engine->cached_odom->R;
       }
+      source_engine_->VisualizePose();
     }
 
     // check if RGB and Depth image msgs have close enough timestamps to consider as pair
@@ -238,29 +239,27 @@ void ROSBagOdometrySourceEngine::getMeasurement(ITMOdometryMeasurement *odom)
 ROSBagSourceEngine::ROSBagSourceEngine(
     const char *calibFilename, const char *bagFileName,
     const char *rgbTopic, const char *depthTopic,
-    const Vector2i rgbSize, const Vector2i depthSize)
-//        viz_key_event(cv::viz::KeyboardEvent::Action::KEY_DOWN, "A", cv::viz::KeyboardEvent::ALT, 1)
+    const Vector2i rgbSize, const Vector2i depthSize) :
+        viz_key_event(cv::viz::KeyboardEvent::Action::KEY_DOWN, "A", cv::viz::KeyboardEvent::ALT, 1)
 {
   rosbag_image_source_engine = new ROSBagImageSourceEngine(
       *this, calibFilename, bagFileName, rgbTopic, depthTopic, rgbSize, depthSize);
   rosbag_imu_source_engine = NULL;
   rosbag_odometry_source_engine = NULL;
 
-//  viz_cached_pose_ = NULL;
-
-//  // Add camera coordinate axes visualization widget
-//  viz_window.setWindowSize(cv::Size(600, 600));
-////  viz_window.showWidget("Coordinate Widget", cv::viz::WCoordinateSystem(200.0));
-////  viz_window.showWidget("Test Sphere", cv::viz::WSphere(cv::Point3f(100.0, 0.0, 0.0), 5.0));
-//  viz_window.showWidget("Camera Widget", cv::viz::WCoordinateSystem(100.0));
-//  viz_window.registerKeyboardCallback(VizKeyboardCallback);
+  // Add camera coordinate axes visualization widget
+  viz_window.setWindowSize(cv::Size(600, 600));
+//  viz_window.showWidget("Coordinate Widget", cv::viz::WCoordinateSystem(200.0));
+//  viz_window.showWidget("Test Sphere", cv::viz::WSphere(cv::Point3f(100.0, 0.0, 0.0), 5.0));
+  viz_window.showWidget("Camera Widget", cv::viz::WCoordinateSystem(100.0));
+  viz_window.registerKeyboardCallback(VizKeyboardCallback);
 }
 ROSBagSourceEngine::ROSBagSourceEngine(
     const char *calibFilename, const char *bagFileName,
     const char *rgbTopic, const char *depthTopic, const char *poseTopic,
     const Vector2i rgbSize, const Vector2i depthSize, const char *pose_type) :
-        viz_cached_pose_(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)
-//        viz_key_event(cv::viz::KeyboardEvent::Action::KEY_DOWN, "A", cv::viz::KeyboardEvent::ALT, 1)
+        viz_cached_pose_(1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0),
+        viz_key_event(cv::viz::KeyboardEvent::Action::KEY_DOWN, "A", cv::viz::KeyboardEvent::ALT, 1)
 {
   rosbag_image_source_engine = new ROSBagImageSourceEngine(
       *this, calibFilename, bagFileName, rgbTopic, depthTopic, poseTopic, rgbSize, depthSize);
@@ -270,14 +269,12 @@ ROSBagSourceEngine::ROSBagSourceEngine(
   if (pose_type == std::string("odom")) rosbag_imu_source_engine = NULL;
   if (pose_type == std::string("imu")) rosbag_odometry_source_engine = NULL;
 
-//  viz_cached_pose_ = NULL;
-
-//  // Add camera coordinate axes visualization widget
-//  viz_window.setWindowSize(cv::Size(600, 600));
-////  viz_window.showWidget("Coordinate Widget", cv::viz::WCoordinateSystem(200.0));
-////  viz_window.showWidget("Test Sphere", cv::viz::WSphere(cv::Point3f(100.0, 0.0, 0.0), 5.0));
-//  viz_window.showWidget("Camera Widget", cv::viz::WCoordinateSystem(100.0));
-//  viz_window.registerKeyboardCallback(VizKeyboardCallback);
+  // Add camera coordinate axes visualization widget
+  viz_window.setWindowSize(cv::Size(600, 600));
+//  viz_window.showWidget("Coordinate Widget", cv::viz::WCoordinateSystem(200.0));
+//  viz_window.showWidget("Test Sphere", cv::viz::WSphere(cv::Point3f(100.0, 0.0, 0.0), 5.0));
+  viz_window.showWidget("Camera Widget", cv::viz::WCoordinateSystem(100.0));
+  viz_window.registerKeyboardCallback(VizKeyboardCallback);
 }
 void ROSBagSourceEngine::VisualizePose() {
 
@@ -289,8 +286,8 @@ void ROSBagSourceEngine::VisualizePose() {
       mat_pointer[3*row + col] = viz_cached_pose_(col, row);
     }
   }
-//    viz_pose.rotation(pose_mat);
-//    viz_pose.translate(cv::Vec3f(0.0, 0.0, 0.0));
-//    viz_window.setWidgetPose("Camera Widget", viz_pose);
-//    viz_window.spinOnce(1, true);
+  viz_pose.rotation(pose_mat);
+  viz_pose.translate(cv::Vec3f(0.0, 0.0, 0.0));
+  viz_window.setWidgetPose("Camera Widget", viz_pose);
+  viz_window.spinOnce(1, true);
 }
