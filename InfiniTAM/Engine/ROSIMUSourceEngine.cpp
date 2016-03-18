@@ -29,22 +29,22 @@ ROSIMUSourceEngine::ROSIMUSourceEngine(const char *imuMask) : IMUSourceEngine(im
     if (topic.name == imuMask) {
       if (topic.datatype == std::string("nav_msgs/Odometry")) {
         sub_pose_ = node_.subscribe(node_.resolveName(imuMask), 1,
-                                    &ROSIMUSourceEngine::ROSOdometryCallback, this);
+                                    &ROSIMUSourceEngine::ROSOdometryCallback_IMU, this);
         break;
       }
       if (topic.datatype == std::string("sensor_msgs/Imu")) {
         sub_pose_ = node_.subscribe(node_.resolveName(imuMask), 1,
-                                    &ROSIMUSourceEngine::ROSIMUCallback, this);
+                                    &ROSIMUSourceEngine::ROSIMUCallback_IMU, this);
         break;
       }
       if (topic.datatype == std::string("geometry_msgs/TransformStamped")) {
         sub_pose_ = node_.subscribe(node_.resolveName(imuMask), 1,
-                                    &ROSIMUSourceEngine::ROSTFCallback, this);
+                                    &ROSIMUSourceEngine::ROSTFCallback_IMU, this);
         break;
       }
       if (topic.datatype == std::string("geometry_msgs/PoseStamped")) {
         sub_pose_ = node_.subscribe(node_.resolveName(imuMask), 1,
-                                    &ROSIMUSourceEngine::ROSPoseCallback, this);
+                                    &ROSIMUSourceEngine::ROSPoseCallback_IMU, this);
         break;
       }
     }
@@ -59,7 +59,7 @@ ROSIMUSourceEngine::ROSIMUSourceEngine(const char *imuMask) : IMUSourceEngine(im
   viz_window.registerKeyboardCallback(VizKeyboardCallback);
 }
 
-void ROSIMUSourceEngine::ROSOdometryCallback(const nav_msgs::Odometry::ConstPtr& msg)
+void ROSIMUSourceEngine::ROSOdometryCallback_IMU(const nav_msgs::Odometry::ConstPtr& msg)
 {
   ROS_INFO("Odometry Orientation x: [%f], y: [%f], z: [%f], w: [%f]",
            msg->pose.pose.orientation.x, msg->pose.pose.orientation.y, msg->pose.pose.orientation.z,
@@ -68,7 +68,7 @@ void ROSIMUSourceEngine::ROSOdometryCallback(const nav_msgs::Odometry::ConstPtr&
                          msg->pose.pose.orientation.z, msg->pose.pose.orientation.w));
 }
 
-void ROSIMUSourceEngine::ROSIMUCallback(const sensor_msgs::Imu::ConstPtr& msg)
+void ROSIMUSourceEngine::ROSIMUCallback_IMU(const sensor_msgs::Imu::ConstPtr& msg)
 {
   ROS_INFO("IMU Orientation x: [%f], y: [%f], z: [%f], w: [%f]",
            msg->orientation.x,msg->orientation.y,msg->orientation.z,msg->orientation.w);
@@ -76,7 +76,7 @@ void ROSIMUSourceEngine::ROSIMUCallback(const sensor_msgs::Imu::ConstPtr& msg)
                          msg->orientation.z, msg->orientation.w));
 }
 
-void ROSIMUSourceEngine::ROSTFCallback(
+void ROSIMUSourceEngine::ROSTFCallback_IMU(
     const geometry_msgs::TransformStamped::ConstPtr& msg)
 {
   ROS_INFO("TF Orientation x: [%f], y: [%f], z: [%f], w: [%f]",
@@ -86,7 +86,7 @@ void ROSIMUSourceEngine::ROSTFCallback(
                          msg->transform.rotation.z, msg->transform.rotation.w));
 }
 
-void ROSIMUSourceEngine::ROSPoseCallback(
+void ROSIMUSourceEngine::ROSPoseCallback_IMU(
     const geometry_msgs::PoseStamped::ConstPtr& msg)
 {
   ROS_INFO("Pose Orientation x: [%f], y: [%f], z: [%f], w: [%f]",

@@ -26,17 +26,17 @@ ROSOdometrySourceEngine::ROSOdometrySourceEngine(const char *odomMask) : Odometr
     if (topic.name == odomMask) {
       if (topic.datatype == std::string("nav_msgs/Odometry")) {
         sub_pose_ = node_.subscribe(node_.resolveName(odomMask), 1,
-                                    &ROSOdometrySourceEngine::ROSOdometryCallback, this);
+                                    &ROSOdometrySourceEngine::ROSOdometryCallback_Odom, this);
         break;
       }
       if (topic.datatype == std::string("geometry_msgs/TransformStamped")) {
         sub_pose_ = node_.subscribe(node_.resolveName(odomMask), 1,
-                                    &ROSOdometrySourceEngine::ROSTFCallback, this);
+                                    &ROSOdometrySourceEngine::ROSTFCallback_Odom, this);
         break;
       }
       if (topic.datatype == std::string("geometry_msgs/PoseStamped")) {
         sub_pose_ = node_.subscribe(node_.resolveName(odomMask), 1,
-                                    &ROSOdometrySourceEngine::ROSPoseCallback, this);
+                                    &ROSOdometrySourceEngine::ROSPoseCallback_Odom, this);
         break;
       }
     }
@@ -51,13 +51,13 @@ ROSOdometrySourceEngine::ROSOdometrySourceEngine(const char *odomMask) : Odometr
   viz_window.registerKeyboardCallback(VizKeyboardCallback);
 }
 
-void ROSOdometrySourceEngine::ROSOdometryCallback(const nav_msgs::Odometry::ConstPtr& msg)
+void ROSOdometrySourceEngine::ROSOdometryCallback_Odom(const nav_msgs::Odometry::ConstPtr& msg)
 {
   ROS_INFO("Odometry Orientation x: [%f], y: [%f], z: [%f], w: [%f]",
            msg->pose.pose.orientation.x, msg->pose.pose.orientation.y, msg->pose.pose.orientation.z,
            msg->pose.pose.orientation.w);
-  quat2ITMIMU(Quaternion(msg->pose.pose.orientation.x, msg->pose.pose.orientation.y,
-                         msg->pose.pose.orientation.z, msg->pose.pose.orientation.w));
+  quat2ITMOdom(Quaternion(msg->pose.pose.orientation.x, msg->pose.pose.orientation.y,
+                          msg->pose.pose.orientation.z, msg->pose.pose.orientation.w));
   Vector3f t_imu_G = cached_odom->R * Vector3f(-msg->pose.pose.position.x,
                                                -msg->pose.pose.position.y,
                                                -msg->pose.pose.position.z);
@@ -66,14 +66,14 @@ void ROSOdometrySourceEngine::ROSOdometryCallback(const nav_msgs::Odometry::Cons
   cached_odom->t.z = t_imu_G.z;
 }
 
-void ROSOdometrySourceEngine::ROSTFCallback(
+void ROSOdometrySourceEngine::ROSTFCallback_Odom(
     const geometry_msgs::TransformStamped::ConstPtr& msg)
 {
   ROS_INFO("TF Orientation x: [%f], y: [%f], z: [%f], w: [%f]",
            msg->transform.rotation.x, msg->transform.rotation.y,
            msg->transform.rotation.z, msg->transform.rotation.w);
-  quat2ITMIMU(Quaternion(msg->transform.rotation.x, msg->transform.rotation.y,
-                         msg->transform.rotation.z, msg->transform.rotation.w));
+  quat2ITMOdom(Quaternion(msg->transform.rotation.x, msg->transform.rotation.y,
+                          msg->transform.rotation.z, msg->transform.rotation.w));
   Vector3f t_imu_G = cached_odom->R * Vector3f(-msg->transform.translation.x,
                                                -msg->transform.translation.y,
                                                -msg->transform.translation.z);
@@ -82,14 +82,14 @@ void ROSOdometrySourceEngine::ROSTFCallback(
   cached_odom->t.z = t_imu_G.z;
 }
 
-void ROSOdometrySourceEngine::ROSPoseCallback(
+void ROSOdometrySourceEngine::ROSPoseCallback_Odom(
     const geometry_msgs::PoseStamped::ConstPtr& msg)
 {
   ROS_INFO("Pose Orientation x: [%f], y: [%f], z: [%f], w: [%f]",
            msg->pose.orientation.x, msg->pose.orientation.y,
            msg->pose.orientation.z, msg->pose.orientation.w);
-  quat2ITMIMU(Quaternion(msg->pose.orientation.x, msg->pose.orientation.y,
-                         msg->pose.orientation.z, msg->pose.orientation.w));
+  quat2ITMOdom(Quaternion(msg->pose.orientation.x, msg->pose.orientation.y,
+                          msg->pose.orientation.z, msg->pose.orientation.w));
   Vector3f t_imu_G = cached_odom->R * Vector3f(-msg->pose.position.x,
                                                -msg->pose.position.y,
                                                -msg->pose.position.z);
@@ -99,7 +99,7 @@ void ROSOdometrySourceEngine::ROSPoseCallback(
 }
 
 // conversion from quaternion to rotation matrix
-void ROSOdometrySourceEngine::quat2ITMIMU(const Quaternion odom_pose) {
+void ROSOdometrySourceEngine::quat2ITMOdom(const Quaternion odom_pose) {
 
   // TODO(vanurag): make this user definable
 //  Quaternion q_cam_to_imu(-0.0439623792008964, -0.07685149594247381,

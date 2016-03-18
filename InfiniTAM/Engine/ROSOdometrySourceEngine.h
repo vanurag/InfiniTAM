@@ -34,12 +34,24 @@ namespace InfiniTAM
       static const int BUF_SIZE = 2048;
       char odomMask[BUF_SIZE];
 
-      ITMOdometryMeasurement *cached_odom;
-
       ros::NodeHandle node_;
       ros::Subscriber sub_pose_;
       ros::master::V_TopicInfo master_topics;
 
+      // Visualization
+      cv::viz::KeyboardEvent viz_key_event;
+      static cv::viz::Viz3d viz_window;
+      static cv::Affine3f viz_cam_pose;
+      static void VizKeyboardCallback(const cv::viz::KeyboardEvent&, void*) {
+        std::cout << "Setting VIZ viewing angle to camera's viewing direction" << std::endl;
+        cv::Affine3f viz_viewer_pose = viz_cam_pose;
+        viz_viewer_pose = viz_viewer_pose.translate(cv::Vec3f(0.0, 0.0, 10.0));
+        viz_window.setViewerPose(viz_viewer_pose);
+      }
+      void VisualizePose();
+
+    protected:
+      ITMOdometryMeasurement *cached_odom;
       struct Quaternion {
         double x;
         double y;
@@ -71,24 +83,11 @@ namespace InfiniTAM
           return result;
         }
       };
-
-      // conversion from quaternion to ITM IMU Measurement
-      void quat2ITMIMU(const Quaternion q);
-      void ROSOdometryCallback(const nav_msgs::Odometry::ConstPtr& msg);
-      void ROSTFCallback(const geometry_msgs::TransformStamped::ConstPtr& msg);
-      void ROSPoseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
-
-      // Visualization
-      cv::viz::KeyboardEvent viz_key_event;
-      static cv::viz::Viz3d viz_window;
-      static cv::Affine3f viz_cam_pose;
-      static void VizKeyboardCallback(const cv::viz::KeyboardEvent&, void*) {
-        std::cout << "Setting VIZ viewing angle to camera's viewing direction" << std::endl;
-        cv::Affine3f viz_viewer_pose = viz_cam_pose;
-        viz_viewer_pose = viz_viewer_pose.translate(cv::Vec3f(0.0, 0.0, 10.0));
-        viz_window.setViewerPose(viz_viewer_pose);
-      }
-      void VisualizePose();
+      // conversion from quaternion to ITM Odometry Measurement
+      void quat2ITMOdom(const Quaternion q);
+      void ROSOdometryCallback_Odom(const nav_msgs::Odometry::ConstPtr& msg);
+      void ROSTFCallback_Odom(const geometry_msgs::TransformStamped::ConstPtr& msg);
+      void ROSPoseCallback_Odom(const geometry_msgs::PoseStamped::ConstPtr& msg);
 
     public:
       ROSOdometrySourceEngine(const char *odomMask);
