@@ -191,7 +191,7 @@ void ROSBagImageSourceEngine::getImages(
   return /*true*/;
 }
 bool ROSBagImageSourceEngine::hasMoreImages(void) {
-  return (current_bag_pos_ == bag_view_.end());
+  return (current_bag_pos_ != bag_view_.end());
 }
 Vector2i ROSBagImageSourceEngine::getDepthImageSize(void) { return imageSize_d_; }
 Vector2i ROSBagImageSourceEngine::getRGBImageSize(void) { return imageSize_rgb_; }
