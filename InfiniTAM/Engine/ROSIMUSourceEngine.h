@@ -94,6 +94,7 @@ namespace InfiniTAM
       void ROSPoseCallback_IMU(const geometry_msgs::PoseStamped::ConstPtr& msg);
     public:
       ROSIMUSourceEngine(const char *imuMask);
+      ROSIMUSourceEngine();
       virtual ~ROSIMUSourceEngine() { }
 
       virtual bool hasMoreMeasurements(void);

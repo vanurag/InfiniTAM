@@ -63,6 +63,7 @@ namespace InfiniTAM
     public:
       ROSImageSourceEngine(const char *calibFilename, const char *rgbTopic, const char *depthTopic,
                            const Vector2i rgbSize, const Vector2i depthSize);
+      ROSImageSourceEngine(const char *calibFilename, const Vector2i rgbSize, const Vector2i depthSize);
       ~ROSImageSourceEngine() {};
 
       bool hasMoreImages(void);

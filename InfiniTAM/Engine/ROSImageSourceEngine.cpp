@@ -27,6 +27,16 @@ ROSImageSourceEngine::ROSImageSourceEngine(
   sync_.registerCallback(boost::bind(&ROSImageSourceEngine::ROSImageCallback, this, _1, _2));
 }
 
+ROSImageSourceEngine::ROSImageSourceEngine(
+    const char *calibFilename, const Vector2i rgbSize, const Vector2i depthSize) :
+        ImageSourceEngine(calibFilename)
+{
+  imageSize_d_ = depthSize;
+  imageSize_rgb_ = rgbSize;
+  colorAvailable_ = false;
+  depthAvailable_ = false;
+}
+
 void ROSImageSourceEngine::ROSImageCallback(const sensor_msgs::ImageConstPtr rgb_msg,
                                             const sensor_msgs::ImageConstPtr depth_msg)
 {

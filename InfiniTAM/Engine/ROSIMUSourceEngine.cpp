@@ -59,6 +59,11 @@ ROSIMUSourceEngine::ROSIMUSourceEngine(const char *imuMask) : IMUSourceEngine(im
   viz_window.registerKeyboardCallback(VizKeyboardCallback);
 }
 
+ROSIMUSourceEngine::ROSIMUSourceEngine() : IMUSourceEngine("")
+{
+  cached_imu = NULL;
+}
+
 void ROSIMUSourceEngine::ROSOdometryCallback_IMU(const nav_msgs::Odometry::ConstPtr& msg)
 {
   ROS_INFO("Odometry Orientation x: [%f], y: [%f], z: [%f], w: [%f]",

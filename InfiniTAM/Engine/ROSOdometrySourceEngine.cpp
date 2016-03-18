@@ -51,6 +51,11 @@ ROSOdometrySourceEngine::ROSOdometrySourceEngine(const char *odomMask) : Odometr
   viz_window.registerKeyboardCallback(VizKeyboardCallback);
 }
 
+ROSOdometrySourceEngine::ROSOdometrySourceEngine() : OdometrySourceEngine("")
+{
+  cached_odom = NULL;
+}
+
 void ROSOdometrySourceEngine::ROSOdometryCallback_Odom(const nav_msgs::Odometry::ConstPtr& msg)
 {
   ROS_INFO("Odometry Orientation x: [%f], y: [%f], z: [%f], w: [%f]",

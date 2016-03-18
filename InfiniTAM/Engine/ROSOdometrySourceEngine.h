@@ -91,6 +91,7 @@ namespace InfiniTAM
 
     public:
       ROSOdometrySourceEngine(const char *odomMask);
+      ROSOdometrySourceEngine();
       virtual ~ROSOdometrySourceEngine() { }
 
       virtual bool hasMoreMeasurements(void);
