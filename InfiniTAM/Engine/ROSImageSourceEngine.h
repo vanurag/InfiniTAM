@@ -48,17 +48,18 @@ namespace InfiniTAM
     private:
       typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> MySyncPolicy;
 
-      void CallBackFunction(const sensor_msgs::ImageConstPtr rgb_msg,
-                            const sensor_msgs::ImageConstPtr depth_msg);
-
-      char timestamp_[16];
-      cv::Mat rgb_, depth_;
       ros::Subscriber sub_rgb_;
       ros::NodeHandle node_;
       message_filters::Subscriber<sensor_msgs::Image> mf_sub_rgb_, mf_sub_depth_;
       message_filters::Synchronizer<MySyncPolicy> sync_;
+
+    protected:
+      void ROSImageCallback(const sensor_msgs::ImageConstPtr rgb_msg,
+                            const sensor_msgs::ImageConstPtr depth_msg);
+      cv::Mat rgb_, depth_;
       Vector2i imageSize_d_, imageSize_rgb_;
       bool colorAvailable_, depthAvailable_;
+
     public:
       ROSImageSourceEngine(const char *calibFilename, const char *rgbTopic, const char *depthTopic,
                            const Vector2i rgbSize, const Vector2i depthSize);

@@ -24,10 +24,10 @@ ROSImageSourceEngine::ROSImageSourceEngine(
   colorAvailable_ = false;
   depthAvailable_ = false;
 
-  sync_.registerCallback(boost::bind(&ROSImageSourceEngine::CallBackFunction, this, _1, _2));
+  sync_.registerCallback(boost::bind(&ROSImageSourceEngine::ROSImageCallback, this, _1, _2));
 }
 
-void ROSImageSourceEngine::CallBackFunction(const sensor_msgs::ImageConstPtr rgb_msg,
+void ROSImageSourceEngine::ROSImageCallback(const sensor_msgs::ImageConstPtr rgb_msg,
                                             const sensor_msgs::ImageConstPtr depth_msg)
 {
   if (rgb_.empty()) {
@@ -36,8 +36,18 @@ void ROSImageSourceEngine::CallBackFunction(const sensor_msgs::ImageConstPtr rgb
   if (depth_.empty()) {
     depth_.create(cv::Size(depth_msg->width, depth_msg->height), CV_16UC1);
   }
-  rgb_ = cv_bridge::toCvCopy(rgb_msg, sensor_msgs::image_encodings::BGR8)->image;
-  depth_ = cv_bridge::toCvCopy(depth_msg, sensor_msgs::image_encodings::TYPE_16UC1)->image;
+  try {
+    rgb_ = cv_bridge::toCvCopy(rgb_msg, sensor_msgs::image_encodings::BGR8)->image;
+  } catch (cv_bridge::Exception& e) {
+    ROS_ERROR("rgb cv_bridge exception: %s", e.what());
+    exit(1);
+  }
+  try {
+    depth_ = cv_bridge::toCvCopy(depth_msg, sensor_msgs::image_encodings::TYPE_16UC1)->image;
+  } catch (cv_bridge::Exception& e) {
+    ROS_ERROR("depth cv_bridge exception: %s", e.what());
+    exit(1);
+  }
   imageSize_rgb_ = Vector2i(rgb_.cols, rgb_.rows);
   imageSize_d_ = Vector2i(depth_.cols, depth_.rows);
   colorAvailable_ = true;
@@ -61,7 +71,7 @@ void ROSImageSourceEngine::getImages(ITMUChar4Image *rgbImage, ITMShortImage *ra
     {
       for (int i = 0; i < imageSize_rgb_.x; ++i)
       {
-        rgb[j*imageSize_rgb_.x + i].b   = rgb_pointer[j*3*imageSize_rgb_.x + 3*i];
+        rgb[j*imageSize_rgb_.x + i].b = rgb_pointer[j*3*imageSize_rgb_.x + 3*i];
         rgb[j*imageSize_rgb_.x + i].g = rgb_pointer[j*3*imageSize_rgb_.x + 3*i +1];
         rgb[j*imageSize_rgb_.x + i].r = rgb_pointer[j*3*imageSize_rgb_.x + 3*i + 2];
         rgb[j*imageSize_rgb_.x + i].a = 255.0;
