@@ -3,6 +3,7 @@ project(InfiniTAM)
 
 find_package(catkin REQUIRED COMPONENTS 
 	           roscpp 
+	           rosbag
 	           message_generation 
 	           std_msgs
 	           cv_bridge

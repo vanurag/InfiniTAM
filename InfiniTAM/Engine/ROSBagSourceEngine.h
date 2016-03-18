@@ -89,7 +89,13 @@ namespace InfiniTAM
 
     class ROSBagIMUSourceEngine : public ROSIMUSourceEngine
     {
+    protected:
+      void OdometryCallback_IMU(const nav_msgs::Odometry::ConstPtr& msg) {this->ROSOdometryCallback_IMU(msg);}
+      void IMUCallback_IMU(const sensor_msgs::Imu::ConstPtr& msg) {this->ROSIMUCallback_IMU(msg);}
+      void TFCallback_IMU(const geometry_msgs::TransformStamped::ConstPtr& msg) {this->ROSTFCallback_IMU(msg);}
+      void PoseCallback_IMU(const geometry_msgs::PoseStamped::ConstPtr& msg) {this->ROSPoseCallback_IMU(msg);}
     public:
+      friend class ROSBagImageSourceEngine;
       ROSBagIMUSourceEngine();
       virtual ~ROSBagIMUSourceEngine() { }
 
@@ -99,7 +105,12 @@ namespace InfiniTAM
 
     class ROSBagOdometrySourceEngine : public ROSOdometrySourceEngine
     {
+    protected:
+      void OdometryCallback_Odom(const nav_msgs::Odometry::ConstPtr& msg) {this->ROSOdometryCallback_Odom(msg);}
+      void TFCallback_Odom(const geometry_msgs::TransformStamped::ConstPtr& msg) {this->ROSTFCallback_Odom(msg);}
+      void PoseCallback_Odom(const geometry_msgs::PoseStamped::ConstPtr& msg) {this->ROSPoseCallback_Odom(msg);}
     public:
+      friend class ROSBagImageSourceEngine;
       ROSBagOdometrySourceEngine();
       virtual ~ROSBagOdometrySourceEngine() { }
 
@@ -111,7 +122,7 @@ namespace InfiniTAM
     {
     private:
       // Visualization
-      Matrix3f* viz_cached_pose_;
+      Matrix3f viz_cached_pose_;
 //      cv::viz::KeyboardEvent viz_key_event;
 //      static cv::viz::Viz3d viz_window;
 //      static cv::Affine3f viz_pose;
@@ -124,6 +135,7 @@ namespace InfiniTAM
       void VisualizePose();
 
     public:
+      friend class ROSBagImageSourceEngine;
       ROSBagImageSourceEngine* rosbag_image_source_engine;
       ROSBagIMUSourceEngine* rosbag_imu_source_engine;
       ROSBagOdometrySourceEngine* rosbag_odometry_source_engine;

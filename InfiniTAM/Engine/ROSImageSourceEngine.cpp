@@ -29,7 +29,7 @@ ROSImageSourceEngine::ROSImageSourceEngine(
 
 ROSImageSourceEngine::ROSImageSourceEngine(
     const char *calibFilename, const Vector2i rgbSize, const Vector2i depthSize) :
-        ImageSourceEngine(calibFilename)
+        ImageSourceEngine(calibFilename), sync_(MySyncPolicy(10))
 {
   imageSize_d_ = depthSize;
   imageSize_rgb_ = rgbSize;

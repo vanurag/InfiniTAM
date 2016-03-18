@@ -51,7 +51,8 @@ ROSOdometrySourceEngine::ROSOdometrySourceEngine(const char *odomMask) : Odometr
   viz_window.registerKeyboardCallback(VizKeyboardCallback);
 }
 
-ROSOdometrySourceEngine::ROSOdometrySourceEngine() : OdometrySourceEngine("")
+ROSOdometrySourceEngine::ROSOdometrySourceEngine() : OdometrySourceEngine(""),
+    viz_key_event(cv::viz::KeyboardEvent::Action::KEY_DOWN, "A", cv::viz::KeyboardEvent::ALT, 1)
 {
   cached_odom = NULL;
 }

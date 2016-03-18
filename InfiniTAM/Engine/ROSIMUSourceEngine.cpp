@@ -59,7 +59,8 @@ ROSIMUSourceEngine::ROSIMUSourceEngine(const char *imuMask) : IMUSourceEngine(im
   viz_window.registerKeyboardCallback(VizKeyboardCallback);
 }
 
-ROSIMUSourceEngine::ROSIMUSourceEngine() : IMUSourceEngine("")
+ROSIMUSourceEngine::ROSIMUSourceEngine() : IMUSourceEngine(""),
+    viz_key_event(cv::viz::KeyboardEvent::Action::KEY_DOWN, "A", cv::viz::KeyboardEvent::ALT, 1)
 {
   cached_imu = NULL;
 }
