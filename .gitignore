@@ -18,3 +18,5 @@ x64/
 *.settings
 build/
 InfiniTAM/doxygen-html/
+drz-rig*
+drz_rig*
