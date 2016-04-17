@@ -1,27 +1,19 @@
-function [ align_error ] = optimize_inertial_alignment_fun( T_inertial , bagFile, type)
+function [ align_error ] = optimize_inertial_alignment_fun( optimize_params , msgData, mocapTopic, vioTopic, icpPoseTopic, type)
 %UNTITLED3 Summary of this function goes here
 %   Detailed explanation goes here
-clear all; close all; clc;
 
+T_mocapG_vioG = eye(4);
+T_mocapG_icpG = eye(4);
 if (strcmp(type, 'vio') == 1)
-    T_mocapG_vioG = T_inertial;
+    T_mocapG_vioG(1:3, 1:3) = eul2rotm(optimize_params(1,1:3));
+    T_mocapG_vioG(1:3, 4) = optimize_params(1,4:6)';
 elseif (strcmp(type, 'icp') == 1)
-    T_mocapG_icpG = T_inertial;
+    T_mocapG_icpG(1:3, 1:3) = eul2rotm(optimize_params(1,1:3));
+    T_mocapG_icpG(1:3, 4) = optimize_params(1,4:6)';
 else
     error('Type should be either vio or icp');
 end
-         as
-bag = rosbag(bagFile);
-%%
-%topics
-icpPoseTopic = '/itm/pose';
-mocapTopic = '/drz_rig/estimated_transform';
-vioTopic = '/rovio/odometry';
-camTopic = '/cam0/image_raw';
 
-% mocapData = MocapInfo(bag, mocapTopic);
-% vioData = VioInfo(bag, vioTopic);
-msgData = ReadData(bag, {mocapTopic, vioTopic, icpPoseTopic, camTopic});
 %%
 num_msgs = size(msgData.times, 1);
 T_mocap_vio = [-0.98165076 0.00766302 0.18984042 0.00108668; ...
@@ -36,8 +28,9 @@ latest_vio_time = inf;
 % eval error (cost function)
 error_icp = 0;
 error_vio = 0;
+num_matches_icp = 0;
+num_matches_vio = 0;
 for i = 1:num_msgs
-    disp(msgData.source{i})
     T = reshape(msgData.T_G_F(i,:), [4, 4]);
 
     % update pose, position
@@ -62,10 +55,6 @@ for i = 1:num_msgs
         T_transformed = T_vio_vioG*T_vioG_mocapG;
         T_other = my_inv(T_transformed);
         position_vio = [T_other(1, 4), T_other(2, 4), T_other(3, 4)];
-    elseif (strcmp(msgData.source{i}, camTopic) == 1 && showImage)
-        figure(2)
-        imshow(msgData.image{i});
-        figure(1)
     end
 
 
@@ -73,19 +62,21 @@ for i = 1:num_msgs
     if (latest_mocap_time ~= inf && latest_icp_time ~= inf)
         if (abs(latest_mocap_time-latest_icp_time) < 0.01)
             error_icp = error_icp + norm(position_mocap-position_icp);
+            num_matches_icp = num_matches_icp + 1;
         end
     end
     if (latest_mocap_time ~= inf && latest_vio_time ~= inf)
         if (abs(latest_mocap_time-latest_vio_time) < 0.01)
             error_vio = error_vio + norm(position_mocap-position_vio);
+            num_matches_vio = num_matches_vio + 1;
         end
     end
 end
 
 if (strcmp(type, 'vio') == 1)
-    align_error = error_vio;
+    align_error = 100.0*error_vio/num_matches_vio;
 elseif (strcmp(type, 'icp') == 1)
-    align_error = error_icp;
+    align_error = 100.0*error_icp/num_matches_icp;
 end
 
 end

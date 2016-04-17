@@ -16,6 +16,7 @@ msgData.times = bag.MessageList.Time;
 msgData.T_G_F = zeros(length(msgData.times), 16);
 msgData.image = cell(length(msgData.times), 1);
 msgData.source = cell(length(msgData.times), 1);
+msgData.covariance = cell(length(msgData.times), 1);
 
 for i = 1:length(msgData.times)
     if(mod(i,1000) == 0)
@@ -34,9 +35,10 @@ for i = 1:length(msgData.times)
     elseif (strcmp(in{1}.MessageType, 'nav_msgs/Odometry') == 1)
         or = in{1}.Pose.Pose.Orientation;
         pos = in{1}.Pose.Pose.Position;
-        tformMat(1:3,1:3)  = quat2rotm([or.W, -or.X, -or.Y, -or.Z]);
+        tformMat(1:3,1:3)  = quat2rotm([or.W, or.X, or.Y, or.Z]);
         tformMat(1:3,4) = [pos.X, pos.Y, pos.Z];
         msgData.source{i} = char(bag.MessageList(i, 2).Topic);
+        msgData.covariance{i} = in{1}.Pose.Covariance();
     elseif (strcmp(in{1}.MessageType, 'sensor_msgs/Image') == 1)
         image = reshape(in{1}.Data,in{1}.Width,in{1}.Height)';
 %         image = Undistort(image, camData.D, camData.K, camData.DistModel);

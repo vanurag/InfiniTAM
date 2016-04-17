@@ -1,50 +1,47 @@
 clear all; close all; clc;
 
 % make sure to update T_mocapG_vioG for each dataset
-bagFile = 'drz-rig-result_2016-03-19-15-35-46.bag';
-% bagFile = 'drz-rig_2016-03-23-15-30-27.bag';
-% T_mocapG_vioG = [ 0.8490  0.3491  0.3966  0.326238415304; ...
-%                  -0.1043 -0.6251  0.7735 -0.23859243723; ...
-%                   0.5179 -0.6981 -0.4943  1.55077250793; ...
-%                   0.0000  0.0000  0.0000  1.0000];
-% T_mocapG_vioG = [ 0.8490 -0.1043  0.5179  0.326238415304; ...
-%                   0.3491 -0.6251 -0.6981 -0.23859243723; ...
-%                   0.3966  0.7735 -0.4943  1.55077250793; ...
-%                   0.0000  0.0000  0.0000  1.0000];
-% T_mocapG_vioG = [-0.565005104881  -0.761974023331  -0.291781115852  0.431871644954; ...
-%                  0.796465167594 -0.591902045105  0.00288397532099 -0.103036423436; ...
-%                   -0.177154928262 -0.231863469037 0.956261179417  0.995096238726; ...
-%                   0.0000  0.0000  0.0000  1.0000];
-              
-% T_mocapG_vioG = [-0.5867   -0.7620   -0.2740    0.5429; ...
-%     0.7921   -0.6104    0.0013   -0.0809; ...
-%    -0.1682   -0.2163    0.9618    1.0277; ...
+
+% bagFile = 'drz-rig-result_2016-03-19-15-35-46.bag';   % icp
+% bagFile = 'drz-rig-result_2016-03-23-15-30-27.bag';   % vio
+
+% bagFile = 'drz-rig-result_2016-04-07-20-15-00_clipped.bag'; % vio
+% bagFile = 'drz-rig-result_2016-04-07-20-15-00_clipped2.bag'; % icp
+% bagFile = 'drz-rig-result_2016-04-07-20-15-00_clipped3.bag'; % closed-loop1 (rovio estimate to icp)
+% bagFile = 'drz-rig-result_2016-04-07-20-15-00_clipped4.bag'; % closed-loop2 (rovio estimate to icp and icp estimate as pose update to rovio)
+
+bagFile = 'drz-rig-result_2016-04-17-21-29-54.bag'; % vio
+
+% drz-rig-result_2016-03-23-15-30-27.bag
+% T_mocapG_vioG = [-0.9514   -0.3068   -0.0256   -0.0140; ...
+%     0.3068   -0.9518    0.0036    0.1722; ...
+%    -0.0254   -0.0044    0.9997    0.8937; ...
 %          0         0         0    1.0000];
 
-% T_mocapG_vioG = [-0.5743   -0.7685    0.2821    0.3557; ...
-%     0.7773   -0.6200   -0.1066    0.2791; ...
-%     0.2569    0.1581    0.9535    1.2108; ...
-%          0         0         0    1.0000];
-     
-T_mocapG_vioG = [-0.7030   -0.0354    0.7103    0.2150; ...
-    0.6612   -0.4003    0.6345   -0.2965; ...
-    0.2619    0.9157    0.3048    1.2562; ...
+% drz-rig-result_2016-04-07-20-15-00_clipped.bag
+% T_mocapG_vioG = [0.9918    0.1203   -0.0442    0.3336; ...
+%    -0.1208    0.9926   -0.0094   -0.1867; ...
+%     0.0428    0.0147    0.9990    1.0122; ...
+%     0         0         0         1     ];
+
+% drz-rig-result_2016-04-17-21-29-54.bag
+T_mocapG_vioG = [0.7900    0.5660    0.2354    0.6563; ...
+   -0.5260    0.8232   -0.2137   -0.0288; ...
+   -0.3147    0.0450    0.9480    1.2026; ...
          0         0         0    1.0000];
 
-% T_mocapG_icpG = [0.9376    0.2176    0.2706    0.2687; ...
-%    -0.2200   -0.2308    0.9478   -0.5553; ...
-%     0.2687   -0.9483   -0.1684    1.1036; ...
+% drz-rig-result_2016-03-19-15-35-46.bag
+% T_mocapG_icpG = [0.8908    0.1880   -0.4137    0.2268; ...
+%     0.4463   -0.1905    0.8744   -0.5271; ...
+%     0.0855   -0.9635   -0.2536    1.0217; ...
 %          0         0         0    1.0000];
-              
-T_mocapG_icpG = [0.9299    0.2534    0.2660    0.2478; ...
-   -0.2067   -0.2380    0.9490   -0.5539; ...
-    0.3037   -0.9376   -0.1688    1.0757; ...
-         0         0         0    1.0000];
+
+% drz-rig-result_2016-04-07-20-15-00_clipped.bag
+T_mocapG_icpG = [-0.9798    0.0998   -0.1731    0.3157; ...
+    0.1923    0.2356   -0.9526   -0.1082; ...
+   -0.0543   -0.9667   -0.2501    1.3096; ...
+   0          0            0       1];
          
-% T_mocapG_vioG = [-0.5382 -0.2691  0.7987 -0.2915; ...
-%                  -0.7302  0.6220 -0.2825 -0.2370; ...
-%                  -0.4208 -0.7353 -0.5313  1.6283; ...
-%                   0.0000  0.0000  0.0000  1.0000];
 bag = rosbag(bagFile);
 %%
 %topics
@@ -58,16 +55,18 @@ camTopic = '/cam0/image_raw';
 msgData = ReadData(bag, {mocapTopic, vioTopic, icpPoseTopic, camTopic});
 %%
 plotMocap = 1;
-plotVio = 0;
+plotVio = 1;
 drawMocapVioEdges = 0;
-plotIcp = 1;
-drawMocapIcpEdges = 1;
+plotVioUncertainity = 0;
+plotIcp = 0;
+drawMocapIcpEdges = 0;
 showImage = 0;
 %setup for plotting    
 if(plotMocap || plotVio)
     R = [1 0 0; 0 1 0; 0 0 1];
     figure(1);
     hold on
+    title('real-time pose estimates from Mocap, VIsual-Inertial Odometry and ICP')
     marker = plotCamera('Location', [0 0 0], 'Orientation', R, 'Opacity', 0, 'Size', 0.07, 'Color', [1 0 0], 'Label', 'marker', 'AxesVisible', 1);
     odom = plotCamera('Location', [0 0 0], 'Orientation', R, 'Opacity', 0, 'Size', 0.07, 'Color', [0 0 1], 'Label', 'odom', 'AxesVisible', 1);
     icp = plotCamera('Location', [0 0 0], 'Orientation', R, 'Opacity', 0, 'Size', 0.07, 'Color', [0 1 0], 'Label', 'icp', 'AxesVisible', 1);
@@ -99,11 +98,16 @@ if(plotMocap || plotVio)
     latest_mocap_time = inf;
     latest_icp_time = inf;
     latest_vio_time = inf;
+    position_mocap = inf;
+    distance_travelled = 0.0;
     % eval error (cost function)
     error_icp = 0;
     error_vio = 0;
+    num_matches_icp = 0;
+    num_matches_vio = 0;
     for i = 1:num_msgs
-        disp(msgData.source{i})
+        disp(sprintf('msg #%d', i));
+        disp(sprintf('distance travelled: %d m', distance_travelled));
         T = reshape(msgData.T_G_F(i,:), [4, 4]);
         
         % draw cameras (pose, position)
@@ -114,6 +118,9 @@ if(plotMocap || plotVio)
             T_mocap_mocapG = my_inv(T_mocapG_mocap);
             T_transformed = T_vio_mocap*T_mocap_mocapG;
             T_other = my_inv(T_transformed);
+            if (position_mocap ~= inf)
+                distance_travelled = distance_travelled + norm(position_mocap-T_other(1:3,4)');
+            end
             position_mocap = [T_other(1, 4), T_other(2, 4), T_other(3, 4)];
             if (plotMocap)
                 marker.Orientation = T_transformed(1:3, 1:3);
@@ -136,15 +143,8 @@ if(plotMocap || plotVio)
         elseif (strcmp(msgData.source{i}, vioTopic) == 1)
             latest_vio_time = msgData.times(i);
             color = [((num_msgs-i)/num_msgs)*0.6, ((num_msgs-i)/num_msgs)*0.6, 1.0];
-%             T_vio_vioG = eye(4);
-%             T_vio_vioG(1:3, 1:3) = T(1:3, 1:3);
-%             T_vio_vioG(1:3, 4) = -T(1:3, 1:3)*T(1:3, 4);
-
             T_vioG_vio = T;
-%             disp('vio')
-%             disp(T_vioG_vio)
             T_vio_vioG = my_inv(T_vioG_vio);
-            
             T_transformed = T_vio_vioG*T_vioG_mocapG;
             T_other = my_inv(T_transformed);
             position_vio = [T_other(1, 4), T_other(2, 4), T_other(3, 4)];
@@ -152,6 +152,12 @@ if(plotMocap || plotVio)
                 odom.Orientation = T_transformed(1:3, 1:3);
                 odom.Location = position_vio;
                 plot3(position_vio(1), position_vio(2), position_vio(3), '.', 'Color', color, 'MarkerSize', 1);
+                % covariance
+                pose_cov = reshape(msgData.covariance{i}, 6, 6)';
+                % TODO: transform covariance matrix to mocap inertial frame
+                if (rem(distance_travelled, 0.5) < 0.05 && plotVioUncertainity)
+                    covarianceEllipse3D(position_vio, pose_cov(1:3,1:3), color, 1.0);
+                end
             end
         elseif (strcmp(msgData.source{i}, camTopic) == 1 && showImage)
             figure(2)
@@ -160,49 +166,64 @@ if(plotMocap || plotVio)
         end
         
         
-        % draw edges
+        % evaluate and plot alignment errors
         if (latest_mocap_time ~= inf && latest_icp_time ~= inf)
             if (abs(latest_mocap_time-latest_icp_time) < 0.01)
-                error_icp = error_icp + norm(position_mocap-position_icp);
+                % average alignment error
+                error_icp = (num_matches_icp*(error_icp) + norm(position_mocap-position_icp))/...
+                            (num_matches_icp+1);
+                num_matches_icp = num_matches_icp + 1;
+                figure(3)
+                title('Mocap - ICP alignment error')
+                xlabel('msg #')
+                ylabel('avg. error in cm')
+                hold on
+                plot(i, 100.0*error_icp, '*', 'Color', [0 0 1]);
+                figure(1)
+                disp(sprintf('mocap - icp alignment error: %f cm', 100.0*(error_icp)));
+                % plot
                 if (drawMocapIcpEdges)
                     plot3([position_mocap(1) position_icp(1)], ...
                           [position_mocap(2) position_icp(2)], ...
                           [position_mocap(3) position_icp(3)], '-', 'Color', [0 0 0]);
                 end
+                % inertial align
+                T_mocap_icp_align(:,:,i) = my_inv(T_icpG_icp*T_vio_mocap*T_mocap_mocapG);
+                disp('mocap-icp')
+                disp(T_mocap_icp_align(:,:,i))
             end
         end
         if (latest_mocap_time ~= inf && latest_vio_time ~= inf)
             if (abs(latest_mocap_time-latest_vio_time) < 0.01)
-                error_vio = error_vio + norm(position_mocap-position_vio);
+                % average alignment error
+                error_vio = (num_matches_vio*(error_vio) + norm(position_mocap-position_vio))/...
+                            (num_matches_vio+1);
+                num_matches_vio = num_matches_vio + 1;
+                figure(4)
+                xlabel('msg #')
+                ylabel('avg. error in cm')
+                title('Mocap - Visual-Inertial Odometry alignment error')
+                hold on
+                plot(i, 100.0*error_vio, '*', 'Color', [0 0 1]);
+                if (rem(distance_travelled, 0.5) < 0.05)
+                    covarianceEllipse1D([i; 100.0*error_vio], pose_cov(1:3,1:3), [0 1 0], 100.0);
+                end
+                figure(1)
+                disp(sprintf('mocap - vio alignment error: %f cm', 100.0*(error_vio)));
+                % plot
                 if (drawMocapVioEdges)
                     plot3([position_mocap(1) position_vio(1)], ...
                           [position_mocap(2) position_vio(2)], ...
                           [position_mocap(3) position_vio(3)], '-', 'Color', [0 1 1]);
                 end
-            end
-        end
-        drawnow;
-        
-        
-        % inertial alignment
-        % T_mocapG_vioG
-        disp('align')
-        if (latest_mocap_time ~= inf && latest_vio_time ~= inf)
-            if (abs(latest_mocap_time-latest_vio_time) < 0.01)
+                % inertial align
                 T_mocap_vio_align(:,:,i) = my_inv(T_vioG_vio*T_vio_mocap*T_mocap_mocapG);
                 disp('mocap-vio')
                 disp(T_mocap_vio_align(:,:,i))
             end
         end
-        % T_mocapG_icpG (NOTE: vio = icp = imu reference frame)
-        if (latest_mocap_time ~= inf && latest_icp_time ~= inf)
-            if (abs(latest_mocap_time-latest_icp_time) < 0.01)
-                T_mocap_icp_align(:,:,i) = my_inv(T_icpG_icp*T_vio_mocap*T_mocap_mocapG);
-                disp('mocap-icp')
-                disp(T_mocap_icp_align(:,:,i));
-            end
-        end
-%         pause;
+        drawnow;
+        pause;
     end
 %     plot3(msgData.T_G_F(:,13), msgData.T_G_F(:,14), msgData.T_G_F(:,15));
 end
