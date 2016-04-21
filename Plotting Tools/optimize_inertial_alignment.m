@@ -2,10 +2,13 @@ clear all; close all; clc;
 
 % bagFile = 'drz-rig-result_2016-03-19-15-35-46.bag';   % icp
 % bagFile = 'drz-rig-result_2016-03-23-15-30-27.bag'; % vio
-% bagFile = 'drz-rig-result_2016-04-07-20-15-00_clipped3.bag'; % vio and icp
+% bagFile = 'drz-rig-result_2016-04-07-20-15-00_clipped3.bag'; % closed-loop1 (rovio estimate to icp)
 
-bagFile = 'drz-rig-result_2016-04-17-21-29-54.bag'; % vio
-type = 'vio';
+% bagFile = 'drz-rig-result_2016-04-17-21-29-54.bag'; % vio
+% bagFile = 'drz-rig-result_2016-04-17-21-29-54_3.bag'; % closed-loop1 (rovio estimate to icp)
+% bagFile = 'drz-rig-result_2016-04-17-21-29-54_4.bag'; % closed-loop2 (rovio estimate to icp and icp estimate as pose update to rovio)
+bagFile = 'drz-rig-result_2016-04-17-21-29-54_5.bag'; % closed-loop2 but ICP kciks in after few minutes
+type = 'icp';
 bag = rosbag(bagFile);
 %%
 %topics
@@ -18,17 +21,20 @@ camTopic = '/cam0/image_raw';
 % vioData = VioInfo(bag, vioTopic);
 msgData = ReadData(bag, {mocapTopic, vioTopic, icpPoseTopic, camTopic});
 %%
-T_mocapG_icpG_init = [-0.6704    0.0585   -0.7396    0.2317; ...
-    0.7213    0.2845   -0.6314   -0.0931; ...
-    0.1734   -0.9568   -0.2328    1.3231; ...
+T_mocapG_icpG_init = [-0.8002    0.4812   -0.3579    3.8604; ...
+    0.5657    0.4076   -0.7168   -0.5738; ...
+   -0.1990   -0.7761   -0.5984   -1.0592; ...
          0         0         0    1.0000];
-T_mocapG_vioG_init = [0.7900    0.5660    0.2354    0.6563; ...
-   -0.5260    0.8232   -0.2137   -0.0288; ...
-   -0.3147    0.0450    0.9480    1.2026; ...
-         0         0         0    1.0000];
+T_mocapG_vioG_init = [0.9999   -0.0165    0.0003    0.6483; ...
+    0.0164    0.9904   -0.1373   -0.2053; ...
+    0.0020    0.1373    0.9905    1.8617; ...
+    0         0         0         1     ];
      
-optimize_params_init = [rotm2eul(T_mocapG_icpG_init(1:3,1:3)), T_mocapG_icpG_init(1:3,4)'];
-% optimize_params_init = [rotm2eul(T_mocapG_vioG_init(1:3,1:3)), T_mocapG_vioG_init(1:3,4)'];
+if (strcmp(type, 'icp') == 1)
+    optimize_params_init = [rotm2eul(T_mocapG_icpG_init(1:3,1:3)), T_mocapG_icpG_init(1:3,4)'];
+elseif (strcmp(type, 'vio') == 1)
+    optimize_params_init = [rotm2eul(T_mocapG_vioG_init(1:3,1:3)), T_mocapG_vioG_init(1:3,4)'];
+end
 
 disp('optimizing...')
 optimize_params_optimal = fminsearch(@(optimize_params) ...

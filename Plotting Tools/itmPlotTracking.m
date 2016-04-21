@@ -10,7 +10,11 @@ clear all; close all; clc;
 % bagFile = 'drz-rig-result_2016-04-07-20-15-00_clipped3.bag'; % closed-loop1 (rovio estimate to icp)
 % bagFile = 'drz-rig-result_2016-04-07-20-15-00_clipped4.bag'; % closed-loop2 (rovio estimate to icp and icp estimate as pose update to rovio)
 
-bagFile = 'drz-rig-result_2016-04-17-21-29-54.bag'; % vio
+% bagFile = 'drz-rig-result_2016-04-17-21-29-54.bag'; % vio
+% bagFile = 'drz-rig-result_2016-04-17-21-29-54_2.bag'; % icp
+% bagFile = 'drz-rig-result_2016-04-17-21-29-54_3.bag'; % closed-loop1 (rovio estimate to icp)
+% bagFile = 'drz-rig-result_2016-04-17-21-29-54_4.bag'; % closed-loop2 (rovio estimate to icp and icp estimate as pose update to rovio)
+bagFile = 'drz-rig-result_2016-04-17-21-29-54_5.bag'; % closed-loop2 but ICP kciks in after few minutes
 
 % drz-rig-result_2016-03-23-15-30-27.bag
 % T_mocapG_vioG = [-0.9514   -0.3068   -0.0256   -0.0140; ...
@@ -25,10 +29,15 @@ bagFile = 'drz-rig-result_2016-04-17-21-29-54.bag'; % vio
 %     0         0         0         1     ];
 
 % drz-rig-result_2016-04-17-21-29-54.bag
-T_mocapG_vioG = [0.7900    0.5660    0.2354    0.6563; ...
-   -0.5260    0.8232   -0.2137   -0.0288; ...
-   -0.3147    0.0450    0.9480    1.2026; ...
-         0         0         0    1.0000];
+T_mocapG_vioG = [0.9999   -0.0165    0.0003    0.6483; ...
+    0.0164    0.9904   -0.1373   -0.2053; ...
+    0.0020    0.1373    0.9905    1.8617; ...
+    0         0         0         1     ];
+% drz-rig-result_2016-04-17-21-29-54_4.bag
+% T_mocapG_vioG = [0.9967    0.0741    0.0329   -0.3914; ...
+%    -0.0723    0.9960   -0.0525    2.3115; ...
+%    -0.0366    0.0499    0.9981   48.0844; ...
+%     0         0         0         1     ];
 
 % drz-rig-result_2016-03-19-15-35-46.bag
 % T_mocapG_icpG = [0.8908    0.1880   -0.4137    0.2268; ...
@@ -37,10 +46,21 @@ T_mocapG_vioG = [0.7900    0.5660    0.2354    0.6563; ...
 %          0         0         0    1.0000];
 
 % drz-rig-result_2016-04-07-20-15-00_clipped.bag
-T_mocapG_icpG = [-0.9798    0.0998   -0.1731    0.3157; ...
-    0.1923    0.2356   -0.9526   -0.1082; ...
-   -0.0543   -0.9667   -0.2501    1.3096; ...
-   0          0            0       1];
+% T_mocapG_icpG = [-0.9798    0.0998   -0.1731    0.3157; ...
+%     0.1923    0.2356   -0.9526   -0.1082; ...
+%    -0.0543   -0.9667   -0.2501    1.3096; ...
+%    0          0            0       1];
+
+% drz-rig-result_2016-04-17-21-29-54_3.bag
+% T_mocapG_icpG = [-0.9873    0.1055   -0.1189    1.3438; ...
+%     0.1487    0.3487   -0.9254   -0.0195; ...
+%    -0.0562   -0.9313   -0.3600    1.8764; ...
+%          0         0         0    1.0000];
+% drz-rig-result_2016-04-17-21-29-54_5.bag
+T_mocapG_icpG = [-0.7588    0.5605   -0.3318    3.9151; ...
+    0.6137    0.4445   -0.6526   -0.5745; ...
+   -0.2183   -0.6988   -0.6812   -1.0165; ...
+    0         0         0    1.0000];
          
 bag = rosbag(bagFile);
 %%
@@ -56,13 +76,13 @@ msgData = ReadData(bag, {mocapTopic, vioTopic, icpPoseTopic, camTopic});
 %%
 plotMocap = 1;
 plotVio = 1;
-drawMocapVioEdges = 0;
+drawMocapVioEdges = 1;
 plotVioUncertainity = 0;
-plotIcp = 0;
-drawMocapIcpEdges = 0;
+plotIcp = 1;
+drawMocapIcpEdges = 1;
 showImage = 0;
 %setup for plotting    
-if(plotMocap || plotVio)
+if(plotMocap || plotVio || plotIcp)
     R = [1 0 0; 0 1 0; 0 0 1];
     figure(1);
     hold on
@@ -88,7 +108,6 @@ if(plotMocap || plotVio)
                     0.17795358 -0.31287988  0.93287942 0.11919152; ...
                     0.06656298  0.94966982  0.30594812 -0.19977433];
 
-%     T_mocap_vio = eye(4);
     T_vio_mocap = my_inv(T_mocap_vio);
     T_vioG_mocapG = my_inv(T_mocapG_vioG);
     T_icpG_mocapG = my_inv(T_mocapG_icpG);
@@ -98,13 +117,20 @@ if(plotMocap || plotVio)
     latest_mocap_time = inf;
     latest_icp_time = inf;
     latest_vio_time = inf;
-    position_mocap = inf;
+    position_vio = [inf,inf,inf];
+    position_mocap = [inf,inf,inf];
+    position_icp = [inf,inf,inf];
     distance_travelled = 0.0;
     % eval error (cost function)
     error_icp = 0;
     error_vio = 0;
     num_matches_icp = 0;
     num_matches_vio = 0;
+    % init alignment
+    do_vio_initialization = 1;
+    do_icp_initialization = 1;
+    init_vio_delta = [0,0,0];
+    init_icp_delta = [0,0,0];
     for i = 1:num_msgs
         disp(sprintf('msg #%d', i));
         disp(sprintf('distance travelled: %d m', distance_travelled));
@@ -118,7 +144,7 @@ if(plotMocap || plotVio)
             T_mocap_mocapG = my_inv(T_mocapG_mocap);
             T_transformed = T_vio_mocap*T_mocap_mocapG;
             T_other = my_inv(T_transformed);
-            if (position_mocap ~= inf)
+            if (position_mocap(1) ~= inf)
                 distance_travelled = distance_travelled + norm(position_mocap-T_other(1:3,4)');
             end
             position_mocap = [T_other(1, 4), T_other(2, 4), T_other(3, 4)];
@@ -128,32 +154,52 @@ if(plotMocap || plotVio)
                 plot3(position_mocap(1), position_mocap(2), position_mocap(3), '.', 'Color', color, 'MarkerSize', 1);
             end
         elseif (strcmp(msgData.source{i}, icpPoseTopic) == 1)
-            latest_icp_time = msgData.times(i);
             color = [((num_msgs-i)/num_msgs)*0.6, 1.0, ((num_msgs-i)/num_msgs)*0.6];
             T_icpG_icp = T;
             T_icp_icpG = my_inv(T_icpG_icp);
             T_transformed = T_icp_icpG*T_icpG_mocapG;
             T_other = my_inv(T_transformed);
-            position_icp = [T_other(1, 4), T_other(2, 4), T_other(3, 4)];
+            position_icp = [T_other(1, 4), T_other(2, 4), T_other(3, 4)] + init_icp_delta;
+            % initializing icp position == mocap position
+            if (latest_icp_time == inf)
+                if (position_mocap(1) ~= inf && do_icp_initialization && (abs(latest_mocap_time-msgData.times(i)) < 0.01))
+                    disp('Initializing ICP')
+                    init_icp_delta = position_mocap - position_icp;
+                    position_icp = position_mocap;
+                    latest_icp_time = msgData.times(i);
+                end
+            else
+                latest_icp_time = msgData.times(i);
+            end
             if (plotIcp)
                 icp.Orientation = T_transformed(1:3, 1:3);
                 icp.Location = position_icp;
                 plot3(position_icp(1), position_icp(2), position_icp(3), '.', 'Color', color, 'MarkerSize', 1);
             end
         elseif (strcmp(msgData.source{i}, vioTopic) == 1)
-            latest_vio_time = msgData.times(i);
             color = [((num_msgs-i)/num_msgs)*0.6, ((num_msgs-i)/num_msgs)*0.6, 1.0];
             T_vioG_vio = T;
             T_vio_vioG = my_inv(T_vioG_vio);
             T_transformed = T_vio_vioG*T_vioG_mocapG;
             T_other = my_inv(T_transformed);
-            position_vio = [T_other(1, 4), T_other(2, 4), T_other(3, 4)];
+            position_vio = [T_other(1, 4), T_other(2, 4), T_other(3, 4)] + init_vio_delta;
+            % initializing vio position == mocap position
+            if (latest_vio_time == inf)
+                if (position_mocap(1) ~= inf && do_vio_initialization && (abs(latest_mocap_time-msgData.times(i)) < 0.01))
+                    disp('Initializing VIO')
+                    init_vio_delta = position_mocap - position_vio;
+                    position_vio = position_mocap;
+                    latest_vio_time = msgData.times(i);
+                end
+            else
+                latest_vio_time = msgData.times(i);
+            end
+            % covariance
+            pose_cov = reshape(msgData.covariance{i}, 6, 6)';
             if (plotVio)
                 odom.Orientation = T_transformed(1:3, 1:3);
                 odom.Location = position_vio;
                 plot3(position_vio(1), position_vio(2), position_vio(3), '.', 'Color', color, 'MarkerSize', 1);
-                % covariance
-                pose_cov = reshape(msgData.covariance{i}, 6, 6)';
                 % TODO: transform covariance matrix to mocap inertial frame
                 if (rem(distance_travelled, 0.5) < 0.05 && plotVioUncertainity)
                     covarianceEllipse3D(position_vio, pose_cov(1:3,1:3), color, 1.0);
@@ -223,7 +269,7 @@ if(plotMocap || plotVio)
             end
         end
         drawnow;
-        pause;
+%         pause;
     end
 %     plot3(msgData.T_G_F(:,13), msgData.T_G_F(:,14), msgData.T_G_F(:,15));
 end
