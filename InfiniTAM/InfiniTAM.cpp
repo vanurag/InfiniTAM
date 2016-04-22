@@ -286,18 +286,21 @@ static void CreateDefaultImageSource(
       imageSource = NULL;
     }
   }
-	if (imageSource == NULL && meta2 != NULL && source == std::string("offline"))
+	if (imageSource == NULL && meta2 != NULL && (source == std::string("offline") || source == std::string("offline+imu")))
   {
     printf("using rgb images: %s\nusing depth images: %s\n", meta1, meta2);
-    if (imu_source == NULL)
-    {
-      imageSource = new ImageFileReader(calibFile, meta1, meta2);
-    }
-    else
-    {
-      printf("using imu data: %s\n", imu_source);
+    if (source == std::string("offline")) {
       imageSource = new RawFileReader(calibFile, meta1, meta2, Vector2i(320, 240), 0.5f);
-      imuSource = new IMUSourceEngine(imu_source);
+    } else if (source == std::string("offline+imu")) {
+      if (imu_source != NULL) {
+        printf("using imu data: %s\n", imu_source);
+        imuSource = new IMUSourceEngine(imu_source);
+        imageSource = new ImageFileReader(calibFile, meta1, meta2);
+      }
+      else {
+        printf("IMU source not provided! aborting.");
+        return;
+      }
     }
   }
 

@@ -192,7 +192,7 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 
 // VIZ ITM Tracker camera pose estimate
 void ITMMainEngine::VisualizeCameraPose() {
-  Matrix4f itm_pose = trackingState->pose_d->GetInvM();
+  Matrix4f itm_pose = trackingState->pose_d->GetInvM()*view->calib->trafo_rgb_to_depth.calib*view->calib->trafo_rgb_to_imu.calib_inv;
 //  cv::Mat pose_mat(3, 3, CV_32F);
   cv::Matx<float, 3, 3> pose_mat;
   float* mat_pointer = (float*)pose_mat.val;
@@ -212,21 +212,19 @@ void ITMMainEngine::PublishROSPoseMsg() {
   if(pubITMPose.getNumSubscribers() > 0){
     ITMPoseMsg.header.stamp = ros::Time::now();
 
-    std::cout << "trafo check: " << view->calib->trafo_rgb_to_imu.calib.m01 << std::endl;
-
     Matrix4f pose_imu = view->calib->trafo_rgb_to_imu.calib * view->calib->trafo_rgb_to_depth.calib_inv * trackingState->pose_d->GetM();
     Vector3f t_inv = pose_imu.getRot().t() * (-1.0 * pose_imu.getTrans());
     ITMPoseMsg.transform.translation.x = t_inv.x;
     ITMPoseMsg.transform.translation.y = t_inv.y;
     ITMPoseMsg.transform.translation.z = t_inv.z;
     Matrix3f r = pose_imu.getRot();
-    MPD R(r.m00, r.m10, r.m20,
-          r.m01, r.m11, r.m21,
-          r.m02, r.m12, r.m22);
+    MPD R(pose_imu.m00, pose_imu.m10, pose_imu.m20,
+          pose_imu.m01, pose_imu.m11, pose_imu.m21,
+          pose_imu.m02, pose_imu.m12, pose_imu.m22);
     QPD q(R);
-    ITMPoseMsg.transform.rotation.x = -q.x(); // JPL form
-    ITMPoseMsg.transform.rotation.y = -q.y();
-    ITMPoseMsg.transform.rotation.z = -q.z();
+    ITMPoseMsg.transform.rotation.x = q.x(); // JPL form
+    ITMPoseMsg.transform.rotation.y = q.y();
+    ITMPoseMsg.transform.rotation.z = q.z();
     ITMPoseMsg.transform.rotation.w = q.w();
 
     pubITMPose.publish(ITMPoseMsg);
