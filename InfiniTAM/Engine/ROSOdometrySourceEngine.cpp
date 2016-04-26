@@ -62,14 +62,16 @@ void ROSOdometrySourceEngine::ROSOdometryCallback_Odom(const nav_msgs::Odometry:
   ROS_INFO("Odometry Orientation x: [%f], y: [%f], z: [%f], w: [%f]",
            msg->pose.pose.orientation.x, msg->pose.pose.orientation.y, msg->pose.pose.orientation.z,
            msg->pose.pose.orientation.w);
-  quat2ITMOdom(Quaternion(msg->pose.pose.orientation.x, msg->pose.pose.orientation.y,
-                          msg->pose.pose.orientation.z, msg->pose.pose.orientation.w));
+  quat2ITMOdom(Quaternion(-msg->pose.pose.orientation.x, -msg->pose.pose.orientation.y,
+                          -msg->pose.pose.orientation.z,  msg->pose.pose.orientation.w));
   Vector3f t_imu_G = cached_odom->R * Vector3f(-msg->pose.pose.position.x,
                                                -msg->pose.pose.position.y,
                                                -msg->pose.pose.position.z);
   cached_odom->t.x = t_imu_G.x;
   cached_odom->t.y = t_imu_G.y;
   cached_odom->t.z = t_imu_G.z;
+
+  cached_odom->cov.setValues(msg->pose.covariance.elems);
 }
 
 void ROSOdometrySourceEngine::ROSTFCallback_Odom(
@@ -107,13 +109,6 @@ void ROSOdometrySourceEngine::ROSPoseCallback_Odom(
 // conversion from quaternion to rotation matrix
 void ROSOdometrySourceEngine::quat2ITMOdom(const Quaternion odom_pose) {
 
-  // TODO(vanurag): make this user definable
-//  Quaternion q_cam_to_imu(-0.0439623792008964, -0.07685149594247381,
-//                          -0.9957522559683859, 0.025274394156932774);
-//  Quaternion cam_pose = imu_pose * q_cam_to_imu;
-//  Quaternion q_imu_to_cam(0.0439623792008964, 0.07685149594247381,
-//                          0.9957522559683859, 0.025274394156932774);
-//  Quaternion cam_pose = q_imu_to_cam * imu_pose;
   cached_odom = new ITMOdometryMeasurement();
 
   // IMU Tracker only needs differential rotational changes.

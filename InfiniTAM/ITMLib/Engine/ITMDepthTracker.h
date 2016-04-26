@@ -26,6 +26,8 @@
 #include <pcl/common/common_headers.h>
 #include <pcl/common/transforms.h>
 
+#include "../../Utils/gnuplot-iostream/gnuplot-iostream.h"
+
 
 using namespace ITMLib::Objects;
 typedef PointMatcher<float> PM;
@@ -60,6 +62,9 @@ namespace ITMLib
 			pcl::PointCloud<pcl::PointXYZRGB> scene_cloud, current_view_cloud;
 			pcl::PointCloud<pcl::PointXYZRGB>::Ptr scene_cloud_pointer, current_view_cloud_pointer;
 			void pcl_render_loop();
+			//GNU Plot
+			Gnuplot gp;
+			std::vector<double> gp_outlier_dist;
 
 			void PrepareForEvaluation();
 			void SetEvaluationParams(int levelId);

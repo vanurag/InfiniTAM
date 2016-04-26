@@ -21,11 +21,13 @@ namespace ITMLib
     public:
       Matrix3f R;
       Vector3f t;
+      Matrix6d cov;
 
       ITMOdometryMeasurement()
       {
         this->R.setIdentity();
         this->t.x = 0.0; this->t.y = 0.0; this->t.z = 0.0;
+        this->cov.setIdentity();
       }
 
       ITMOdometryMeasurement(const Matrix3f & R, const Vector3f t)
@@ -34,10 +36,24 @@ namespace ITMLib
         this->t = t;
       }
 
+      ITMOdometryMeasurement(const Matrix3f & R, const Vector3f t, const Matrix6d cov)
+      {
+        this->R = R;
+        this->t = t;
+        this->cov = cov;
+      }
+
       ITMOdometryMeasurement(const Matrix4f & T)
       {
         this->R = T.getRot();
         this->t = T.getTrans();
+      }
+
+      ITMOdometryMeasurement(const Matrix4f & T, const Matrix6d cov)
+      {
+        this->R = T.getRot();
+        this->t = T.getTrans();
+        this->cov = cov;
       }
 
       void SetFrom(const ITMOdometryMeasurement *measurement)

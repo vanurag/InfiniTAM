@@ -20,6 +20,7 @@ typedef unsigned long ulong;
 
 typedef class ORUtils::Matrix3<float> Matrix3f;
 typedef class ORUtils::Matrix4<float> Matrix4f;
+typedef class ORUtils::Matrix6<double> Matrix6d;
 
 typedef class ORUtils::Vector2<short> Vector2s;
 typedef class ORUtils::Vector2<int> Vector2i;
