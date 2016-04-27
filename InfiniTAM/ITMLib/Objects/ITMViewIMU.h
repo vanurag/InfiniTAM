@@ -22,6 +22,7 @@ namespace ITMLib
 			 : ITMView(calibration, imgSize_rgb, imgSize_d, useGPU)
 			{
 				imu = new ITMIMUMeasurement();
+				this->view_type = ITMView::IMU;
 			}
 
 			~ITMViewIMU(void) { delete imu; }

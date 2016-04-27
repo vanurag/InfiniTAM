@@ -30,6 +30,7 @@ namespace ITMLib
        : ITMView(calibration, imgSize_rgb, imgSize_d, useGPU)
       {
         odom = new ITMOdometryMeasurement();
+        this->view_type = ITMView::ODOM;
       }
 
       ~ITMViewOdometry(void) { delete odom; }

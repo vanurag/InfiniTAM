@@ -299,27 +299,29 @@ void ITMDepthTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 	} // level change
 
 	// outlier detection using Mahalanobis distance
-	Eigen::Vector3f init_att = initPose.getRot().toEigen().eulerAngles(0, 1, 2);
-	Eigen::Vector3f init_pos(initPose.getTrans().x, initPose.getTrans().y, initPose.getTrans().z);
-	Eigen::VectorXd init_state(6);
-	init_state << init_pos.cast<double>(), init_att.cast<double>();
-	Eigen::Vector3f new_att = trackingState->pose_d->GetR().toEigen().eulerAngles(0, 1, 2);
-  Eigen::Vector3f new_pos(
-      trackingState->pose_d->GetT().x, trackingState->pose_d->GetT().y, trackingState->pose_d->GetT().z);
-  Eigen::VectorXd new_state(6);
-  new_state << new_pos.cast<double>(), new_att.cast<double>();
-	Eigen::Matrix<double,6,6> odom_cov = ((ITMViewOdometry*)view)->odom->cov.toEigen();
-	double dist = (new_state-init_state).transpose()*odom_cov.inverse()*(new_state-init_state);
-	std::cout << "Outlier distance: " << dist << std::endl;
-	if (dist > 0.003) { // outlier
-	  trackingState->pose_d->SetM(initPose);
-	  gp_outlier_dist.push_back(0.0);
-	} else {
-	  gp_outlier_dist.push_back(dist);
+	if (view->view_type == ITMView::ODOM) {
+    Eigen::Vector3f init_att = initPose.getRot().toEigen().eulerAngles(0, 1, 2);
+    Eigen::Vector3f init_pos(initPose.getTrans().x, initPose.getTrans().y, initPose.getTrans().z);
+    Eigen::VectorXd init_state(6);
+    init_state << init_pos.cast<double>(), init_att.cast<double>();
+    Eigen::Vector3f new_att = trackingState->pose_d->GetR().toEigen().eulerAngles(0, 1, 2);
+    Eigen::Vector3f new_pos(
+        trackingState->pose_d->GetT().x, trackingState->pose_d->GetT().y, trackingState->pose_d->GetT().z);
+    Eigen::VectorXd new_state(6);
+    new_state << new_pos.cast<double>(), new_att.cast<double>();
+    Eigen::Matrix<double,6,6> odom_cov = ((ITMViewOdometry*)view)->odom->cov.toEigen();
+    double dist = (new_state-init_state).transpose()*odom_cov.inverse()*(new_state-init_state);
+    std::cout << "Outlier distance: " << dist << std::endl;
+    if (dist > 0.003) { // outlier
+      trackingState->pose_d->SetM(initPose);
+      gp_outlier_dist.push_back(0.0);
+    } else {
+      gp_outlier_dist.push_back(dist);
+    }
+    // Un-comment to plot outlier distances
+  //  gp << "plot '-' with lines title 'outlier distance'\n";
+  //  gp.send1d(gp_outlier_dist);
 	}
-	// Un-comment to plot outlier distances
-//  gp << "plot '-' with lines title 'outlier distance'\n";
-//  gp.send1d(gp_outlier_dist);
 }
 
 

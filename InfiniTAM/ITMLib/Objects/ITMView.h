@@ -33,6 +33,14 @@ namespace ITMLib
 			/// allocated when needed
 			ITMFloatImage *depthUncertainty;
 
+			/// View types
+      typedef enum {
+        BASE,
+        IMU,
+        ODOM
+      } ViewType;
+      ViewType view_type;
+
 			ITMView(const ITMRGBDCalib *calibration, Vector2i imgSize_rgb, Vector2i imgSize_d, bool useGPU)
 			{
 				this->calib = new ITMRGBDCalib(*calibration);
@@ -40,6 +48,8 @@ namespace ITMLib
 				this->depth = new ITMFloatImage(imgSize_d, true, useGPU);
 				this->depthNormal = NULL;
 				this->depthUncertainty = NULL;
+
+				this->view_type = BASE;
 			}
 
 			virtual ~ITMView(void)

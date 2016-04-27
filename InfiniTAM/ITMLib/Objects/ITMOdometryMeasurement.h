@@ -27,7 +27,7 @@ namespace ITMLib
       {
         this->R.setIdentity();
         this->t.x = 0.0; this->t.y = 0.0; this->t.z = 0.0;
-        this->cov.setIdentity();
+        this->cov.setZeros();
       }
 
       ITMOdometryMeasurement(const Matrix3f & R, const Vector3f t)
