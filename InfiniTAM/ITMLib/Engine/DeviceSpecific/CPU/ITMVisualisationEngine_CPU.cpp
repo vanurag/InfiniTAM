@@ -234,7 +234,7 @@ static void RenderImage_common(const ITMScene<TVoxel,TIndex> *scene, const ITMPo
 		for (int locId = 0; locId < imgSize.x * imgSize.y; locId++)
 		{
 			Vector4f ptRay = pointsRay[locId];
-			processPixelGrey<TVoxel, TIndex>(outRendering[locId], ptRay.toVector3(), ptRay.w > 0, voxelData, voxelIndex, lightSource);
+			processPixelTimeColour<TVoxel, TIndex>(outRendering[locId], ptRay.toVector3(), ptRay.w > 0, voxelData, voxelIndex, lightSource, 10);
 		}
 	}
 }

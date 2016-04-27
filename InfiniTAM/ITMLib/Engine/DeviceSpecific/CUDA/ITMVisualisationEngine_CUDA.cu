@@ -54,6 +54,10 @@ __global__ void renderGrey_device(Vector4u *outRendering, const Vector4f *ptsRay
 	const typename TIndex::IndexData *voxelIndex, Vector2i imgSize, Vector3f lightSource);
 
 template<class TVoxel, class TIndex>
+__global__ void renderColourFromTime_device(Vector4u *outRendering, const Vector4f *ptsRay, const TVoxel *voxelData,
+	const typename TIndex::IndexData *voxelIndex, Vector2i imgSize, Vector3f lightSource, short int current_time);
+
+template<class TVoxel, class TIndex>
 __global__ void renderColourFromNormal_device(Vector4u *outRendering, const Vector4f *ptsRay, const TVoxel *voxelData,
 	const typename TIndex::IndexData *voxelIndex, Vector2i imgSize, Vector3f lightSource);
 
@@ -257,8 +261,8 @@ static void RenderImage_common(const ITMScene<TVoxel, TIndex> *scene, const ITMP
 		break;
 	case IITMVisualisationEngine::RENDER_SHADED_GREYSCALE:
 	default:
-		renderGrey_device<TVoxel, TIndex> <<<gridSize, cudaBlockSize>>>(outRendering, pointsRay, scene->localVBA.GetVoxelBlocks(),
-			scene->index.getIndexData(), imgSize, lightSource);
+		renderColourFromTime_device<TVoxel, TIndex> <<<gridSize, cudaBlockSize>>>(outRendering, pointsRay, scene->localVBA.GetVoxelBlocks(),
+			scene->index.getIndexData(), imgSize, lightSource, 10);
 		break;
 	}
 }
@@ -634,6 +638,22 @@ __global__ void renderGrey_device(Vector4u *outRendering, const Vector4f *ptsRay
 
 	processPixelGrey<TVoxel, TIndex>(outRendering[locId], ptRay.toVector3(), ptRay.w > 0, voxelData, voxelIndex, lightSource);
 }
+
+template<class TVoxel, class TIndex>
+__global__ void renderColourFromTime_device(Vector4u *outRendering, const Vector4f *ptsRay, const TVoxel *voxelData,
+	const typename TIndex::IndexData *voxelIndex, Vector2i imgSize, Vector3f lightSource, short int current_time)
+{
+	int x = (threadIdx.x + blockIdx.x * blockDim.x), y = (threadIdx.y + blockIdx.y * blockDim.y);
+
+	if (x >= imgSize.x || y >= imgSize.y) return;
+
+	int locId = x + y * imgSize.x;
+
+	Vector4f ptRay = ptsRay[locId];
+
+	processPixelTimeColour<TVoxel, TIndex>(outRendering[locId], ptRay.toVector3(), ptRay.w > 0, voxelData, voxelIndex, lightSource, 10);
+}
+
 
 template<class TVoxel, class TIndex>
 __global__ void renderColourFromNormal_device(Vector4u *outRendering, const Vector4f *ptsRay, const TVoxel *voxelData,

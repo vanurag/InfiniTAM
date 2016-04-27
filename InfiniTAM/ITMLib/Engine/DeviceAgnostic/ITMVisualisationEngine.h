@@ -257,6 +257,32 @@ _CPU_AND_GPU_CODE_ inline void drawPixelGrey(DEVICEPTR(Vector4u) & dest, const T
 {
 	float outRes = (0.8f * angle + 0.2f) * 255.0f;
 	dest = Vector4u((uchar)outRes);
+#ifndef COMPILE_WITHOUT_CUDA
+#else
+  std::cout << "time check: last update -> " << std::endl;
+#endif
+}
+
+template<class TVoxel, class TIndex>
+_CPU_AND_GPU_CODE_ inline void drawPixelTimeColour(DEVICEPTR(Vector4u) & dest, const THREADPTR(float) & angle, const CONSTPTR(Vector3f) & point,
+  const CONSTPTR(TVoxel) *voxelBlockData, const CONSTPTR(typename TIndex::IndexData) *indexData, const short int current_time)
+{
+  short int voxel_time = readFromSDF_voxel_update_time<TVoxel, TIndex>(voxelBlockData, indexData, point);
+
+  float outRes = (0.8f * angle + 0.2f) * 255.0f;
+  short int delta_time = 10;  // TODO(vanurag) : Make it a parameter
+  dest.r = (uchar)outRes;
+#ifndef COMPILE_WITHOUT_CUDA
+#else
+  std::cout << "time check: last update -> " << voxel_time << ", curr time -> " << current_time << std::endl;
+#endif
+  if (true) {//voxel_time > current_time - delta_time) {
+    dest.g = (uchar)0;
+    dest.b = (uchar)0;
+  } else {
+    dest.g = (uchar)outRes;
+    dest.b = (uchar)outRes;
+  }
 }
 
 _CPU_AND_GPU_CODE_ inline void drawPixelNormal(DEVICEPTR(Vector4u) & dest, const THREADPTR(Vector3f) & normal_obj)
@@ -377,6 +403,20 @@ _CPU_AND_GPU_CODE_ inline void processPixelGrey(DEVICEPTR(Vector4u) &outRenderin
 
 	if (foundPoint) drawPixelGrey(outRendering, angle);
 	else outRendering = Vector4u((uchar)0);
+}
+
+template<class TVoxel, class TIndex>
+_CPU_AND_GPU_CODE_ inline void processPixelTimeColour(DEVICEPTR(Vector4u) &outRendering, const CONSTPTR(Vector3f) & point,
+  bool foundPoint, const CONSTPTR(TVoxel) *voxelData, const CONSTPTR(typename TIndex::IndexData) *voxelIndex,
+  Vector3f lightSource, const short int current_time)
+{
+  Vector3f outNormal;
+  float angle;
+
+  computeNormalAndAngle<TVoxel, TIndex>(foundPoint, point, voxelData, voxelIndex, lightSource, outNormal, angle);
+
+  if (foundPoint) drawPixelTimeColour<TVoxel, TIndex>(outRendering, angle, point, voxelData, voxelIndex, current_time);
+  else outRendering = Vector4u((uchar)0);
 }
 
 template<class TVoxel, class TIndex>

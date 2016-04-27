@@ -287,6 +287,7 @@ void ITMMainEngine::GetImage(ITMUChar4Image *out, GetImageType getImageType, ITM
 
 		visualisationEngine->FindVisibleBlocks(pose, intrinsics, renderState_freeview);
 		visualisationEngine->CreateExpectedDepths(pose, intrinsics, renderState_freeview);
+		std::cout << "render type check: " << type << std::endl;
 		visualisationEngine->RenderImage(pose, intrinsics, renderState_freeview, renderState_freeview->raycastImage, type);
 
 		if (settings->deviceType == ITMLibSettings::DEVICE_CUDA)
