@@ -4,6 +4,7 @@
 
 #include "../ITMLib.h"
 #include "../Utils/ITMLibSettings.h"
+#include "../../Utils/NVTimer.h"
 #include <opencv2/viz/vizcore.hpp>
 #include <opencv2/viz/types.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
@@ -113,6 +114,9 @@ namespace ITMLib
 				InfiniTAM_IMAGE_FREECAMERA_COLOUR_FROM_NORMAL,
 				InfiniTAM_IMAGE_UNKNOWN
 			};
+
+			// timer to keep track of voxel update times
+      StopWatchInterface* render_timer;
 
 			/// Gives access to the current input frame
 			ITMView* GetView() { return view; }

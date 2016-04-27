@@ -51,8 +51,8 @@ namespace ITMLib
 			virtual void IntegrateIntoScene(ITMScene<TVoxel,TIndex> *scene, const ITMView *view, const ITMTrackingState *trackingState,
 				const ITMRenderState *renderState) = 0;
 
-			ITMSceneReconstructionEngine(void) { sdkCreateTimer(&scene_timer);}
-			virtual ~ITMSceneReconstructionEngine(void) { }
+			ITMSceneReconstructionEngine(void) { sdkCreateTimer(&scene_timer); sdkStartTimer(&scene_timer); }
+			virtual ~ITMSceneReconstructionEngine(void) { sdkDeleteTimer(&scene_timer); }
 		};
 	}
 }

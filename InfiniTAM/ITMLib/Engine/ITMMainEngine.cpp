@@ -56,6 +56,8 @@ ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib 
 	renderState_live = visualisationEngine->CreateRenderState(trackedImageSize);
 	renderState_freeview = NULL; //will be created by the visualisation engine
 
+	sdkCreateTimer(&render_timer);
+	sdkStartTimer(&render_timer);
 	denseMapper = new ITMDenseMapper<ITMVoxel, ITMVoxelIndex>(settings);
 	denseMapper->ResetScene(scene);
 
@@ -88,6 +90,7 @@ ITMMainEngine::~ITMMainEngine()
 	delete scene;
 
 	delete denseMapper;
+	sdkDeleteTimer(&render_timer);
 	delete trackingController;
 
 	delete tracker;
@@ -287,7 +290,7 @@ void ITMMainEngine::GetImage(ITMUChar4Image *out, GetImageType getImageType, ITM
 
 		visualisationEngine->FindVisibleBlocks(pose, intrinsics, renderState_freeview);
 		visualisationEngine->CreateExpectedDepths(pose, intrinsics, renderState_freeview);
-		visualisationEngine->RenderImage(pose, intrinsics, renderState_freeview, renderState_freeview->raycastImage, 10, type);
+		visualisationEngine->RenderImage(pose, intrinsics, renderState_freeview, renderState_freeview->raycastImage, static_cast<short int>(sdkGetTimerValue(&render_timer)/1000.0), type);
 
 		if (settings->deviceType == ITMLibSettings::DEVICE_CUDA)
 			out->SetFrom(renderState_freeview->raycastImage, ORUtils::MemoryBlock<Vector4u>::CUDA_TO_CPU);
