@@ -24,6 +24,7 @@ ITMSceneReconstructionEngine_CPU<TVoxel,ITMVoxelBlockHash>::~ITMSceneReconstruct
 template<class TVoxel>
 void ITMSceneReconstructionEngine_CPU<TVoxel,ITMVoxelBlockHash>::ResetScene(ITMScene<TVoxel, ITMVoxelBlockHash> *scene)
 {
+  sdkResetTimer(&(this->scene_timer));
 	int numBlocks = scene->index.getNumAllocatedVoxelBlocks();
 	int blockSize = scene->index.getVoxelBlockSize();
 
@@ -108,7 +109,7 @@ void ITMSceneReconstructionEngine_CPU<TVoxel, ITMVoxelBlockHash>::IntegrateIntoS
 			pt_model.w = 1.0f;
 
 			ComputeUpdatedVoxelInfo<TVoxel::hasColorInformation,TVoxel>::compute(localVoxelBlock[locId], pt_model, M_d, 
-				projParams_d, M_rgb, projParams_rgb, mu, maxW, depth, depthImgSize, rgb, rgbImgSize);
+				projParams_d, M_rgb, projParams_rgb, mu, maxW, depth, depthImgSize, rgb, rgbImgSize, sdkGetTimerValue(&(this->scene_timer)));
 		}
 	}
 }

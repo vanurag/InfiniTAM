@@ -5,6 +5,7 @@
 #include <math.h>
 
 #include "../Utils/ITMLibDefines.h"
+#include "../../Utils/NVTimer.h"
 
 #include "../Objects/ITMScene.h"
 #include "../Objects/ITMView.h"
@@ -29,6 +30,9 @@ namespace ITMLib
 		class ITMSceneReconstructionEngine
 		{
 		public:
+		  // timer to keep track of voxel update times
+		  StopWatchInterface* scene_timer;
+
 			/** Clear and reset a scene to set up a new empty
 			    one.
 			*/
@@ -47,7 +51,7 @@ namespace ITMLib
 			virtual void IntegrateIntoScene(ITMScene<TVoxel,TIndex> *scene, const ITMView *view, const ITMTrackingState *trackingState,
 				const ITMRenderState *renderState) = 0;
 
-			ITMSceneReconstructionEngine(void) { }
+			ITMSceneReconstructionEngine(void) { sdkCreateTimer(&scene_timer);}
 			virtual ~ITMSceneReconstructionEngine(void) { }
 		};
 	}
