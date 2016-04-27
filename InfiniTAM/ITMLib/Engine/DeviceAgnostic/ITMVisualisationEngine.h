@@ -270,13 +270,9 @@ _CPU_AND_GPU_CODE_ inline void drawPixelTimeColour(DEVICEPTR(Vector4u) & dest, c
   short int voxel_time = readFromSDF_voxel_update_time<TVoxel, TIndex>(voxelBlockData, indexData, point);
 
   float outRes = (0.8f * angle + 0.2f) * 255.0f;
-  short int delta_time = 10;  // TODO(vanurag) : Make it a parameter
+  short int delta_time = 12;  // TODO(vanurag) : Make it a parameter
   dest.r = (uchar)outRes;
-#ifndef COMPILE_WITHOUT_CUDA
-#else
-  std::cout << "time check: last update -> " << voxel_time << ", curr time -> " << current_time << std::endl;
-#endif
-  if (true) {//voxel_time > current_time - delta_time) {
+  if (voxel_time > current_time - delta_time) {
     dest.g = (uchar)0;
     dest.b = (uchar)0;
   } else {
