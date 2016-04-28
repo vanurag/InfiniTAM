@@ -96,17 +96,17 @@ static void CreateDefaultImageSource(
 
 	if (imageSource == NULL &&
       (source == std::string("kinect_ros") || source == std::string("kinect_ros+imu") ||
-       source == std::string("kinect_ros+odom") || source == std::string("kinect_ros+strict_odom") ||
+       source == std::string("kinect_ros+odom") || source == std::string("kinect_ros+odom_color") || source == std::string("kinect_ros+strict_odom") ||
        source == std::string("realsense_ros") || source == std::string("realsense_ros+imu") ||
-       source == std::string("realsense_ros+odom") || source == std::string("realsense_ros+strict_odom")))
+       source == std::string("realsense_ros+odom") || source == std::string("realsense_ros+odom_color") || source == std::string("realsense_ros+strict_odom")))
   {
     printf("trying ROS image source\n");
     if (source == std::string("kinect_ros") || source == std::string("kinect_ros+imu") ||
-        source == std::string("kinect_ros+odom") || source == std::string("kinect_ros+strict_odom")) {
+        source == std::string("kinect_ros+odom") || source == std::string("kinect_ros+odom_color") || source == std::string("kinect_ros+strict_odom")) {
       imageSource = new ROSImageSourceEngine(
           calibFile, meta1, meta2, Vector2i(1920, 1080), Vector2i(512, 424));
     } else if (source == std::string("realsense_ros") || source == std::string("realsense_ros+imu") ||
-               source == std::string("realsense_ros+odom") || source == std::string("realsense_ros+strict_odom")) {
+               source == std::string("realsense_ros+odom") || source == std::string("realsense_ros+odom_color") || source == std::string("realsense_ros+strict_odom")) {
       imageSource = new ROSImageSourceEngine(
           calibFile, meta1, meta2, Vector2i(640, 480), Vector2i(480, 360));
     }
@@ -124,8 +124,8 @@ static void CreateDefaultImageSource(
         return;
       }
     }
-    if (source == std::string("kinect_ros+odom") || source == std::string("kinect_ros+strict_odom") ||
-        source == std::string("realsense_ros+odom") || source == std::string("realsense_ros+strict_odom")) {
+    if (source == std::string("kinect_ros+odom") || source == std::string("kinect_ros+odom_color") || source == std::string("kinect_ros+strict_odom") ||
+        source == std::string("realsense_ros+odom") || source == std::string("realsense_ros+odom_color") || source == std::string("realsense_ros+strict_odom")) {
       if (odom_source != NULL) {
         printf("using Odometry ROS topic: %s\n", odom_source);
         odomSource = new ROSOdometrySourceEngine(odom_source);
@@ -137,7 +137,7 @@ static void CreateDefaultImageSource(
   }
 	if (imageSource == NULL &&
 	    (source == std::string("realsense") || source == std::string("realsense+imu") ||
-       source == std::string("realsense+odom") || source == std::string("realsense+strict_odom")))
+       source == std::string("realsense+odom") || source == std::string("realsense+odom_color") || source == std::string("realsense+strict_odom")))
   {
     printf("trying Intel Realsense device\n");
 //    imageSource = new RealsenseEngine(calibFile);
@@ -157,7 +157,7 @@ static void CreateDefaultImageSource(
         return;
       }
     }
-    if (source == std::string("realsense+odom") || source == std::string("realsense+strict_odom")) {
+    if (source == std::string("realsense+odom") || source == std::string("realsense+odom_color") || source == std::string("realsense+strict_odom")) {
       if (odom_source != NULL) {
         printf("using Odometry ROS topic: %s\n", odom_source);
         odomSource = new ROSOdometrySourceEngine(odom_source);
@@ -183,7 +183,7 @@ static void CreateDefaultImageSource(
   }
 	if (imageSource == NULL &&
 	    (source == std::string("kinect") || source == std::string("kinect+imu") ||
-       source == std::string("kinect+odom") || source == std::string("kinect+strict_odom")))
+       source == std::string("kinect+odom") || source == std::string("kinect+odom_color") || source == std::string("kinect+strict_odom")))
   {
     printf("trying MS Kinect 2 device\n");
     imageSource = new Kinect2Engine(calibFile);
@@ -201,7 +201,7 @@ static void CreateDefaultImageSource(
         return;
       }
     }
-    if (source == std::string("kinect+odom") || source == std::string("kinect+strict_odom")) {
+    if (source == std::string("kinect+odom") || source == std::string("kinect+odom_color") || source == std::string("kinect+strict_odom")) {
       if (odom_source != NULL) {
         printf("using Odometry ROS topic: %s\n", odom_source);
         odomSource = new ROSOdometrySourceEngine(odom_source);
@@ -213,7 +213,7 @@ static void CreateDefaultImageSource(
   }
 	if (imageSource == NULL &&
       (source == std::string("kinect_rosbag") || source == std::string("kinect_rosbag+imu") ||
-       source == std::string("kinect_rosbag+odom") || source == std::string("kinect_rosbag+strict_odom")))
+       source == std::string("kinect_rosbag+odom") || source == std::string("kinect_rosbag+odom_color") || source == std::string("kinect_rosbag+strict_odom")))
   {
     printf("trying Kinect ROSBAG image source\n");
     if (source == std::string("kinect_rosbag")) {
@@ -231,7 +231,7 @@ static void CreateDefaultImageSource(
         printf("IMU source not provided! aborting.");
         return;
       }
-    } else if (source == std::string("kinect_rosbag+odom") || source == std::string("kinect_rosbag+strict_odom")) {
+    } else if (source == std::string("kinect_rosbag+odom") || source == std::string("kinect_rosbag+odom_color") || source == std::string("kinect_rosbag+strict_odom")) {
       if (odom_source != NULL) {
         printf("using Odometry ROS topic: %s\n", odom_source);
         ROSBagSourceEngine rosbag_source(calibFile, meta1, meta2, meta3, imu_source,
@@ -251,7 +251,7 @@ static void CreateDefaultImageSource(
   }
 	if (imageSource == NULL &&
       (source == std::string("realsense_rosbag") || source == std::string("realsense_rosbag+imu") ||
-       source == std::string("realsense_rosbag+odom") || source == std::string("realsense_rosbag+strict_odom")))
+       source == std::string("realsense_rosbag+odom") || source == std::string("realsense_rosbag+odom_color") || source == std::string("realsense_rosbag+strict_odom")))
   {
 	  if (source == std::string("realsense_rosbag")) {
 	    ROSBagSourceEngine rosbag_source(calibFile, meta1, meta2, meta3,
@@ -268,7 +268,7 @@ static void CreateDefaultImageSource(
         printf("IMU source not provided! aborting.");
         return;
       }
-    } else if (source == std::string("realsense_rosbag+odom") || source == std::string("realsense_rosbag+strict_odom")) {
+    } else if (source == std::string("realsense_rosbag+odom") || source == std::string("realsense_rosbag+odom_color") || source == std::string("realsense_rosbag+strict_odom")) {
       if (odom_source != NULL) {
         printf("using Odometry ROS topic: %s\n", odom_source);
         ROSBagSourceEngine rosbag_source(calibFile, meta1, meta2, meta3, imu_source,
@@ -384,17 +384,22 @@ try
 	           arg2 == std::string("kinect_rosbag+imu")) { // Kinect2
     internalSettings->sceneParams.viewFrustum_min = 0.5f;
     internalSettings->sceneParams.viewFrustum_max = 8.0f;
-    internalSettings->trackerType = ITMLibSettings::TRACKER_IMU;
+    internalSettings->setTrackerType(ITMLibSettings::TRACKER_IMU);
 	} else if (arg2 == std::string("kinect+odom") || arg2 == std::string("kinect_ros+odom") ||
 	           arg2 == std::string("kinect_rosbag+odom")) { // Kinect2
     internalSettings->sceneParams.viewFrustum_min = 0.5f;
     internalSettings->sceneParams.viewFrustum_max = 8.0f;
-    internalSettings->trackerType = ITMLibSettings::TRACKER_ODOMETRY;
+    internalSettings->setTrackerType(ITMLibSettings::TRACKER_ODOMETRY);
+	} else if (arg2 == std::string("kinect+odom_color") || arg2 == std::string("kinect_ros+odom_color") ||
+           arg2 == std::string("kinect_rosbag+odom_color")) { // Kinect2
+    internalSettings->sceneParams.viewFrustum_min = 0.5f;
+    internalSettings->sceneParams.viewFrustum_max = 8.0f;
+    internalSettings->setTrackerType(ITMLibSettings::TRACKER_ODOMETRY_COLOR);
 	} else if (arg2 == std::string("kinect+strict_odom") || arg2 == std::string("kinect_ros+strict_odom") ||
 	           arg2 == std::string("kinect_rosbag+strict_odom")) { // Kinect2
     internalSettings->sceneParams.viewFrustum_min = 0.5f;
     internalSettings->sceneParams.viewFrustum_max = 8.0f;
-    internalSettings->trackerType = ITMLibSettings::TRACKER_STRICT_ODOMETRY;
+    internalSettings->setTrackerType(ITMLibSettings::TRACKER_STRICT_ODOMETRY);
 	} else if (arg2 == std::string("realsense") || arg2 == std::string("realsense_ros") ||
 	           arg2 == std::string("realsense_rosbag")) { // R200
 	  internalSettings->sceneParams.viewFrustum_min = 0.5f;
@@ -403,17 +408,17 @@ try
 	           arg2 == std::string("realsense_rosbag+imu")) { // R200
     internalSettings->sceneParams.viewFrustum_min = 0.5f;
     internalSettings->sceneParams.viewFrustum_max = 2.0f; // 4.0f
-    internalSettings->trackerType = ITMLibSettings::TRACKER_IMU;
-	} else if (arg2 == std::string("realsense+odom") || arg2 == std::string("realsense_ros+odom") ||
-	           arg2 == std::string("realsense_rosbag+odom")) { // R200
+    internalSettings->setTrackerType(ITMLibSettings::TRACKER_IMU);
+	} else if (arg2 == std::string("realsense+odom") || arg2 == std::string("realsense+odom_color") || arg2 == std::string("realsense_ros+odom") || arg2 == std::string("realsense_ros+odom_color") ||
+	           arg2 == std::string("realsense_rosbag+odom") || arg2 == std::string("realsense_rosbag+odom_color")) { // R200
     internalSettings->sceneParams.viewFrustum_min = 0.5f;
     internalSettings->sceneParams.viewFrustum_max = 2.0f; // 4.0f
-    internalSettings->trackerType = ITMLibSettings::TRACKER_ODOMETRY;
+    internalSettings->setTrackerType(ITMLibSettings::TRACKER_ODOMETRY);
 	} else if (arg2 == std::string("realsense+strict_odom") || arg2 == std::string("realsense_ros+strict_odom") ||
 	           arg2 == std::string("realsense_rosbag+strict_odom")) { // R200
     internalSettings->sceneParams.viewFrustum_min = 0.5f;
     internalSettings->sceneParams.viewFrustum_max = 2.0f; // 4.0f
-    internalSettings->trackerType = ITMLibSettings::TRACKER_STRICT_ODOMETRY;
+    internalSettings->setTrackerType(ITMLibSettings::TRACKER_STRICT_ODOMETRY);
 	} else if (arg2 == std::string("vi-sensor")) {
 	  internalSettings->sceneParams.viewFrustum_min = 0.0f;
     internalSettings->sceneParams.viewFrustum_max = 20.0f;

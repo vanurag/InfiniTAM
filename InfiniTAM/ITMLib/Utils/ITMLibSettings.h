@@ -43,6 +43,8 @@ namespace ITMLib
 				TRACKER_IMU,
 				//! Identifies a tracker based on depth image and Odometry measurement
         TRACKER_ODOMETRY,
+        //! Identifies a tracker based on depth image, colour image and Odometry measurement
+        TRACKER_ODOMETRY_COLOR,
         //! Identifies a tracker based on Odometry measurement
         TRACKER_STRICT_ODOMETRY,
 				//! Identifies a tracker that use weighted ICP only on depth image
@@ -91,6 +93,8 @@ namespace ITMLib
 
 			ITMLibSettings(void);
 			~ITMLibSettings(void);
+
+			void setTrackerType(const TrackerType& new_tracker_type);
 
 			// Suppress the default copy constructor and assignment operator
 			ITMLibSettings(const ITMLibSettings&);
