@@ -270,12 +270,16 @@ _CPU_AND_GPU_CODE_ inline void drawPixelTimeColour(DEVICEPTR(Vector4u) & dest, c
   short int voxel_time = readFromSDF_voxel_update_time<TVoxel, TIndex>(voxelBlockData, indexData, point);
 
   float outRes = (0.8f * angle + 0.2f) * 255.0f;
-  short int delta_time = 1;  // TODO(vanurag) : Make it a parameter
+  short int delta_time = 5;  // TODO(vanurag) : Make it a parameter
   dest.r = (uchar)outRes;
-  if (voxel_time > render_time - delta_time) {
+  if (voxel_time > render_time - delta_time && voxel_time < render_time) {  // last few frames
     dest.g = (uchar)0;
     dest.b = (uchar)0;
-  } else {
+  } else if (voxel_time >= render_time) { // current frame
+    dest.g = (uchar)outRes;
+    dest.b = (uchar)0;
+  }
+  else {  // other frames
     dest.g = (uchar)outRes;
     dest.b = (uchar)outRes;
   }
