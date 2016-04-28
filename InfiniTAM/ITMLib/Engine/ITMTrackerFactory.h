@@ -59,6 +59,7 @@ namespace ITMLib
         makers.insert(std::make_pair(ITMLibSettings::TRACKER_WICP, &MakeWeightedICPTracker));
         makers.insert(std::make_pair(ITMLibSettings::TRACKER_IMU, &MakeIMUTracker));
         makers.insert(std::make_pair(ITMLibSettings::TRACKER_ODOMETRY, &MakeOdometryTracker));
+        makers.insert(std::make_pair(ITMLibSettings::TRACKER_ODOMETRY_COLOR, &MakeOdometryColourTracker));
         makers.insert(std::make_pair(ITMLibSettings::TRACKER_STRICT_ODOMETRY, &MakeStrictOdometryTracker));
         makers.insert(std::make_pair(ITMLibSettings::TRACKER_REN, &MakeRenTracker));
       }
@@ -113,7 +114,7 @@ namespace ITMLib
           case ITMLibSettings::DEVICE_METAL:
           {
 #ifdef COMPILE_WITH_METAL
-            return new ITMColorTracker_CPU(trackedImageSize, settings->trackingRegime, settings->noHierarchyLevels, lowLevelEngine);
+            return new ITMColorTracker_Metal(trackedImageSize, settings->trackingRegime, settings->noHierarchyLevels, lowLevelEngine);
 #else
             break;
 #endif
@@ -396,6 +397,108 @@ namespace ITMLib
         }
 
         DIEWITHEXCEPTION("Failed to make Odometry tracker");
+      }
+
+      /**
+       * \brief Makes an Odometry tracker + Depth Tracker + Color Tracker
+       */
+      static ITMTracker *MakeOdometryColourTracker(
+          const Vector2i& trackedImageSize, const ITMLibSettings *settings, const ITMLowLevelEngine *lowLevelEngine,
+          ITMIMUCalibrator *imuCalibrator, ITMScene<TVoxel,TIndex> *scene)
+      {
+        switch(settings->deviceType)
+        {
+          case ITMLibSettings::DEVICE_CPU:
+          {
+            ITMCompositeTracker *compositeTracker = new ITMCompositeTracker(3);
+            compositeTracker->SetTracker(new ITMOdometryTracker(imuCalibrator), 0);
+            compositeTracker->SetTracker(
+              new ITMColorTracker_CPU(
+                  Vector2i(1920, 1080),
+                  settings->trackingRegime,
+                  settings->noHierarchyLevels,
+                  lowLevelEngine
+              ), 1
+            );
+            compositeTracker->SetTracker(
+              new ITMDepthTracker_CPU(
+                trackedImageSize,
+                settings->trackingRegime,
+                settings->noHierarchyLevels,
+                settings->noICPRunTillLevel,
+                settings->depthTrackerICPThreshold,
+                settings->depthTrackerTerminationThreshold,
+                settings->depthTrackerType,
+                settings->visualizeICP,
+                lowLevelEngine
+              ), 2
+            );
+            return compositeTracker;
+          }
+          case ITMLibSettings::DEVICE_CUDA:
+          {
+#ifndef COMPILE_WITHOUT_CUDA
+            ITMCompositeTracker *compositeTracker = new ITMCompositeTracker(3);
+            compositeTracker->SetTracker(new ITMOdometryTracker(imuCalibrator), 0);
+            compositeTracker->SetTracker(
+              new ITMColorTracker_CUDA(
+                Vector2i(1920, 1080), // TODO(vanurag): make it a variable
+                settings->trackingRegime,
+                settings->noHierarchyLevels,
+                lowLevelEngine
+              ), 1
+            );
+            compositeTracker->SetTracker(
+              new ITMDepthTracker_CUDA(
+                trackedImageSize,
+                settings->trackingRegime,
+                settings->noHierarchyLevels,
+                settings->noICPRunTillLevel,
+                settings->depthTrackerICPThreshold,
+                settings->depthTrackerTerminationThreshold,
+                settings->depthTrackerType,
+                settings->visualizeICP,
+                lowLevelEngine
+              ), 2
+            );
+            return compositeTracker;
+#else
+            break;
+#endif
+          }
+          case ITMLibSettings::DEVICE_METAL:
+          {
+#ifdef COMPILE_WITH_METAL
+            ITMCompositeTracker *compositeTracker = new ITMCompositeTracker(3);
+            compositeTracker->SetTracker(new ITMOdometryTracker(imuCalibrator), 0);
+            compositeTracker->SetTracker(
+              new ITMColorTracker_Metal(
+                Vector2i(1920, 1080),
+                settings->trackingRegime,
+                settings->noHierarchyLevels,
+                lowLevelEngine
+              ), 1
+            );
+            compositeTracker->SetTracker(
+              new ITMDepthTracker_Metal(
+                trackedImageSize,
+                settings->trackingRegime,
+                settings->noHierarchyLevels,
+                settings->noICPRunTillLevel,
+                settings->depthTrackerICPThreshold,
+                settings->depthTrackerTerminationThreshold,
+                lowLevelEngine
+              ), 2
+            );
+            return compositeTracker;
+#else
+            break;
+#endif
+          }
+          default: break;
+        }
+
+        DIEWITHEXCEPTION("Failed to make Odometry Colour tracker");
       }
 
 

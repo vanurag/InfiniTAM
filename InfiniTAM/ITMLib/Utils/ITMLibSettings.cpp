@@ -72,7 +72,7 @@ ITMLibSettings::ITMLibSettings(void)
     trackingRegime = new TrackerIterationType[noHierarchyLevels];
 
     trackingRegime[0] = TRACKER_ITERATION_BOTH;
-    trackingRegime[1] = TRACKER_ITERATION_TRANSLATION;
+    trackingRegime[1] = TRACKER_ITERATION_BOTH;
     trackingRegime[2] = TRACKER_ITERATION_ROTATION;
   } else if (trackerType == TRACKER_STRICT_ODOMETRY)
   {
@@ -130,7 +130,7 @@ void ITMLibSettings::setTrackerType(const TrackerType& new_tracker_type) {
     trackingRegime = new TrackerIterationType[noHierarchyLevels];
 
     trackingRegime[0] = TRACKER_ITERATION_BOTH;
-    trackingRegime[1] = TRACKER_ITERATION_TRANSLATION;
+    trackingRegime[1] = TRACKER_ITERATION_BOTH;
     trackingRegime[2] = TRACKER_ITERATION_ROTATION;
   } else if (trackerType == TRACKER_STRICT_ODOMETRY)
   {

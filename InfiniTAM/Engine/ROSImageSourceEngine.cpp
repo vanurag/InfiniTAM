@@ -66,7 +66,7 @@ void ROSImageSourceEngine::ROSImageCallback(const sensor_msgs::ImageConstPtr rgb
 
 void ROSImageSourceEngine::getImages(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage)
 {
-  while (!colorAvailable_ && !depthAvailable_) {
+  while (!colorAvailable_ || !depthAvailable_) {
     std::cout << "waiting for ROS Image streams..." << std::endl;
     ros::spinOnce();
   }

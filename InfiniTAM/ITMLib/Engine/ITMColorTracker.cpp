@@ -31,6 +31,7 @@ void ITMColorTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 	ITMPose currentPara(view->calib->trafo_rgb_to_depth.calib_inv * trackingState->pose_d->GetM());
 	for (int levelId = viewHierarchy->noLevels - 1; levelId >= 0; levelId--)
 	{
+	  std::cout << "Color Tracker Level ID: " << levelId << std::endl;
 		this->levelId = levelId;
 		this->iterationType = viewHierarchy->levels[levelId]->iterationType;
 
