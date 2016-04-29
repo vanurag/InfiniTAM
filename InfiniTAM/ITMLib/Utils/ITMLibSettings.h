@@ -3,7 +3,7 @@
 #pragma once
 
 #include "../Objects/ITMSceneParams.h"
-#include "../Engine/ITMTracker.h"
+//#include "../Engine/ITMTracker.h"
 
 namespace ITMLib
 {
@@ -33,22 +33,27 @@ namespace ITMLib
 
 			/// Tracker types
 			typedef enum {
+			  // non-composite trackers
 				//! Identifies a tracker based on colour image
 				TRACKER_COLOR,
 				//! Identifies a tracker based on depth image
 				TRACKER_ICP,
 				//! Identifies a tracker based on depth image (Ren et al, 2012)
 				TRACKER_REN,
+				//! Identifies a tracker based on Odometry measurement
+        TRACKER_STRICT_ODOMETRY,
+        //! Identifies a tracker that use weighted ICP only on depth image
+        TRACKER_WICP,
+
+        // ----------------------------------------------------------------
+
+				// composite trackers
 				//! Identifies a tracker based on depth image and IMU measurement
 				TRACKER_IMU,
 				//! Identifies a tracker based on depth image and Odometry measurement
         TRACKER_ODOMETRY,
         //! Identifies a tracker based on depth image, colour image and Odometry measurement
-        TRACKER_ODOMETRY_COLOR,
-        //! Identifies a tracker based on Odometry measurement
-        TRACKER_STRICT_ODOMETRY,
-				//! Identifies a tracker that use weighted ICP only on depth image
-				TRACKER_WICP
+        TRACKER_ODOMETRY_COLOR
 			} TrackerType;
 
 			/// Depth Tracker types
