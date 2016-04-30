@@ -438,7 +438,7 @@ namespace ITMLib
           case ITMLibSettings::DEVICE_CUDA:
           {
 #ifndef COMPILE_WITHOUT_CUDA
-            ITMCompositeTracker *compositeTracker = new ITMCompositeTracker(3);
+            ITMCompositeTracker *compositeTracker = new ITMCompositeTracker(2);
             compositeTracker->SetTracker(new ITMOdometryTracker(imuCalibrator), 0);
             compositeTracker->SetTracker(
               new ITMColorTracker_CUDA(
@@ -448,19 +448,19 @@ namespace ITMLib
                 lowLevelEngine
               ), 1
             );
-            compositeTracker->SetTracker(
-              new ITMDepthTracker_CUDA(
-                trackedImageSize,
-                settings->trackingRegime,
-                settings->noHierarchyLevels,
-                settings->noICPRunTillLevel,
-                settings->depthTrackerICPThreshold,
-                settings->depthTrackerTerminationThreshold,
-                settings->depthTrackerType,
-                settings->visualizeICP,
-                lowLevelEngine
-              ), 2
-            );
+//            compositeTracker->SetTracker(
+//              new ITMDepthTracker_CUDA(
+//                trackedImageSize,
+//                settings->trackingRegime,
+//                settings->noHierarchyLevels,
+//                settings->noICPRunTillLevel,
+//                settings->depthTrackerICPThreshold,
+//                settings->depthTrackerTerminationThreshold,
+//                settings->depthTrackerType,
+//                settings->visualizeICP,
+//                lowLevelEngine
+//              ), 2
+//            );
             return compositeTracker;
 #else
             break;

@@ -57,6 +57,8 @@ void ITMViewBuilder_CPU::UpdateView(ITMView **view_ptr, ITMUChar4Image *rgbImage
 		view->depth->SetFrom(this->floatImage, MemoryBlock<float>::CPU_TO_CPU);
 	}
 
+	this->ComputeColorForDepthImage(view->rgb_d, view->calib->trafo_rgb_to_depth, view->depth, view->calib->intrinsics_d, view->calib->intrinsics_rgb, view->rgb);
+
 	if (modelSensorNoise)
 	{
 		this->ComputeNormalAndWeights(view->depthNormal, view->depthUncertainty, view->depth, view->calib->intrinsics_d.projectionParamsSimple.all);
@@ -71,6 +73,7 @@ void ITMViewBuilder_CPU::UpdateView(ITMView **view_ptr, ITMUChar4Image *rgbImage
 	ITMView *view = *view_ptr;
 
 	view->rgb->UpdateDeviceFromHost();
+	view->rgb_d->UpdateDeviceFromHost();
 	view->depth->UpdateDeviceFromHost();
 }
 
@@ -157,4 +160,24 @@ void ITMLib::Engine::ITMViewBuilder_CPU::ComputeNormalAndWeights(ITMFloat4Image 
 
 	for (int y = 2; y < imgDims.y - 2; y++) for (int x = 2; x < imgDims.x - 2; x++)
 		computeNormalAndWeight(depthData_in, normalData_out, sigmaZData_out, x, y, imgDims, intrinsic);
+}
+
+void ITMViewBuilder_CPU::ComputeColorForDepthImage(ITMUChar4Image *rgb_out, const ITMExtrinsics rgb_to_depth, const ITMFloatImage *depth, const ITMIntrinsics intrinsics_depth, const ITMIntrinsics intrinsics_rgb, const ITMUChar4Image *rgb) {
+
+  Vector2i rgbImgDims = rgb->noDims;
+  Vector2i depthImgDims = depth->noDims;
+
+  const float *depthData = depth->GetData(MEMORYDEVICE_CPU);
+  const Vector4u *rgbData_in = rgb->GetData(MEMORYDEVICE_CPU);
+  Vector4u *rgbData_out = rgb_out->GetData(MEMORYDEVICE_CPU);
+
+  for (int y = 0; y < depthImgDims.y; ++y) {
+    for (int x = 0; x < depthImgDims.x; ++x) {
+      const float depth = depthData[x + y * depthImgDims.x];
+      rgbData_out[x + y * depthImgDims.x] = Vector4u(0,0,0,255);
+      if (depth > 0) {
+        computeColorForDepth(rgbData_out, rgb_to_depth.calib_inv, depth, Vector2i(x, y), intrinsics_depth.projectionParamsSimple.all, depthImgDims, intrinsics_rgb.projectionParamsSimple.all, rgbData_in, rgbImgDims);
+      }
+    }
+  }
 }

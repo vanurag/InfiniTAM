@@ -23,6 +23,7 @@ __global__ void convertDisparityToDepth_device(float *depth_out, const short *de
 __global__ void convertDepthAffineToFloat_device(float *d_out, const short *d_in, Vector2i imgSize, Vector2f depthCalibParams);
 __global__ void filterDepth_device(float *imageData_out, const float *imageData_in, Vector2i imgDims);
 __global__ void ComputeNormalAndWeight_device(const float* depth_in, Vector4f* normal_out, float *sigmaL_out, Vector2i imgDims, Vector4f intrinsic);
+__global__ void ComputeColorForDepthImage_device(Vector4u *rgb_out, const Matrix4f depth_to_rgb, const float *depth, const Vector4f intrinsics_depth, const Vector2i depthImgDims, const Vector4f intrinsics_rgb, const Vector4u *rgb, const Vector2i rgbImgDims);
 
 //---------------------------------------------------------------------------
 //
@@ -75,6 +76,8 @@ void ITMViewBuilder_CUDA::UpdateView(ITMView **view_ptr, ITMUChar4Image *rgbImag
 		view->depth->SetFrom(this->floatImage, MemoryBlock<float>::CUDA_TO_CUDA);
 	}
 
+	this->ComputeColorForDepthImage(view->rgb_d, view->calib->trafo_rgb_to_depth, view->depth, view->calib->intrinsics_d, view->calib->intrinsics_rgb, view->rgb);
+
 	if (modelSensorNoise)
 	{
 		this->ComputeNormalAndWeights(view->depthNormal, view->depthUncertainty, view->depth, view->calib->intrinsics_d.projectionParamsSimple.all);
@@ -89,6 +92,7 @@ void ITMViewBuilder_CUDA::UpdateView(ITMView **view_ptr, ITMUChar4Image *rgbImag
 	ITMView *view = *view_ptr;
 
 	view->rgb->UpdateDeviceFromHost();
+	view->rgb_d->UpdateDeviceFromHost();
 	view->depth->UpdateDeviceFromHost();
 }
 
@@ -184,6 +188,21 @@ void ITMLib::Engine::ITMViewBuilder_CUDA::ComputeNormalAndWeights(ITMFloat4Image
 
 }
 
+void ITMViewBuilder_CUDA::ComputeColorForDepthImage(ITMUChar4Image *rgb_out, const ITMExtrinsics rgb_to_depth, const ITMFloatImage *depth, const ITMIntrinsics intrinsics_depth, const ITMIntrinsics intrinsics_rgb, const ITMUChar4Image *rgb) {
+
+  Vector2i rgbImgDims = rgb->noDims;
+  Vector2i depthImgDims = depth->noDims;
+
+  const float *depthData = depth->GetData(MEMORYDEVICE_CUDA);
+  const Vector4u *rgbData_in = rgb->GetData(MEMORYDEVICE_CUDA);
+  Vector4u *rgbData_out = rgb_out->GetData(MEMORYDEVICE_CUDA);
+
+  dim3 blockSize(16, 16);
+  dim3 gridSize((int)ceil((float)depthImgDims.x / (float)blockSize.x), (int)ceil((float)depthImgDims.y / (float)blockSize.y));
+
+  ComputeColorForDepthImage_device << <gridSize, blockSize >> >(rgbData_out, rgb_to_depth.calib_inv, depthData, intrinsics_depth.projectionParamsSimple.all, depthImgDims, intrinsics_rgb.projectionParamsSimple.all, rgbData_in, rgbImgDims);
+}
+
 //---------------------------------------------------------------------------
 //
 // kernel function implementation
@@ -234,4 +253,17 @@ __global__ void ComputeNormalAndWeight_device(const float* depth_in, Vector4f* n
 	{
 		computeNormalAndWeight(depth_in, normal_out, sigmaZ_out, x, y, imgDims, intrinsic);
 	}
+}
+
+__global__ void ComputeColorForDepthImage_device(Vector4u *rgbData_out, const Matrix4f depth_to_rgb, const float *depthData, const Vector4f intrinsics_depth, const Vector2i depthImgDims, const Vector4f intrinsics_rgb, const Vector4u *rgbData, const Vector2i rgbImgDims)
+{
+  int x = threadIdx.x + blockIdx.x * blockDim.x, y = threadIdx.y + blockIdx.y * blockDim.y;
+  if ((x >= depthImgDims.x) || (y >= depthImgDims.y)) return;
+  int idx = x + y * depthImgDims.x;
+
+  rgbData_out[idx] = Vector4u(0,0,0,255);
+  const float depth = depthData[idx];
+  if (depth > 0) {
+    computeColorForDepth(rgbData_out, depth_to_rgb, depth, Vector2i(x, y), intrinsics_depth, depthImgDims, intrinsics_rgb, rgbData, rgbImgDims);
+  }
 }

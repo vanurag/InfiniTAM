@@ -33,8 +33,8 @@ namespace InfiniTAM
 				 : name(_name), type(_type)
 				{}
 			};
-			std::vector<UIColourMode> colourModes;
-			int currentColourMode;
+			std::vector<UIColourMode> colourModes, rgbModes;
+			int currentColourMode, currentRGBMode;
 
 			ITMLibSettings internalSettings;
 			ImageSourceEngine *imageSource;

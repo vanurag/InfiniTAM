@@ -270,6 +270,12 @@ void ITMMainEngine::GetImage(ITMUChar4Image *out, GetImageType getImageType, ITM
 		}
 
 		break;
+	case ITMMainEngine::InfiniTAM_IMAGE_ORIGINAL_DEPTH_WITH_RGB:
+    out->ChangeDims(view->depth->noDims);
+    if (settings->deviceType == ITMLibSettings::DEVICE_CUDA)
+      out->SetFrom(view->rgb_d, ORUtils::MemoryBlock<Vector4u>::CUDA_TO_CPU);
+    else out->SetFrom(view->rgb_d, ORUtils::MemoryBlock<Vector4u>::CPU_TO_CPU);
+    break;
 	case ITMMainEngine::InfiniTAM_IMAGE_SCENERAYCAST:
 	{
 		ORUtils::Image<Vector4u> *srcImage = renderState_live->raycastImage;

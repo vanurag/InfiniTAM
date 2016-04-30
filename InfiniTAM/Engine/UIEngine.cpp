@@ -85,11 +85,11 @@ void UIEngine::glutDisplayFunction()
 	glRasterPos2f(-0.95f, -0.95f);
 	if (uiEngine->freeviewActive)
 	{
-		sprintf(str, "n - next frame \t b - all frames \t e/esc - exit \t f - follow camera \t c - colours (currently %s) \t t - turn fusion %s", uiEngine->colourModes[uiEngine->currentColourMode].name, uiEngine->intergrationActive ? "off" : "on");
+		sprintf(str, "n - next frame \t b - all frames \t e/esc - exit \t f - follow camera \t c - colours (currently %s) \t r - rgb (currently %s) \t t - turn fusion %s", uiEngine->colourModes[uiEngine->currentColourMode].name, uiEngine->rgbModes[uiEngine->currentRGBMode].name, uiEngine->intergrationActive ? "off" : "on");
 	}
 	else
 	{
-		sprintf(str, "n - next frame \t b - all frames \t e/esc - exit \t f - free viewpoint \t t - turn fusion %s", uiEngine->intergrationActive ? "off" : "on");
+		sprintf(str, "n - next frame \t b - all frames \t r - rgb (currently %s) \t e/esc - exit \t f - free viewpoint \t t - turn fusion %s", uiEngine->rgbModes[uiEngine->currentRGBMode].name, uiEngine->intergrationActive ? "off" : "on");
 	}
 	safe_glutBitmapString(GLUT_BITMAP_HELVETICA_12, (const char*)str);
 
@@ -199,6 +199,11 @@ void UIEngine::glutKeyUpFunction(unsigned char key, int x, int y)
 		}
 		uiEngine->needsRefresh = true;
 		break;
+	case 'r':
+	  uiEngine->currentRGBMode++; if ((unsigned)uiEngine->currentRGBMode >= uiEngine->rgbModes.size()) uiEngine->currentRGBMode = 0;
+	  uiEngine->outImageType[2] = uiEngine->rgbModes[uiEngine->currentRGBMode].type;
+    uiEngine->needsRefresh = true;
+    break;
 	case 'c':
 		uiEngine->currentColourMode++; if ((unsigned)uiEngine->currentColourMode >= uiEngine->colourModes.size()) uiEngine->currentColourMode = 0;
 		uiEngine->needsRefresh = true;
@@ -331,6 +336,9 @@ void UIEngine::Initialise(int & argc, char** argv, ImageSourceEngine *imageSourc
 	this->freeviewActive = false;
 	this->intergrationActive = true;
 	this->currentColourMode = 0;
+	this->currentRGBMode = 0;
+	this->rgbModes.push_back(UIColourMode("original rgb", ITMMainEngine::InfiniTAM_IMAGE_ORIGINAL_RGB));
+	this->rgbModes.push_back(UIColourMode("depth with rgb registered", ITMMainEngine::InfiniTAM_IMAGE_ORIGINAL_DEPTH_WITH_RGB));
 	this->colourModes.push_back(UIColourMode("shaded greyscale", ITMMainEngine::InfiniTAM_IMAGE_FREECAMERA_SHADED));
 	if (ITMVoxel::hasColorInformation) this->colourModes.push_back(UIColourMode("integrated colours", ITMMainEngine::InfiniTAM_IMAGE_FREECAMERA_COLOUR_FROM_VOLUME));
 	this->colourModes.push_back(UIColourMode("surface normals", ITMMainEngine::InfiniTAM_IMAGE_FREECAMERA_COLOUR_FROM_NORMAL));
@@ -402,7 +410,9 @@ void UIEngine::Initialise(int & argc, char** argv, ImageSourceEngine *imageSourc
 	outImageType[0] = ITMMainEngine::InfiniTAM_IMAGE_SCENERAYCAST;
 	outImageType[1] = ITMMainEngine::InfiniTAM_IMAGE_ORIGINAL_DEPTH;
 	outImageType[2] = ITMMainEngine::InfiniTAM_IMAGE_ORIGINAL_RGB;
-	if (inputRGBImage->noDims == Vector2i(0,0)) outImageType[2] = ITMMainEngine::InfiniTAM_IMAGE_UNKNOWN;
+	if (inputRGBImage->noDims == Vector2i(0,0)) {
+	  outImageType[2] = ITMMainEngine::InfiniTAM_IMAGE_UNKNOWN;
+	}
 	//outImageType[3] = ITMMainEngine::InfiniTAM_IMAGE_SCENERAYCAST;
 	//outImageType[4] = ITMMainEngine::InfiniTAM_IMAGE_SCENERAYCAST;
 

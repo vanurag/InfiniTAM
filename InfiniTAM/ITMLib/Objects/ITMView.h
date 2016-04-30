@@ -22,6 +22,9 @@ namespace ITMLib
 			/// RGB colour image.
 			ITMUChar4Image *rgb; 
 
+			/// RGB colour image in depth camera frame of reference
+      ITMUChar4Image *rgb_d;
+
 			/// Float valued depth image, if available according to @ref inputImageType.
 			ITMFloatImage *depth;
 
@@ -45,6 +48,7 @@ namespace ITMLib
 			{
 				this->calib = new ITMRGBDCalib(*calibration);
 				this->rgb = new ITMUChar4Image(imgSize_rgb, true, useGPU);
+				this->rgb_d = new ITMUChar4Image(imgSize_d, true, useGPU);
 				this->depth = new ITMFloatImage(imgSize_d, true, useGPU);
 				this->depthNormal = NULL;
 				this->depthUncertainty = NULL;
@@ -57,6 +61,7 @@ namespace ITMLib
 				delete calib;
 
 				delete rgb;
+				delete rgb_d;
 				delete depth;
 
 				if (depthNormal != NULL) delete depthNormal;
