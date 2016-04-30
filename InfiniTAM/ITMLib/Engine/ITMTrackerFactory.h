@@ -101,12 +101,12 @@ namespace ITMLib
         {
           case ITMLibSettings::DEVICE_CPU:
           {
-            return new ITMColorTracker_CPU(trackedImageSize, settings->trackingRegime, settings->noHierarchyLevels, lowLevelEngine);
+            return new ITMColorTracker_CPU(trackedImageSize, settings->trackingRegime, settings->noHierarchyLevels, settings->trackerType, lowLevelEngine);
           }
           case ITMLibSettings::DEVICE_CUDA:
           {
 #ifndef COMPILE_WITHOUT_CUDA
-            return new ITMColorTracker_CUDA(trackedImageSize, settings->trackingRegime, settings->noHierarchyLevels, lowLevelEngine);
+            return new ITMColorTracker_CUDA(trackedImageSize, settings->trackingRegime, settings->noHierarchyLevels, settings->trackerType, lowLevelEngine);
 #else
             break;
 #endif
@@ -114,7 +114,7 @@ namespace ITMLib
           case ITMLibSettings::DEVICE_METAL:
           {
 #ifdef COMPILE_WITH_METAL
-            return new ITMColorTracker_Metal(trackedImageSize, settings->trackingRegime, settings->noHierarchyLevels, lowLevelEngine);
+            return new ITMColorTracker_Metal(trackedImageSize, settings->trackingRegime, settings->noHierarchyLevels, settings->trackerType, lowLevelEngine);
 #else
             break;
 #endif
@@ -414,9 +414,10 @@ namespace ITMLib
             compositeTracker->SetTracker(new ITMOdometryTracker(imuCalibrator), 0);
             compositeTracker->SetTracker(
               new ITMColorTracker_CPU(
-                  Vector2i(1920, 1080),
+                  trackedImageSize,
                   settings->trackingRegime,
                   settings->noHierarchyLevels,
+                  settings->trackerType,
                   lowLevelEngine
               ), 1
             );
@@ -438,29 +439,30 @@ namespace ITMLib
           case ITMLibSettings::DEVICE_CUDA:
           {
 #ifndef COMPILE_WITHOUT_CUDA
-            ITMCompositeTracker *compositeTracker = new ITMCompositeTracker(2);
+            ITMCompositeTracker *compositeTracker = new ITMCompositeTracker(3);
             compositeTracker->SetTracker(new ITMOdometryTracker(imuCalibrator), 0);
             compositeTracker->SetTracker(
               new ITMColorTracker_CUDA(
-                Vector2i(1920, 1080), // TODO(vanurag): make it a variable
+                trackedImageSize,
                 settings->trackingRegime,
                 settings->noHierarchyLevels,
+                settings->trackerType,
                 lowLevelEngine
               ), 1
             );
-//            compositeTracker->SetTracker(
-//              new ITMDepthTracker_CUDA(
-//                trackedImageSize,
-//                settings->trackingRegime,
-//                settings->noHierarchyLevels,
-//                settings->noICPRunTillLevel,
-//                settings->depthTrackerICPThreshold,
-//                settings->depthTrackerTerminationThreshold,
-//                settings->depthTrackerType,
-//                settings->visualizeICP,
-//                lowLevelEngine
-//              ), 2
-//            );
+            compositeTracker->SetTracker(
+              new ITMDepthTracker_CUDA(
+                trackedImageSize,
+                settings->trackingRegime,
+                settings->noHierarchyLevels,
+                settings->noICPRunTillLevel,
+                settings->depthTrackerICPThreshold,
+                settings->depthTrackerTerminationThreshold,
+                settings->depthTrackerType,
+                settings->visualizeICP,
+                lowLevelEngine
+              ), 2
+            );
             return compositeTracker;
 #else
             break;
@@ -473,9 +475,10 @@ namespace ITMLib
             compositeTracker->SetTracker(new ITMOdometryTracker(imuCalibrator), 0);
             compositeTracker->SetTracker(
               new ITMColorTracker_Metal(
-                Vector2i(1920, 1080),
+                trackedImageSize,
                 settings->trackingRegime,
                 settings->noHierarchyLevels,
+                settings->trackerType,
                 lowLevelEngine
               ), 1
             );

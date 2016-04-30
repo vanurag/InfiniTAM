@@ -15,7 +15,7 @@ namespace ITMLib
 			void G_oneLevel(float *gradient, float *hessian, ITMPose *pose) const;
 
 			ITMColorTracker_CPU(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels,
-				const ITMLowLevelEngine *lowLevelEngine);
+			                    ITMLibSettings::TrackerType tracker_type, const ITMLowLevelEngine *lowLevelEngine);
 			~ITMColorTracker_CPU(void);
 		};
 	}

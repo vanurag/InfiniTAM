@@ -3,6 +3,7 @@
 #pragma once
 
 #include "../Utils/ITMLibDefines.h"
+#include "../Utils/ITMLibSettings.h"
 
 #include "../Objects/ITMImageHierarchy.h"
 #include "../Objects/ITMViewHierarchyLevel.h"
@@ -29,6 +30,9 @@ namespace ITMLib
 			void PrepareForEvaluation(const ITMView *view);
 
 		protected: 
+			// tracker type
+      ITMLibSettings::TrackerType type;
+
 			TrackerIterationType iterationType;
 			ITMTrackingState *trackingState; const ITMView *view;
 			ITMImageHierarchy<ITMViewHierarchyLevel> *viewHierarchy;
@@ -78,7 +82,7 @@ namespace ITMLib
 
 			void TrackCamera(ITMTrackingState *trackingState, const ITMView *view);
 
-			ITMColorTracker(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels,
+			ITMColorTracker(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels, ITMLibSettings::TrackerType tracker_type,
 				const ITMLowLevelEngine *lowLevelEngine, MemoryDeviceType memoryType);
 			virtual ~ITMColorTracker(void);
 		};
