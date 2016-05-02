@@ -16,7 +16,7 @@ namespace ITMLib
 		public:
 			uint noTotalPoints, noTotalActivePoints, noTotalInactivePoints;
 
-			ORUtils::Image<Vector4f> *locations, *colours, *active_locations, *inactive_locations;
+			ORUtils::Image<Vector4f> *locations, *colours, *active_locations, *active_colours, *inactive_locations, *inactive_colours;
 
 			explicit ITMPointCloud(Vector2i imgSize, MemoryDeviceType memoryType)
 			{
@@ -28,6 +28,8 @@ namespace ITMLib
 				active_locations = new ORUtils::Image<Vector4f>(imgSize, memoryType);
 				inactive_locations = new ORUtils::Image<Vector4f>(imgSize, memoryType);
 				colours = new ORUtils::Image<Vector4f>(imgSize, memoryType);
+				active_colours = new ORUtils::Image<Vector4f>(imgSize, memoryType);
+				inactive_colours = new ORUtils::Image<Vector4f>(imgSize, memoryType);
 			}
 
 			void UpdateHostFromDevice()
@@ -36,6 +38,8 @@ namespace ITMLib
 				this->active_locations->UpdateHostFromDevice();
 				this->inactive_locations->UpdateHostFromDevice();
 				this->colours->UpdateHostFromDevice();
+				this->active_colours->UpdateHostFromDevice();
+				this->inactive_colours->UpdateHostFromDevice();
 			}
 
 			void UpdateDeviceFromHost()
@@ -44,6 +48,8 @@ namespace ITMLib
 				this->active_locations->UpdateDeviceFromHost();
 				this->inactive_locations->UpdateDeviceFromHost();
 				this->colours->UpdateDeviceFromHost();
+				this->active_colours->UpdateDeviceFromHost();
+				this->inactive_colours->UpdateDeviceFromHost();
 			}
 
 			~ITMPointCloud()
@@ -52,6 +58,8 @@ namespace ITMLib
 				delete active_locations;
 				delete inactive_locations;
 				delete colours;
+				delete active_colours;
+				delete inactive_colours;
 			}
 
 			// Suppress the default copy constructor and assignment operator

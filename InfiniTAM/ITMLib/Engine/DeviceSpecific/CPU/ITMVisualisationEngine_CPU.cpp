@@ -257,6 +257,8 @@ static void CreatePointCloud_common(const ITMScene<TVoxel,TIndex> *scene, const 
 		trackingState->pointCloud->active_locations->GetData(MEMORYDEVICE_CPU),
 		trackingState->pointCloud->inactive_locations->GetData(MEMORYDEVICE_CPU),
 		trackingState->pointCloud->colours->GetData(MEMORYDEVICE_CPU),
+		trackingState->pointCloud->active_colours->GetData(MEMORYDEVICE_CPU),
+		trackingState->pointCloud->inactive_colours->GetData(MEMORYDEVICE_CPU),
 		renderState->raycastResult->GetData(MEMORYDEVICE_CPU),
 		scene->localVBA.GetVoxelBlocks(),
 		scene->index.getIndexData(),
@@ -283,6 +285,8 @@ static void CreateICPMaps_common(const ITMScene<TVoxel,TIndex> *scene, const ITM
 
 	Vector3f lightSource = -Vector3f(invM.getColumn(2));
 	Vector4f *normalsMap = trackingState->pointCloud->colours->GetData(MEMORYDEVICE_CPU);
+	Vector4f *activeNormalsMap = trackingState->pointCloud->active_colours->GetData(MEMORYDEVICE_CPU);
+	Vector4f *inactiveNormalsMap = trackingState->pointCloud->inactive_colours->GetData(MEMORYDEVICE_CPU);
 	Vector4u *outRendering = renderState->raycastImage->GetData(MEMORYDEVICE_CPU);
 	Vector4f *pointsMap = trackingState->pointCloud->locations->GetData(MEMORYDEVICE_CPU);
 	Vector4f *activePointsMap = trackingState->pointCloud->active_locations->GetData(MEMORYDEVICE_CPU);
@@ -438,7 +442,7 @@ void ITMVisualisationEngine_CPU<TVoxel, ITMVoxelBlockHash>::ForwardRender(const 
 }
 
 template<class TVoxel, class TIndex>
-static boost::tuple<int,int,int> RenderPointCloud(Vector4u *outRendering, Vector4f *locations, Vector4f *active_locations, Vector4f *inactive_locations, Vector4f *colours, const Vector4f *ptsRay,
+static boost::tuple<int,int,int> RenderPointCloud(Vector4u *outRendering, Vector4f *locations, Vector4f *active_locations, Vector4f *inactive_locations, Vector4f *colours, Vector4f *active_colours, Vector4f *inactive_colours, const Vector4f *ptsRay,
 	const TVoxel *voxelData, const typename TIndex::IndexData *voxelIndex, bool skipPoints, float voxelSize, 
 	Vector2i imgSize, Vector3f lightSource, const short int render_time)
 {
@@ -477,9 +481,11 @@ static boost::tuple<int,int,int> RenderPointCloud(Vector4u *outRendering, Vector
       short int delta_time = 5;  // TODO(vanurag) : Make it a parameter
       if (voxel_time > render_time - delta_time) {  // last few frames
         active_locations[noTotalActivePoints] = pt_ray_out;
+        active_colours[noTotalActivePoints] = tmp;
         noTotalActivePoints++;
       } else {  // other frames
         inactive_locations[noTotalInactivePoints] = pt_ray_out;
+        inactive_colours[noTotalInactivePoints] = tmp;
         noTotalInactivePoints++;
       }
 

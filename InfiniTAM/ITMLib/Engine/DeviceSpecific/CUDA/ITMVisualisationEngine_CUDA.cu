@@ -64,7 +64,7 @@ __global__ void renderColourFromNormal_device(Vector4u *outRendering, const Vect
 
 template<class TVoxel, class TIndex>
 __global__ void renderPointCloud_device(Vector4u *outRendering, Vector4f *locations, Vector4f *active_locations,
-	Vector4f *inactive_locations,  Vector4f *colours, uint *noTotalPoints, uint *noTotalActivePoints, uint *noTotalInactivePoints,
+	Vector4f *inactive_locations,  Vector4f *colours, Vector4f *active_colours, Vector4f *inactive_colours, uint *noTotalPoints, uint *noTotalActivePoints, uint *noTotalInactivePoints,
 	const Vector4f *ptsRay, const TVoxel *voxelData, const typename TIndex::IndexData *voxelIndex, bool skipPoints,
 	float voxelSize, Vector2i imgSize, Vector3f lightSource, const short int render_time);
 
@@ -296,12 +296,14 @@ static void CreatePointCloud_common(const ITMScene<TVoxel, TIndex> *scene, const
 	Vector4f *active_locations = trackingState->pointCloud->active_locations->GetData(MEMORYDEVICE_CUDA);
 	Vector4f *inactive_locations = trackingState->pointCloud->inactive_locations->GetData(MEMORYDEVICE_CUDA);
 	Vector4f *colours = trackingState->pointCloud->colours->GetData(MEMORYDEVICE_CUDA);
+	Vector4f *active_colours = trackingState->pointCloud->active_colours->GetData(MEMORYDEVICE_CUDA);
+	Vector4f *inactive_colours = trackingState->pointCloud->inactive_colours->GetData(MEMORYDEVICE_CUDA);
 	Vector4u *outRendering = renderState->raycastImage->GetData(MEMORYDEVICE_CUDA);
 	Vector4f *pointsRay = renderState->raycastResult->GetData(MEMORYDEVICE_CUDA);
 
 	dim3 cudaBlockSize(16, 16);
 	dim3 gridSize = getGridSize(imgSize, cudaBlockSize);
-	renderPointCloud_device<TVoxel, TIndex> << <gridSize, cudaBlockSize >> >(outRendering, locations, active_locations, inactive_locations, colours, noTotalPoints_device,
+	renderPointCloud_device<TVoxel, TIndex> << <gridSize, cudaBlockSize >> >(outRendering, locations, active_locations, inactive_locations, colours, active_colours, inactive_colours, noTotalPoints_device,
 			noTotalActivePoints_device, noTotalInactivePoints_device, pointsRay, scene->localVBA.GetVoxelBlocks(), scene->index.getIndexData(), skipPoints,
 			scene->sceneParams->voxelSize, imgSize, lightSource, static_cast<short int>(sdkGetTimerValue(&renderState->timer)/1000.0));
 
@@ -323,6 +325,8 @@ void CreateICPMaps_common(const ITMScene<TVoxel, TIndex> *scene, const ITMView *
 	Vector4f *activePointsMap = trackingState->pointCloud->active_locations->GetData(MEMORYDEVICE_CUDA);
 	Vector4f *inactivePointsMap = trackingState->pointCloud->inactive_locations->GetData(MEMORYDEVICE_CUDA);
 	Vector4f *normalsMap = trackingState->pointCloud->colours->GetData(MEMORYDEVICE_CUDA);
+	Vector4f *activeNormalsMap = trackingState->pointCloud->active_colours->GetData(MEMORYDEVICE_CUDA);
+	Vector4f *inactiveNormalsMap = trackingState->pointCloud->inactive_colours->GetData(MEMORYDEVICE_CUDA);
 	Vector4u *outRendering = renderState->raycastImage->GetData(MEMORYDEVICE_CUDA);
 	Vector4f *pointsRay = renderState->raycastResult->GetData(MEMORYDEVICE_CUDA);
 	Vector3f lightSource = -Vector3f(invM.getColumn(2));
@@ -696,7 +700,7 @@ __global__ void renderColourFromNormal_device(Vector4u *outRendering, const Vect
 
 template<class TVoxel, class TIndex>
 __global__ void renderPointCloud_device(Vector4u *outRendering, Vector4f *locations, Vector4f *active_locations,
-	Vector4f *inactive_locations, Vector4f *colours, uint *noTotalPoints, uint *noTotalActivePoints, uint *noTotalInactivePoints,
+	Vector4f *inactive_locations, Vector4f *colours, Vector4f *active_colours, Vector4f *inactive_colours, uint *noTotalPoints, uint *noTotalActivePoints, uint *noTotalInactivePoints,
 	const Vector4f *ptsRay, const TVoxel *voxelData, const typename TIndex::IndexData *voxelIndex, bool skipPoints,
 	float voxelSize, Vector2i imgSize, Vector3f lightSource, const short int render_time)
 {
@@ -735,15 +739,14 @@ __global__ void renderPointCloud_device(Vector4u *outRendering, Vector4f *locati
 		pt_ray_out.x = point.x * voxelSize; pt_ray_out.y = point.y * voxelSize;
 		pt_ray_out.z = point.z * voxelSize; pt_ray_out.w = 1.0f;
 
-		int offset = computePrefixSum_device<uint>(foundPoint, noTotalPoints, blockDim.x * blockDim.y, threadIdx.x + threadIdx.y * blockDim.x);
+		Vector4f tmp;
+		tmp = VoxelColorReader<TVoxel::hasColorInformation, TVoxel, TIndex>::interpolate(voxelData, voxelIndex, point);
+		if (tmp.w > 0.0f) { tmp.x /= tmp.w; tmp.y /= tmp.w; tmp.z /= tmp.w; tmp.w = 1.0f; }
 
+		int offset = computePrefixSum_device<uint>(foundPoint, noTotalPoints, blockDim.x * blockDim.y, threadIdx.x + threadIdx.y * blockDim.x);
 		if (offset != -1)
 		{
-			Vector4f tmp;
-			tmp = VoxelColorReader<TVoxel::hasColorInformation, TVoxel, TIndex>::interpolate(voxelData, voxelIndex, point);
-			if (tmp.w > 0.0f) { tmp.x /= tmp.w; tmp.y /= tmp.w; tmp.z /= tmp.w; tmp.w = 1.0f; }
 			colours[offset] = tmp;
-
 			locations[offset] = pt_ray_out;
 		}
 
@@ -754,12 +757,14 @@ __global__ void renderPointCloud_device(Vector4u *outRendering, Vector4f *locati
 		if (active_offset != -1 && voxel_time > render_time - delta_time)	// last few frames
 		{
 			active_locations[active_offset] = pt_ray_out;
+			active_colours[active_offset] = tmp;
 		}
 
 		int inactive_offset = computePrefixSum_device<uint>(foundPoint, noTotalInactivePoints, blockDim.x * blockDim.y, threadIdx.x + threadIdx.y * blockDim.x);
 		if (inactive_offset != -1 && voxel_time <= render_time - delta_time)	// other frames
 		{
 			inactive_locations[inactive_offset] = pt_ray_out;
+			inactive_colours[inactive_offset] = tmp;
 		}
 	}
 }
