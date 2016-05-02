@@ -117,7 +117,7 @@ namespace ITMLib
 			};
 
 			// timer to keep track of voxel update times
-      StopWatchInterface* render_timer;
+      StopWatchInterface* main_timer;
 
 			/// Gives access to the current input frame
 			ITMView* GetView() { return view; }

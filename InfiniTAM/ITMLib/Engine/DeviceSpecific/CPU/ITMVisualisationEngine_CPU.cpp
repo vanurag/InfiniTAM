@@ -11,23 +11,23 @@
 using namespace ITMLib::Engine;
 
 template<class TVoxel, class TIndex>
-static int RenderPointCloud(Vector4u *outRendering, Vector4f *locations, Vector4f *colours, const Vector4f *ptsRay, 
+static boost::tuple<int,int,int> RenderPointCloud(Vector4u *outRendering, Vector4f *locations, Vector4f *colours, const Vector4f *ptsRay,
 	const TVoxel *voxelData, const typename TIndex::IndexData *voxelIndex, bool skipPoints, float voxelSize, 
 	Vector2i imgSize, Vector3f lightSource);
 
 template<class TVoxel, class TIndex>
-ITMRenderState* ITMVisualisationEngine_CPU<TVoxel, TIndex>::CreateRenderState(const Vector2i & imgSize) const
+ITMRenderState* ITMVisualisationEngine_CPU<TVoxel, TIndex>::CreateRenderState(const Vector2i & imgSize, const float start_time) const
 {
 	return new ITMRenderState(
-		imgSize, this->scene->sceneParams->viewFrustum_min, this->scene->sceneParams->viewFrustum_max, MEMORYDEVICE_CPU
+		imgSize, this->scene->sceneParams->viewFrustum_min, this->scene->sceneParams->viewFrustum_max, start_time, MEMORYDEVICE_CPU
 	);
 }
 
 template<class TVoxel>
-ITMRenderState_VH* ITMVisualisationEngine_CPU<TVoxel, ITMVoxelBlockHash>::CreateRenderState(const Vector2i & imgSize) const
+ITMRenderState_VH* ITMVisualisationEngine_CPU<TVoxel, ITMVoxelBlockHash>::CreateRenderState(const Vector2i & imgSize, const float start_time) const
 {
 	return new ITMRenderState_VH(
-		ITMVoxelBlockHash::noTotalEntries, imgSize, this->scene->sceneParams->viewFrustum_min, this->scene->sceneParams->viewFrustum_max, MEMORYDEVICE_CPU
+		ITMVoxelBlockHash::noTotalEntries, imgSize, this->scene->sceneParams->viewFrustum_min, this->scene->sceneParams->viewFrustum_max, start_time, MEMORYDEVICE_CPU
 	);
 }
 
@@ -189,7 +189,7 @@ static void GenericRaycast(const ITMScene<TVoxel,TIndex> *scene, const Vector2i&
 
 template<class TVoxel, class TIndex>
 static void RenderImage_common(const ITMScene<TVoxel,TIndex> *scene, const ITMPose *pose, const ITMIntrinsics *intrinsics, 
-	const ITMRenderState *renderState, ITMUChar4Image *outputImage, const short int render_time, IITMVisualisationEngine::RenderImageType type)
+	ITMRenderState *renderState, ITMUChar4Image *outputImage, IITMVisualisationEngine::RenderImageType type)
 {
 	Vector2i imgSize = outputImage->noDims;
 	Matrix4f invM = pose->GetInvM();
@@ -234,7 +234,9 @@ static void RenderImage_common(const ITMScene<TVoxel,TIndex> *scene, const ITMPo
 		for (int locId = 0; locId < imgSize.x * imgSize.y; locId++)
 		{
 			Vector4f ptRay = pointsRay[locId];
-			processPixelTimeColour<TVoxel, TIndex>(outRendering[locId], ptRay.toVector3(), ptRay.w > 0, voxelData, voxelIndex, lightSource, render_time);
+			processPixelTimeColour<TVoxel, TIndex>(
+			    outRendering[locId], ptRay.toVector3(), ptRay.w > 0, voxelData, voxelIndex,
+			    lightSource, static_cast<short int>(sdkGetTimerValue(&renderState->timer)/1000.0));
 		}
 	}
 }
@@ -249,9 +251,11 @@ static void CreatePointCloud_common(const ITMScene<TVoxel,TIndex> *scene, const 
 	GenericRaycast(scene, imgSize, invM, view->calib->intrinsics_rgb.projectionParamsSimple.all, renderState);
 	trackingState->pose_pointCloud->SetFrom(trackingState->pose_d);
 
-	trackingState->pointCloud->noTotalPoints = RenderPointCloud<TVoxel, TIndex>(
+	boost::tuple<int,int,int> ret = RenderPointCloud<TVoxel, TIndex>(
 		renderState->raycastImage->GetData(MEMORYDEVICE_CPU),
 		trackingState->pointCloud->locations->GetData(MEMORYDEVICE_CPU),
+		trackingState->pointCloud->active_locations->GetData(MEMORYDEVICE_CPU),
+		trackingState->pointCloud->inactive_locations->GetData(MEMORYDEVICE_CPU),
 		trackingState->pointCloud->colours->GetData(MEMORYDEVICE_CPU),
 		renderState->raycastResult->GetData(MEMORYDEVICE_CPU),
 		scene->localVBA.GetVoxelBlocks(),
@@ -259,8 +263,13 @@ static void CreatePointCloud_common(const ITMScene<TVoxel,TIndex> *scene, const 
 		skipPoints,
 		scene->sceneParams->voxelSize,
 		imgSize,
-		-Vector3f(invM.getColumn(2))
+		-Vector3f(invM.getColumn(2)),
+    static_cast<short int>(sdkGetTimerValue(&renderState->timer)/1000.0)
 	);
+
+	 trackingState->pointCloud->noTotalPoints = ret.get<0>();
+	 trackingState->pointCloud->noTotalActivePoints = ret.get<1>();
+	 trackingState->pointCloud->noTotalInactivePoints = ret.get<2>();
 }
 
 template<class TVoxel, class TIndex>
@@ -276,14 +285,21 @@ static void CreateICPMaps_common(const ITMScene<TVoxel,TIndex> *scene, const ITM
 	Vector4f *normalsMap = trackingState->pointCloud->colours->GetData(MEMORYDEVICE_CPU);
 	Vector4u *outRendering = renderState->raycastImage->GetData(MEMORYDEVICE_CPU);
 	Vector4f *pointsMap = trackingState->pointCloud->locations->GetData(MEMORYDEVICE_CPU);
+	Vector4f *activePointsMap = trackingState->pointCloud->active_locations->GetData(MEMORYDEVICE_CPU);
+	Vector4f *inactivePointsMap = trackingState->pointCloud->inactive_locations->GetData(MEMORYDEVICE_CPU);
 	Vector4f *pointsRay = renderState->raycastResult->GetData(MEMORYDEVICE_CPU);
 	float voxelSize = scene->sceneParams->voxelSize;
 
 #ifdef WITH_OPENMP
 	#pragma omp parallel for
 #endif
-	for (int y = 0; y < imgSize.y; y++) for (int x = 0; x < imgSize.x; x++)
-		processPixelICP<true>(outRendering, pointsMap, normalsMap, pointsRay, imgSize, x, y, voxelSize, lightSource);
+	short int render_time = static_cast<short int>(sdkGetTimerValue(&renderState->timer)/1000.0);
+	for (int y = 0; y < imgSize.y; y++) for (int x = 0; x < imgSize.x; x++) {
+	  int locId = x + y * imgSize.x;
+    Vector3f point = pointsRay[locId].toVector3();
+	  short int voxel_time = readFromSDF_voxel_update_time<TVoxel, TIndex>(scene->localVBA.GetVoxelBlocks(), scene->index.getIndexData(), point);
+		processPixelICP<true>(outRendering, pointsMap, normalsMap, pointsRay, activePointsMap, inactivePointsMap, imgSize, x, y, voxelSize, lightSource, voxel_time, render_time);
+	}
 }
 
 template<class TVoxel, class TIndex>
@@ -355,16 +371,16 @@ static void ForwardRender_common(const ITMScene<TVoxel, TIndex> *scene, const IT
 
 template<class TVoxel, class TIndex>
 void ITMVisualisationEngine_CPU<TVoxel,TIndex>::RenderImage(const ITMPose *pose, const ITMIntrinsics *intrinsics, 
-	const ITMRenderState *renderState, ITMUChar4Image *outputImage, const short int render_time, IITMVisualisationEngine::RenderImageType type) const
+	ITMRenderState *renderState, ITMUChar4Image *outputImage, IITMVisualisationEngine::RenderImageType type) const
 {
-	RenderImage_common(this->scene, pose, intrinsics, renderState, outputImage, render_time, type);
+	RenderImage_common(this->scene, pose, intrinsics, renderState, outputImage, type);
 }
 
 template<class TVoxel>
 void ITMVisualisationEngine_CPU<TVoxel,ITMVoxelBlockHash>::RenderImage(const ITMPose *pose,  const ITMIntrinsics *intrinsics, 
-	const ITMRenderState *renderState, ITMUChar4Image *outputImage, const short int render_time, IITMVisualisationEngine::RenderImageType type) const
+	ITMRenderState *renderState, ITMUChar4Image *outputImage, IITMVisualisationEngine::RenderImageType type) const
 {
-	RenderImage_common(this->scene, pose, intrinsics, renderState, outputImage, render_time, type);
+	RenderImage_common(this->scene, pose, intrinsics, renderState, outputImage, type);
 }
 
 template<class TVoxel, class TIndex>
@@ -422,11 +438,13 @@ void ITMVisualisationEngine_CPU<TVoxel, ITMVoxelBlockHash>::ForwardRender(const 
 }
 
 template<class TVoxel, class TIndex>
-static int RenderPointCloud(Vector4u *outRendering, Vector4f *locations, Vector4f *colours, const Vector4f *ptsRay, 
+static boost::tuple<int,int,int> RenderPointCloud(Vector4u *outRendering, Vector4f *locations, Vector4f *active_locations, Vector4f *inactive_locations, Vector4f *colours, const Vector4f *ptsRay,
 	const TVoxel *voxelData, const typename TIndex::IndexData *voxelIndex, bool skipPoints, float voxelSize, 
-	Vector2i imgSize, Vector3f lightSource)
+	Vector2i imgSize, Vector3f lightSource, const short int render_time)
 {
 	int noTotalPoints = 0;
+	int noTotalActivePoints = 0;
+	int noTotalInactivePoints = 0;
 
 	for (int y = 0, locId = 0; y < imgSize.y; y++) for (int x = 0; x < imgSize.x; x++, locId++)
 	{
@@ -454,11 +472,22 @@ static int RenderPointCloud(Vector4u *outRendering, Vector4f *locations, Vector4
 			pt_ray_out.z = point.z * voxelSize; pt_ray_out.w = 1.0f;
 			locations[noTotalPoints] = pt_ray_out;
 
+			short int voxel_time = readFromSDF_voxel_update_time<TVoxel, TIndex>(voxelData, voxelIndex, point);
+
+      short int delta_time = 5;  // TODO(vanurag) : Make it a parameter
+      if (voxel_time > render_time - delta_time) {  // last few frames
+        active_locations[noTotalActivePoints] = pt_ray_out;
+        noTotalActivePoints++;
+      } else {  // other frames
+        inactive_locations[noTotalInactivePoints] = pt_ray_out;
+        noTotalInactivePoints++;
+      }
+
 			noTotalPoints++;
 		}
 	}
 
-	return noTotalPoints;
+	return boost::make_tuple(noTotalPoints, noTotalActivePoints, noTotalInactivePoints);
 }
 
 template class ITMLib::Engine::ITMVisualisationEngine_CPU<ITMVoxel, ITMVoxelIndex>;

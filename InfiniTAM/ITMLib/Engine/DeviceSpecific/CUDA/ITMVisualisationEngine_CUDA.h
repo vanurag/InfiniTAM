@@ -14,7 +14,7 @@ namespace ITMLib
 		class ITMVisualisationEngine_CUDA : public ITMVisualisationEngine < TVoxel, TIndex >
 		{
 		private:
-			uint *noTotalPoints_device;
+			uint *noTotalPoints_device, *noTotalActivePoints_device, *noTotalInactivePoints_device;
 
 		public:
 			explicit ITMVisualisationEngine_CUDA(ITMScene<TVoxel, TIndex> *scene);
@@ -22,21 +22,21 @@ namespace ITMLib
 
 			void FindVisibleBlocks(const ITMPose *pose, const ITMIntrinsics *intrinsics, ITMRenderState *renderState) const;
 			void CreateExpectedDepths(const ITMPose *pose, const ITMIntrinsics *intrinsics, ITMRenderState *renderState) const;
-			void RenderImage(const ITMPose *pose, const ITMIntrinsics *intrinsics, const ITMRenderState *renderState, 
-				ITMUChar4Image *outputImage, const short int render_time, IITMVisualisationEngine::RenderImageType type = IITMVisualisationEngine::RENDER_SHADED_GREYSCALE) const;
+			void RenderImage(const ITMPose *pose, const ITMIntrinsics *intrinsics, ITMRenderState *renderState,
+				ITMUChar4Image *outputImage, IITMVisualisationEngine::RenderImageType type = IITMVisualisationEngine::RENDER_SHADED_GREYSCALE) const;
 			void FindSurface(const ITMPose *pose, const ITMIntrinsics *intrinsics, const ITMRenderState *renderState) const;
 			void CreatePointCloud(const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState, bool skipPoints) const;
 			void CreateICPMaps(const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState) const;
 			void ForwardRender(const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState) const;
 
-			ITMRenderState* CreateRenderState(const Vector2i & imgSize) const;
+			ITMRenderState* CreateRenderState(const Vector2i & imgSize, const float start_time) const;
 		};
 
 		template<class TVoxel>
 		class ITMVisualisationEngine_CUDA<TVoxel, ITMVoxelBlockHash> : public ITMVisualisationEngine < TVoxel, ITMVoxelBlockHash >
 		{
 		private:
-			uint *noTotalPoints_device;
+			uint *noTotalPoints_device, *noTotalActivePoints_device, *noTotalInactivePoints_device;
 			RenderingBlock *renderingBlockList_device;
 			uint *noTotalBlocks_device;
 			int *noVisibleEntries_device;
@@ -46,14 +46,14 @@ namespace ITMLib
 
 			void FindVisibleBlocks(const ITMPose *pose, const ITMIntrinsics *intrinsics, ITMRenderState *renderState) const;
 			void CreateExpectedDepths(const ITMPose *pose, const ITMIntrinsics *intrinsics, ITMRenderState *renderState) const;
-			void RenderImage(const ITMPose *pose, const ITMIntrinsics *intrinsics, const ITMRenderState *renderState, 
-				ITMUChar4Image *outputImage, const short int render_time, IITMVisualisationEngine::RenderImageType type = IITMVisualisationEngine::RENDER_SHADED_GREYSCALE) const;
+			void RenderImage(const ITMPose *pose, const ITMIntrinsics *intrinsics, ITMRenderState *renderState,
+				ITMUChar4Image *outputImage, IITMVisualisationEngine::RenderImageType type = IITMVisualisationEngine::RENDER_SHADED_GREYSCALE) const;
 			void FindSurface(const ITMPose *pose, const ITMIntrinsics *intrinsics, const ITMRenderState *renderState) const;
 			void CreatePointCloud(const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState, bool skipPoints) const;
 			void CreateICPMaps(const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState) const;
 			void ForwardRender(const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState) const;
 
-			ITMRenderState_VH* CreateRenderState(const Vector2i & imgSize) const;
+			ITMRenderState_VH* CreateRenderState(const Vector2i & imgSize, const float start_time) const;
 		};
 	}
 }

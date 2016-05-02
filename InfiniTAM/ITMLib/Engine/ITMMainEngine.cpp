@@ -53,13 +53,15 @@ ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib 
 
 	Vector2i trackedImageSize = ITMTrackingController::GetTrackedImageSize(settings, imgSize_rgb, imgSize_d);
 
-	renderState_live = visualisationEngine->CreateRenderState(trackedImageSize);
+	std::cout << "before render." << std::endl;
+	renderState_live = visualisationEngine->CreateRenderState(trackedImageSize, sdkGetTimerValue(&main_timer));
+	std::cout << "after render." << std::endl;
 	renderState_freeview = NULL; //will be created by the visualisation engine
 
-	sdkCreateTimer(&render_timer);
-	sdkStartTimer(&render_timer);
+	sdkCreateTimer(&main_timer);
+	sdkStartTimer(&main_timer);
 	denseMapper = new ITMDenseMapper<ITMVoxel, ITMVoxelIndex>(settings);
-	denseMapper->ResetScene(scene);
+	denseMapper->ResetScene(scene, sdkGetTimerValue(&main_timer));
 
 	imuCalibrator = new ITMIMUCalibrator_DRZ(calib->trafo_rgb_to_imu);
 	tracker = ITMTrackerFactory<ITMVoxel, ITMVoxelIndex>::Instance().Make(trackedImageSize, settings, lowLevelEngine, imuCalibrator, scene);
@@ -90,7 +92,7 @@ ITMMainEngine::~ITMMainEngine()
 	delete scene;
 
 	delete denseMapper;
-	sdkDeleteTimer(&render_timer);
+	sdkDeleteTimer(&main_timer);
 	delete trackingController;
 
 	delete tracker;
@@ -292,11 +294,11 @@ void ITMMainEngine::GetImage(ITMUChar4Image *out, GetImageType getImageType, ITM
 		IITMVisualisationEngine::RenderImageType type = IITMVisualisationEngine::RENDER_SHADED_GREYSCALE;
 		if (getImageType == ITMMainEngine::InfiniTAM_IMAGE_FREECAMERA_COLOUR_FROM_VOLUME) type = IITMVisualisationEngine::RENDER_COLOUR_FROM_VOLUME;
 		else if (getImageType == ITMMainEngine::InfiniTAM_IMAGE_FREECAMERA_COLOUR_FROM_NORMAL) type = IITMVisualisationEngine::RENDER_COLOUR_FROM_NORMAL;
-		if (renderState_freeview == NULL) renderState_freeview = visualisationEngine->CreateRenderState(out->noDims);
+		if (renderState_freeview == NULL) renderState_freeview = visualisationEngine->CreateRenderState(out->noDims, sdkGetTimerValue(&main_timer));
 
 		visualisationEngine->FindVisibleBlocks(pose, intrinsics, renderState_freeview);
 		visualisationEngine->CreateExpectedDepths(pose, intrinsics, renderState_freeview);
-		visualisationEngine->RenderImage(pose, intrinsics, renderState_freeview, renderState_freeview->raycastImage, static_cast<short int>(sdkGetTimerValue(&render_timer)/1000.0), type);
+		visualisationEngine->RenderImage(pose, intrinsics, renderState_freeview, renderState_freeview->raycastImage, type);
 
 		if (settings->deviceType == ITMLibSettings::DEVICE_CUDA)
 			out->SetFrom(renderState_freeview->raycastImage, ORUtils::MemoryBlock<Vector4u>::CUDA_TO_CPU);
