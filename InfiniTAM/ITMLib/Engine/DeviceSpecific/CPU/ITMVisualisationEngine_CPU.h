@@ -24,7 +24,7 @@ namespace ITMLib
 			void CreateICPMaps(const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState) const;
 			void ForwardRender(const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState) const;
 
-			ITMRenderState* CreateRenderState(const Vector2i & imgSize, const float start_time) const;
+			ITMRenderState* CreateRenderState(const Vector2i & imgSize, const float rewind_time) const;
 		};
 
 		template<class TVoxel>
@@ -44,7 +44,7 @@ namespace ITMLib
 			void CreateICPMaps(const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState) const;
 			void ForwardRender(const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState) const;
 
-			ITMRenderState_VH* CreateRenderState(const Vector2i & imgSize, const float start_time) const;
+			ITMRenderState_VH* CreateRenderState(const Vector2i & imgSize, const float rewind_time) const;
 		};
 	}
 }

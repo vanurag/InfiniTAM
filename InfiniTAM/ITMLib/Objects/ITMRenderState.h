@@ -52,7 +52,7 @@ namespace ITMLib
 			// timer to keep track of render times
       StopWatchInterface* timer;
 
-			ITMRenderState(const Vector2i &imgSize, float vf_min, float vf_max, const float start_time, MemoryDeviceType memoryType)
+			ITMRenderState(const Vector2i &imgSize, float vf_min, float vf_max, const float rewind_time, MemoryDeviceType memoryType)
 			{
 				renderingRangeImage = new ORUtils::Image<Vector2f>(imgSize, memoryType);
 				raycastResult = new ORUtils::Image<Vector4f>(imgSize, memoryType);
@@ -78,7 +78,7 @@ namespace ITMLib
 				noFwdProjMissingPoints = 0;
 
 				sdkCreateTimer(&timer);
-				sdkStartTimerWithStartTime(&timer, start_time);
+				sdkStartTimerAndRewindByTime(&timer, rewind_time);
 			}
 
 			virtual ~ITMRenderState()

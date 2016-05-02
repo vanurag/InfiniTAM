@@ -16,18 +16,18 @@ static boost::tuple<int,int,int> RenderPointCloud(Vector4u *outRendering, Vector
 	Vector2i imgSize, Vector3f lightSource);
 
 template<class TVoxel, class TIndex>
-ITMRenderState* ITMVisualisationEngine_CPU<TVoxel, TIndex>::CreateRenderState(const Vector2i & imgSize, const float start_time) const
+ITMRenderState* ITMVisualisationEngine_CPU<TVoxel, TIndex>::CreateRenderState(const Vector2i & imgSize, const float rewind_time) const
 {
 	return new ITMRenderState(
-		imgSize, this->scene->sceneParams->viewFrustum_min, this->scene->sceneParams->viewFrustum_max, start_time, MEMORYDEVICE_CPU
+		imgSize, this->scene->sceneParams->viewFrustum_min, this->scene->sceneParams->viewFrustum_max, rewind_time, MEMORYDEVICE_CPU
 	);
 }
 
 template<class TVoxel>
-ITMRenderState_VH* ITMVisualisationEngine_CPU<TVoxel, ITMVoxelBlockHash>::CreateRenderState(const Vector2i & imgSize, const float start_time) const
+ITMRenderState_VH* ITMVisualisationEngine_CPU<TVoxel, ITMVoxelBlockHash>::CreateRenderState(const Vector2i & imgSize, const float rewind_time) const
 {
 	return new ITMRenderState_VH(
-		ITMVoxelBlockHash::noTotalEntries, imgSize, this->scene->sceneParams->viewFrustum_min, this->scene->sceneParams->viewFrustum_max, start_time, MEMORYDEVICE_CPU
+		ITMVoxelBlockHash::noTotalEntries, imgSize, this->scene->sceneParams->viewFrustum_min, this->scene->sceneParams->viewFrustum_max, rewind_time, MEMORYDEVICE_CPU
 	);
 }
 

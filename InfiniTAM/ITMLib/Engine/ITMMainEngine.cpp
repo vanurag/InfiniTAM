@@ -53,14 +53,14 @@ ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib 
 
 	Vector2i trackedImageSize = ITMTrackingController::GetTrackedImageSize(settings, imgSize_rgb, imgSize_d);
 
-	std::cout << "before render." << std::endl;
+	sdkCreateTimer(&main_timer);
+  sdkStartTimer(&main_timer);
+
 	renderState_live = visualisationEngine->CreateRenderState(trackedImageSize, sdkGetTimerValue(&main_timer));
-	std::cout << "after render." << std::endl;
 	renderState_freeview = NULL; //will be created by the visualisation engine
 
-	sdkCreateTimer(&main_timer);
-	sdkStartTimer(&main_timer);
 	denseMapper = new ITMDenseMapper<ITMVoxel, ITMVoxelIndex>(settings);
+	float check_time = sdkGetTimerValue(&main_timer);
 	denseMapper->ResetScene(scene, sdkGetTimerValue(&main_timer));
 
 	imuCalibrator = new ITMIMUCalibrator_DRZ(calib->trafo_rgb_to_imu);

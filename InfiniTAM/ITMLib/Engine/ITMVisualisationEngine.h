@@ -77,7 +77,7 @@ namespace ITMLib
 			/** Creates a render state, containing rendering info
 			for the scene.
 			*/
-			virtual ITMRenderState* CreateRenderState(const Vector2i & imgSize, const float start_time) const = 0;
+			virtual ITMRenderState* CreateRenderState(const Vector2i & imgSize, const float rewind_time) const = 0;
 		};
 
 		template<class TIndex> struct IndexToRenderState { typedef ITMRenderState type; };
@@ -106,7 +106,7 @@ namespace ITMLib
 			}
 		public:
 			/** Override */
-			virtual typename IndexToRenderState<TIndex>::type *CreateRenderState(const Vector2i & imgSize, const float start_time) const = 0;
+			virtual typename IndexToRenderState<TIndex>::type *CreateRenderState(const Vector2i & imgSize, const float rewind_time) const = 0;
 		};
 	}
 }
