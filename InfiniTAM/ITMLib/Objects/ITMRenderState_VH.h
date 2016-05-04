@@ -35,8 +35,8 @@ namespace ITMLib
 			/** Number of entries in the live list. */
 			int noVisibleEntries;
             
-			ITMRenderState_VH(int noTotalEntries, const Vector2i & imgSize, float vf_min, float vf_max, MemoryDeviceType memoryType = MEMORYDEVICE_CPU)
-				: ITMRenderState(imgSize, vf_min, vf_max, memoryType)
+			ITMRenderState_VH(int noTotalEntries, const Vector2i & imgSize, float vf_min, float vf_max, const float rewind_time, MemoryDeviceType memoryType = MEMORYDEVICE_CPU)
+				: ITMRenderState(imgSize, vf_min, vf_max, rewind_time, memoryType)
             {
 				this->memoryType = memoryType;
 

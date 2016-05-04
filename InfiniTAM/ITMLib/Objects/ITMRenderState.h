@@ -8,6 +8,7 @@
 
 #include "../Utils/ITMLibDefines.h"
 #include "../../ORUtils/Image.h"
+#include "../../Utils/NVTimer.h"
 
 namespace ITMLib
 {
@@ -48,7 +49,10 @@ namespace ITMLib
 
 			ORUtils::Image<Vector4u> *raycastImage;
 
-			ITMRenderState(const Vector2i &imgSize, float vf_min, float vf_max, MemoryDeviceType memoryType)
+			// timer to keep track of render times
+      StopWatchInterface* timer;
+
+			ITMRenderState(const Vector2i &imgSize, float vf_min, float vf_max, const float rewind_time, MemoryDeviceType memoryType)
 			{
 				renderingRangeImage = new ORUtils::Image<Vector2f>(imgSize, memoryType);
 				raycastResult = new ORUtils::Image<Vector4f>(imgSize, memoryType);
@@ -72,6 +76,9 @@ namespace ITMLib
 				delete buffImage;
 
 				noFwdProjMissingPoints = 0;
+
+				sdkCreateTimer(&timer);
+				sdkStartTimerAndRewindByTime(&timer, rewind_time);
 			}
 
 			virtual ~ITMRenderState()

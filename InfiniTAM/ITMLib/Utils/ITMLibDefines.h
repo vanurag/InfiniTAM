@@ -35,7 +35,7 @@
 
 #define SDF_BLOCK_SIZE 8				// SDF block size
 #define SDF_BLOCK_SIZE3 512				// SDF_BLOCK_SIZE3 = SDF_BLOCK_SIZE * SDF_BLOCK_SIZE * SDF_BLOCK_SIZE
-#define SDF_LOCAL_BLOCK_NUM 0x40000		// Number of locally stored blocks, currently 2^17
+#define SDF_LOCAL_BLOCK_NUM 0x70000		// Number of locally stored blocks, currently 2^17
 
 #define SDF_GLOBAL_BLOCK_NUM 0x120000	// Number of globally stored blocks: SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE
 #define SDF_TRANSFER_BLOCK_NUM 0x1000	// Maximum number of blocks transfered in one swap operation
@@ -139,6 +139,37 @@ struct ITMVoxel_s_rgb
 	}
 };
 
+struct ITMVoxel_s_rgb_time
+{
+  _CPU_AND_GPU_CODE_ static short SDF_initialValue() { return 32767; }
+  _CPU_AND_GPU_CODE_ static float SDF_valueToFloat(float x) { return (float)(x) / 32767.0f; }
+  _CPU_AND_GPU_CODE_ static short SDF_floatToValue(float x) { return (short)((x) * 32767.0f); }
+
+  static const CONSTPTR(bool) hasColorInformation = true;
+
+  /** Value of the truncated signed distance transformation. */
+  short sdf;
+  /** Number of fused observations that make up @p sdf. */
+  uchar w_depth;
+  /** Time when the voxel data is last updated. (-1 if not assigned depth) */
+  short int last_update_time;
+  /** Padding that may or may not improve performance on certain GPUs */
+  //uchar pad;
+  /** RGB colour information stored for this voxel. */
+  Vector3u clr;
+  /** Number of observations that made up @p clr. */
+  uchar w_color;
+
+  _CPU_AND_GPU_CODE_ ITMVoxel_s_rgb_time()
+  {
+    sdf = SDF_initialValue();
+    w_depth = 0;
+    clr = (uchar)0;
+    w_color = 0;
+    last_update_time = -1;
+  }
+};
+
 struct ITMVoxel_s
 {
 	_CPU_AND_GPU_CODE_ static short SDF_initialValue() { return 32767; }
@@ -159,6 +190,31 @@ struct ITMVoxel_s
 		sdf = SDF_initialValue();
 		w_depth = 0;
 	}
+};
+
+struct ITMVoxel_s_time
+{
+  _CPU_AND_GPU_CODE_ static short SDF_initialValue() { return 32767; }
+  _CPU_AND_GPU_CODE_ static float SDF_valueToFloat(float x) { return (float)(x) / 32767.0f; }
+  _CPU_AND_GPU_CODE_ static short SDF_floatToValue(float x) { return (short)((x) * 32767.0f); }
+
+  static const CONSTPTR(bool) hasColorInformation = false;
+
+  /** Value of the truncated signed distance transformation. */
+  short sdf;
+  /** Number of fused observations that make up @p sdf. */
+  uchar w_depth;
+  /** Time when the voxel data is last updated. (-1 if not assigned depth) */
+  short int last_update_time;
+  /** Padding that may or may not improve performance on certain GPUs */
+  //uchar pad;
+
+  _CPU_AND_GPU_CODE_ ITMVoxel_s_time()
+  {
+    sdf = SDF_initialValue();
+    w_depth = 0;
+    last_update_time = -1;
+  }
 };
 
 struct ITMVoxel_f
@@ -184,9 +240,9 @@ struct ITMVoxel_f
 };
 
 /** This chooses the information stored at each voxel. At the moment, valid
-    options are ITMVoxel_s, ITMVoxel_f, ITMVoxel_s_rgb and ITMVoxel_f_rgb 
+    options are ITMVoxel_s, ITMVoxel_s_time, ITMVoxel_f, ITMVoxel_s_rgb, ITMVoxel_s_rgb_time and ITMVoxel_f_rgb
 */
-typedef ITMVoxel_s_rgb ITMVoxel;
+typedef ITMVoxel_s_rgb_time ITMVoxel;
 
 /** This chooses the way the voxels are addressed and indexed. At the moment,
     valid options are ITMVoxelBlockHash and ITMPlainVoxelArray.

@@ -4,8 +4,11 @@
 
 using namespace ITMLib::Engine;
 
+cv::viz::Viz3d ITMMainEngine::viz_window_ = cv::viz::Viz3d("ITM Tracking Pose");
+cv::Affine3f ITMMainEngine::viz_itm_pose_ = cv::Affine3f();
+
 ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib *calib, Vector2i imgSize_rgb, Vector2i imgSize_d)
-  : viz_window_("ITM Tracking Pose")
+  : viz_key_event(cv::viz::KeyboardEvent::Action::KEY_DOWN, "A", cv::viz::KeyboardEvent::ALT, 1)
 {
 	// create all the things required for marching cubes and mesh extraction
 	// - uses additional memory (lots!)
@@ -50,14 +53,17 @@ ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib 
 
 	Vector2i trackedImageSize = ITMTrackingController::GetTrackedImageSize(settings, imgSize_rgb, imgSize_d);
 
-	renderState_live = visualisationEngine->CreateRenderState(trackedImageSize);
+	sdkCreateTimer(&main_timer);
+  sdkStartTimer(&main_timer);
+
+	renderState_live = visualisationEngine->CreateRenderState(trackedImageSize, sdkGetTimerValue(&main_timer));
 	renderState_freeview = NULL; //will be created by the visualisation engine
 
 	denseMapper = new ITMDenseMapper<ITMVoxel, ITMVoxelIndex>(settings);
-	denseMapper->ResetScene(scene);
+	float check_time = sdkGetTimerValue(&main_timer);
+	denseMapper->ResetScene(scene, sdkGetTimerValue(&main_timer));
 
-	// TODO(vanurag): Make this a user choice
-	imuCalibrator = new ITMIMUCalibrator_DRZ2();
+	imuCalibrator = new ITMIMUCalibrator_DRZ(calib->trafo_rgb_to_imu);
 	tracker = ITMTrackerFactory<ITMVoxel, ITMVoxelIndex>::Instance().Make(trackedImageSize, settings, lowLevelEngine, imuCalibrator, scene);
 	trackingController = new ITMTrackingController(tracker, visualisationEngine, lowLevelEngine, settings);
 
@@ -70,8 +76,12 @@ ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib 
 	mainProcessingActive = true;
 
 	// VIZ
+	viz_window_.registerKeyboardCallback(VizKeyboardCallback);
 	viz_window_.setWindowSize(cv::Size(600, 600));
   viz_window_.showWidget("ITM Tracking Pose", cv::viz::WCoordinateSystem(100.0));
+
+  // ROS
+  pubITMPose = nh.advertise<geometry_msgs::TransformStamped>("itm/pose", 1);
 }
 
 ITMMainEngine::~ITMMainEngine()
@@ -82,6 +92,7 @@ ITMMainEngine::~ITMMainEngine()
 	delete scene;
 
 	delete denseMapper;
+	sdkDeleteTimer(&main_timer);
 	delete trackingController;
 
 	delete tracker;
@@ -113,6 +124,29 @@ void ITMMainEngine::SaveSceneToMesh(const char *objFileName)
 	mesh->WriteSTL(objFileName);
 }
 
+void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage)
+{
+  // prepare image and turn it into a depth image
+  viewBuilder->UpdateView(&view, rgbImage, rawDepthImage, settings->useBilateralFilter,settings->modelSensorNoise);
+
+  if (!mainProcessingActive) return;
+
+  // tracking
+  trackingController->Track(trackingState, view);
+
+  // publish ITM tracker pose
+  PublishROSPoseMsg();
+
+  // VIZ ITM Tracker estimate
+  VisualizeCameraPose();
+
+  // fusion
+  if (fusionActive) denseMapper->ProcessFrame(view, trackingState, scene, renderState_live);
+
+  // raycast to renderState_live for tracking and free visualisation
+  trackingController->Prepare(trackingState, view, renderState_live);
+}
+
 void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage, ITMIMUMeasurement *imuMeasurement)
 {
 	// prepare image and turn it into a depth image
@@ -124,20 +158,11 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 	// tracking
 	trackingController->Track(trackingState, view);
 
+	// publish ITM tracker pose
+  PublishROSPoseMsg();
+
   // VIZ ITM Tracker estimate
-  Matrix4f itm_pose = trackingState->pose_d->GetM();
-  cv::Affine3f viz_itm_pose;
-  cv::Mat pose_mat(3, 3, CV_32F);
-  float* mat_pointer = (float*)pose_mat.data;
-  for (int row = 0; row < 3; ++row) {
-    for (int col = 0; col < 3; ++col) {
-      mat_pointer[3*row + col] = itm_pose(col, row);
-    }
-  }
-  viz_itm_pose.rotation(pose_mat);
-  viz_itm_pose.translate(cv::Vec3f(0.0, 0.0, 0.0));
-  viz_window_.setWidgetPose("ITM Tracking Pose", viz_itm_pose);
-  viz_window_.spinOnce(1, true);
+	VisualizeCameraPose();
 
 	// fusion
 	if (fusionActive) denseMapper->ProcessFrame(view, trackingState, scene, renderState_live);
@@ -145,6 +170,72 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 	// raycast to renderState_live for tracking and free visualisation
 	trackingController->Prepare(trackingState, view, renderState_live);
 }
+
+void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage, ITMOdometryMeasurement *odomMeasurement)
+{
+  // prepare image and turn it into a depth image
+  if (odomMeasurement==NULL) viewBuilder->UpdateView(&view, rgbImage, rawDepthImage, settings->useBilateralFilter,settings->modelSensorNoise);
+  else viewBuilder->UpdateView(&view, rgbImage, rawDepthImage, settings->useBilateralFilter, odomMeasurement);
+
+  if (!mainProcessingActive) return;
+
+  // tracking
+  trackingController->Track(trackingState, view);
+
+  // publish ITM tracker pose
+  PublishROSPoseMsg();
+
+  // VIZ ITM Tracker estimate
+  VisualizeCameraPose();
+
+  // fusion
+  if (fusionActive) denseMapper->ProcessFrame(view, trackingState, scene, renderState_live);
+
+  // raycast to renderState_live for tracking and free visualisation
+  trackingController->Prepare(trackingState, view, renderState_live);
+}
+
+// VIZ ITM Tracker camera pose estimate
+void ITMMainEngine::VisualizeCameraPose() {
+  Matrix4f itm_pose = trackingState->pose_d->GetInvM()*view->calib->trafo_rgb_to_depth.calib*view->calib->trafo_rgb_to_imu.calib_inv;
+//  cv::Mat pose_mat(3, 3, CV_32F);
+  cv::Matx<float, 3, 3> pose_mat;
+  float* mat_pointer = (float*)pose_mat.val;
+  for (int row = 0; row < 3; ++row) {
+    for (int col = 0; col < 3; ++col) {
+      mat_pointer[3*row + col] = itm_pose(col, row);
+    }
+  }
+  viz_itm_pose_.rotation(pose_mat);
+  viz_itm_pose_.translation(cv::Vec3f(100.0*itm_pose.m30, 100.0*itm_pose.m31, 100.0*itm_pose.m32));
+  viz_window_.setWidgetPose("ITM Tracking Pose", viz_itm_pose_);
+  viz_window_.spinOnce(1, true);
+}
+
+// Publish ITM ROS pose message
+void ITMMainEngine::PublishROSPoseMsg() {
+  if(pubITMPose.getNumSubscribers() > 0){
+    ITMPoseMsg.header.stamp = ros::Time::now();
+
+    Matrix4f pose_imu = view->calib->trafo_rgb_to_imu.calib * view->calib->trafo_rgb_to_depth.calib_inv * trackingState->pose_d->GetM();
+    Vector3f t_inv = pose_imu.getRot().t() * (-1.0 * pose_imu.getTrans());
+    ITMPoseMsg.transform.translation.x = t_inv.x;
+    ITMPoseMsg.transform.translation.y = t_inv.y;
+    ITMPoseMsg.transform.translation.z = t_inv.z;
+    Matrix3f r = pose_imu.getRot();
+    MPD R(pose_imu.m00, pose_imu.m10, pose_imu.m20,
+          pose_imu.m01, pose_imu.m11, pose_imu.m21,
+          pose_imu.m02, pose_imu.m12, pose_imu.m22);
+    QPD q(R);
+    ITMPoseMsg.transform.rotation.x = q.x(); // JPL form
+    ITMPoseMsg.transform.rotation.y = q.y();
+    ITMPoseMsg.transform.rotation.z = q.z();
+    ITMPoseMsg.transform.rotation.w = q.w();
+
+    pubITMPose.publish(ITMPoseMsg);
+  }
+}
+
 
 Vector2i ITMMainEngine::GetImageSize(void) const
 {
@@ -175,10 +266,18 @@ void ITMMainEngine::GetImage(ITMUChar4Image *out, GetImageType getImageType, ITM
 		else
 		{
 			if (settings->deviceType == ITMLibSettings::DEVICE_CUDA) view->depth->UpdateHostFromDevice();
-			ITMVisualisationEngine<ITMVoxel, ITMVoxelIndex>::DepthToUchar4(out, view->depth);
+			ITMVisualisationEngine<ITMVoxel, ITMVoxelIndex>::DepthToUchar4(
+			    out, view->depth, Vector2f(settings->sceneParams.viewFrustum_min,
+			                               settings->sceneParams.viewFrustum_max));
 		}
 
 		break;
+	case ITMMainEngine::InfiniTAM_IMAGE_ORIGINAL_DEPTH_WITH_RGB:
+    out->ChangeDims(view->depth->noDims);
+    if (settings->deviceType == ITMLibSettings::DEVICE_CUDA)
+      out->SetFrom(view->rgb_d, ORUtils::MemoryBlock<Vector4u>::CUDA_TO_CPU);
+    else out->SetFrom(view->rgb_d, ORUtils::MemoryBlock<Vector4u>::CPU_TO_CPU);
+    break;
 	case ITMMainEngine::InfiniTAM_IMAGE_SCENERAYCAST:
 	{
 		ORUtils::Image<Vector4u> *srcImage = renderState_live->raycastImage;
@@ -195,7 +294,7 @@ void ITMMainEngine::GetImage(ITMUChar4Image *out, GetImageType getImageType, ITM
 		IITMVisualisationEngine::RenderImageType type = IITMVisualisationEngine::RENDER_SHADED_GREYSCALE;
 		if (getImageType == ITMMainEngine::InfiniTAM_IMAGE_FREECAMERA_COLOUR_FROM_VOLUME) type = IITMVisualisationEngine::RENDER_COLOUR_FROM_VOLUME;
 		else if (getImageType == ITMMainEngine::InfiniTAM_IMAGE_FREECAMERA_COLOUR_FROM_NORMAL) type = IITMVisualisationEngine::RENDER_COLOUR_FROM_NORMAL;
-		if (renderState_freeview == NULL) renderState_freeview = visualisationEngine->CreateRenderState(out->noDims);
+		if (renderState_freeview == NULL) renderState_freeview = visualisationEngine->CreateRenderState(out->noDims, sdkGetTimerValue(&main_timer));
 
 		visualisationEngine->FindVisibleBlocks(pose, intrinsics, renderState_freeview);
 		visualisationEngine->CreateExpectedDepths(pose, intrinsics, renderState_freeview);

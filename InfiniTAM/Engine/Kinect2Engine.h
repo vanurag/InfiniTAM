@@ -4,6 +4,8 @@
 
 #include "ImageSourceEngine.h"
 
+#include <ros/ros.h>
+
 namespace InfiniTAM
 {
 	namespace Engine

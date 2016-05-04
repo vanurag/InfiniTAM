@@ -3,6 +3,7 @@
 #include "ITMLibSettings.h"
 
 #include <stdio.h>
+#include <iostream>
 
 using namespace ITMLib::Objects;
 
@@ -45,6 +46,11 @@ ITMLibSettings::ITMLibSettings(void)
 	//trackerType = TRACKER_IMU;
 	//trackerType = TRACKER_WICP;
 
+	depthTrackerType = TRACKER_ITM;
+
+	// ICP visualization
+	visualizeICP = false;
+
 	/// model the sensor noise as  the weight for weighted ICP
 	modelSensorNoise = false;
 	if (trackerType == TRACKER_WICP) modelSensorNoise = true;
@@ -53,23 +59,31 @@ ITMLibSettings::ITMLibSettings(void)
 	// builds the tracking regime. level 0 is full resolution
 	if (trackerType == TRACKER_IMU)
 	{
+//	  std::cout << "Setting IMU tracker!!" << std::endl;
 		noHierarchyLevels = 2;
 		trackingRegime = new TrackerIterationType[noHierarchyLevels];
 
 		trackingRegime[0] = TRACKER_ITERATION_BOTH;
 		trackingRegime[1] = TRACKER_ITERATION_TRANSLATION;
 	    //trackingRegime[2] = TRACKER_ITERATION_TRANSLATION;
-	} else if (trackerType == TRACKER_STRICT_IMU)
+	} else if (trackerType == TRACKER_ODOMETRY || trackerType == TRACKER_ODOMETRY_COLOR)
   {
-    noHierarchyLevels = 1;
+//    std::cout << "Setting ODOM tracker!!" << std::endl;
+    noHierarchyLevels = 3;
     trackingRegime = new TrackerIterationType[noHierarchyLevels];
 
-    trackingRegime[0] = TRACKER_ITERATION_NONE;
-//    trackingRegime[1] = TRACKER_ITERATION_TRANSLATION;
-      //trackingRegime[2] = TRACKER_ITERATION_TRANSLATION;
+    trackingRegime[0] = TRACKER_ITERATION_BOTH;
+    trackingRegime[1] = TRACKER_ITERATION_BOTH;
+    trackingRegime[2] = TRACKER_ITERATION_ROTATION;
+  } else if (trackerType == TRACKER_STRICT_ODOMETRY)
+  {
+//    std::cout << "Setting strict ODOM tracker!!" << std::endl;
+    noHierarchyLevels = 0;
+    trackingRegime = new TrackerIterationType[noHierarchyLevels];
   }
 	else
 	{
+//	  std::cout << "Setting ICP tracker!!" << std::endl;
 		noHierarchyLevels = 5;
 		trackingRegime = new TrackerIterationType[noHierarchyLevels];
 
@@ -83,7 +97,7 @@ ITMLibSettings::ITMLibSettings(void)
 	if (trackerType == TRACKER_REN) noICPRunTillLevel = 1;
 	else noICPRunTillLevel = 0;
 
-	if ((trackerType == TRACKER_COLOR) && (!ITMVoxel::hasColorInformation)) {
+	if ((trackerType == TRACKER_COLOR || trackerType == TRACKER_ODOMETRY_COLOR) && (!ITMVoxel::hasColorInformation)) {
 		printf("Error: Color tracker requires a voxel type with color information!\n");
 	}
 }
@@ -91,4 +105,57 @@ ITMLibSettings::ITMLibSettings(void)
 ITMLibSettings::~ITMLibSettings()
 {
 	delete[] trackingRegime;
+}
+
+void ITMLibSettings::setTrackerType(const TrackerType& new_tracker_type) {
+  trackerType = new_tracker_type;
+
+  /// model the sensor noise as  the weight for weighted ICP
+  modelSensorNoise = false;
+  if (trackerType == TRACKER_WICP) modelSensorNoise = true;
+
+  // builds the tracking regime. level 0 is full resolution
+  if (trackerType == TRACKER_IMU)
+  {
+    std::cout << "Setting IMU tracker!!" << std::endl;
+    noHierarchyLevels = 2;
+    trackingRegime = new TrackerIterationType[noHierarchyLevels];
+
+    trackingRegime[0] = TRACKER_ITERATION_BOTH;
+    trackingRegime[1] = TRACKER_ITERATION_TRANSLATION;
+      //trackingRegime[2] = TRACKER_ITERATION_TRANSLATION;
+  } else if (trackerType == TRACKER_ODOMETRY || trackerType == TRACKER_ODOMETRY_COLOR)
+  {
+    std::cout << "Setting ODOM tracker!!" << std::endl;
+    noHierarchyLevels = 3;
+    trackingRegime = new TrackerIterationType[noHierarchyLevels];
+
+    trackingRegime[0] = TRACKER_ITERATION_BOTH;
+    trackingRegime[1] = TRACKER_ITERATION_BOTH;
+    trackingRegime[2] = TRACKER_ITERATION_ROTATION;
+  } else if (trackerType == TRACKER_STRICT_ODOMETRY)
+  {
+    std::cout << "Setting strict ODOM tracker!!" << std::endl;
+    noHierarchyLevels = 0;
+    trackingRegime = new TrackerIterationType[noHierarchyLevels];
+  }
+  else
+  {
+    std::cout << "Setting ICP tracker!!" << std::endl;
+    noHierarchyLevels = 5;
+    trackingRegime = new TrackerIterationType[noHierarchyLevels];
+
+    trackingRegime[0] = TRACKER_ITERATION_BOTH;
+    trackingRegime[1] = TRACKER_ITERATION_BOTH;
+    trackingRegime[2] = TRACKER_ITERATION_ROTATION;
+    trackingRegime[3] = TRACKER_ITERATION_ROTATION;
+    trackingRegime[4] = TRACKER_ITERATION_ROTATION;
+  }
+
+  if (trackerType == TRACKER_REN) noICPRunTillLevel = 1;
+  else noICPRunTillLevel = 0;
+
+  if ((trackerType == TRACKER_COLOR || trackerType == TRACKER_ODOMETRY_COLOR) && (!ITMVoxel::hasColorInformation)) {
+    printf("Error: Color tracker requires a voxel type with color information!\n");
+  }
 }

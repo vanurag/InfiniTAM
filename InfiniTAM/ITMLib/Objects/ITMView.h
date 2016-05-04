@@ -22,6 +22,9 @@ namespace ITMLib
 			/// RGB colour image.
 			ITMUChar4Image *rgb; 
 
+			/// RGB colour image in depth camera frame of reference
+      ITMUChar4Image *rgb_d;
+
 			/// Float valued depth image, if available according to @ref inputImageType.
 			ITMFloatImage *depth;
 
@@ -33,13 +36,24 @@ namespace ITMLib
 			/// allocated when needed
 			ITMFloatImage *depthUncertainty;
 
+			/// View types
+      typedef enum {
+        BASE,
+        IMU,
+        ODOM
+      } ViewType;
+      ViewType view_type;
+
 			ITMView(const ITMRGBDCalib *calibration, Vector2i imgSize_rgb, Vector2i imgSize_d, bool useGPU)
 			{
 				this->calib = new ITMRGBDCalib(*calibration);
 				this->rgb = new ITMUChar4Image(imgSize_rgb, true, useGPU);
+				this->rgb_d = new ITMUChar4Image(imgSize_d, true, useGPU);
 				this->depth = new ITMFloatImage(imgSize_d, true, useGPU);
 				this->depthNormal = NULL;
 				this->depthUncertainty = NULL;
+
+				this->view_type = BASE;
 			}
 
 			virtual ~ITMView(void)
@@ -47,6 +61,7 @@ namespace ITMLib
 				delete calib;
 
 				delete rgb;
+				delete rgb_d;
 				delete depth;
 
 				if (depthNormal != NULL) delete depthNormal;

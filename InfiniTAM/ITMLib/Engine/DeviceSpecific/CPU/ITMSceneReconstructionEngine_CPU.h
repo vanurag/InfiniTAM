@@ -20,7 +20,7 @@ namespace ITMLib
 			ORUtils::MemoryBlock<Vector4s> *blockCoords;
 
 		public:
-			void ResetScene(ITMScene<TVoxel, ITMVoxelBlockHash> *scene);
+			void ResetScene(ITMScene<TVoxel, ITMVoxelBlockHash> *scene, const float rewind_time);
 
 			void AllocateSceneFromDepth(ITMScene<TVoxel, ITMVoxelBlockHash> *scene, const ITMView *view, const ITMTrackingState *trackingState,
 				const ITMRenderState *renderState, bool onlyUpdateVisibleList = false);
@@ -36,7 +36,7 @@ namespace ITMLib
 		class ITMSceneReconstructionEngine_CPU<TVoxel, ITMPlainVoxelArray> : public ITMSceneReconstructionEngine < TVoxel, ITMPlainVoxelArray >
 		{
 		public:
-			void ResetScene(ITMScene<TVoxel, ITMPlainVoxelArray> *scene);
+			void ResetScene(ITMScene<TVoxel, ITMPlainVoxelArray> *scene, const float rewind_time);
 
 			void AllocateSceneFromDepth(ITMScene<TVoxel, ITMPlainVoxelArray> *scene, const ITMView *view, const ITMTrackingState *trackingState,
 				const ITMRenderState *renderState, bool onlyUpdateVisibleList = false);

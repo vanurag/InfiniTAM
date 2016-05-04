@@ -16,7 +16,8 @@ inline float base(float val) {
 	else return 0.0;
 }
 
-void IITMVisualisationEngine::DepthToUchar4(ITMUChar4Image *dst, ITMFloatImage *src)
+void IITMVisualisationEngine::DepthToUchar4(ITMUChar4Image *dst, ITMFloatImage *src,
+                                            Vector2f view_frustum)
 {
 	Vector4u *dest = dst->GetData(MEMORYDEVICE_CPU);
 	float *source = src->GetData(MEMORYDEVICE_CPU);
@@ -46,12 +47,19 @@ void IITMVisualisationEngine::DepthToUchar4(ITMUChar4Image *dst, ITMFloatImage *
 
 		if (sourceVal > 0.0f)
 		{
-			sourceVal = (sourceVal - lims[0]) * scale;
+		  if (sourceVal >= view_frustum[0] && sourceVal <= view_frustum[1]) {
+        sourceVal = (sourceVal - lims[0]) * scale;
 
-			destUC4[idx].r = (uchar)(base(sourceVal - 0.5f) * 255.0f);
-			destUC4[idx].g = (uchar)(base(sourceVal) * 255.0f);
-			destUC4[idx].b = (uchar)(base(sourceVal + 0.5f) * 255.0f);
-			destUC4[idx].a = 255;
+        destUC4[idx].r = (uchar)(base(sourceVal - 0.5f) * 255.0f);
+        destUC4[idx].g = (uchar)(base(sourceVal) * 255.0f);
+        destUC4[idx].b = (uchar)(base(sourceVal + 0.5f) * 255.0f);
+        destUC4[idx].a = 255;
+		  } else {
+		    destUC4[idx].r = 255;
+        destUC4[idx].g = 255;
+        destUC4[idx].b = 255;
+        destUC4[idx].a = 255;
+		  }
 		}
 	}
 }

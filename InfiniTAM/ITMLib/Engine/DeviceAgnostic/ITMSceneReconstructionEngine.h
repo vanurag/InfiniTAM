@@ -8,7 +8,7 @@
 
 template<class TVoxel>
 _CPU_AND_GPU_CODE_ inline float computeUpdatedVoxelDepthInfo(DEVICEPTR(TVoxel) &voxel, const THREADPTR(Vector4f) & pt_model, const CONSTPTR(Matrix4f) & M_d,
-	const CONSTPTR(Vector4f) & projParams_d, float mu, int maxW, const CONSTPTR(float) *depth, const CONSTPTR(Vector2i) & imgSize)
+	const CONSTPTR(Vector4f) & projParams_d, float mu, int maxW, const CONSTPTR(float) *depth, const CONSTPTR(Vector2i) & imgSize, const double update_time)
 {
 	Vector4f pt_camera; Vector2f pt_image;
 	float depth_measure, eta, oldF, newF;
@@ -44,6 +44,7 @@ _CPU_AND_GPU_CODE_ inline float computeUpdatedVoxelDepthInfo(DEVICEPTR(TVoxel) &
 	// write back
 	voxel.sdf = TVoxel::SDF_floatToValue(newF);
 	voxel.w_depth = newW;
+	voxel.last_update_time = static_cast<short int>(update_time/1000.0);
 
 	return eta;
 }
@@ -94,9 +95,9 @@ struct ComputeUpdatedVoxelInfo<false, TVoxel> {
 		const CONSTPTR(Matrix4f) & M_rgb, const CONSTPTR(Vector4f) & projParams_rgb,
 		float mu, int maxW,
 		const CONSTPTR(float) *depth, const CONSTPTR(Vector2i) & imgSize_d,
-		const CONSTPTR(Vector4u) *rgb, const CONSTPTR(Vector2i) & imgSize_rgb)
+		const CONSTPTR(Vector4u) *rgb, const CONSTPTR(Vector2i) & imgSize_rgb, const double update_time)
 	{
-		computeUpdatedVoxelDepthInfo(voxel, pt_model, M_d, projParams_d, mu, maxW, depth, imgSize_d);
+		computeUpdatedVoxelDepthInfo(voxel, pt_model, M_d, projParams_d, mu, maxW, depth, imgSize_d, update_time);
 	}
 };
 
@@ -107,9 +108,9 @@ struct ComputeUpdatedVoxelInfo<true, TVoxel> {
 		const THREADPTR(Matrix4f) & M_rgb, const THREADPTR(Vector4f) & projParams_rgb,
 		float mu, int maxW,
 		const CONSTPTR(float) *depth, const CONSTPTR(Vector2i) & imgSize_d,
-		const CONSTPTR(Vector4u) *rgb, const THREADPTR(Vector2i) & imgSize_rgb)
+		const CONSTPTR(Vector4u) *rgb, const THREADPTR(Vector2i) & imgSize_rgb, const double update_time)
 	{
-		float eta = computeUpdatedVoxelDepthInfo(voxel, pt_model, M_d, projParams_d, mu, maxW, depth, imgSize_d);
+		float eta = computeUpdatedVoxelDepthInfo(voxel, pt_model, M_d, projParams_d, mu, maxW, depth, imgSize_d, update_time);
 		if ((eta > mu) || (fabs(eta / mu) > 0.25f)) return;
 		computeUpdatedVoxelColorInfo(voxel, pt_model, M_rgb, projParams_rgb, mu, maxW, eta, rgb, imgSize_rgb);
 	}

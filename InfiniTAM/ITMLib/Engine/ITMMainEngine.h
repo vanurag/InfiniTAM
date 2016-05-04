@@ -4,9 +4,19 @@
 
 #include "../ITMLib.h"
 #include "../Utils/ITMLibSettings.h"
+#include "../../Utils/NVTimer.h"
 #include <opencv2/viz/vizcore.hpp>
 #include <opencv2/viz/types.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
+
+#include "kindr/rotations/RotationEigen.hpp"
+#include <ros/ros.h>
+#include <geometry_msgs/TransformStamped.h>
+
+namespace rot = kindr::rotations::eigen_impl;
+
+typedef rot::RotationQuaternionPD QPD;
+typedef rot::RotationMatrixPD MPD;
 
 /** \mainpage
     This is the API reference documentation for InfiniTAM. For a general
@@ -75,20 +85,39 @@ namespace ITMLib
 			ITMRenderState *renderState_live;
 			ITMRenderState *renderState_freeview;
 
+			// ROS
+			ros::NodeHandle nh;
+			ros::Publisher pubITMPose;
+			geometry_msgs::TransformStamped ITMPoseMsg;
+			// Publish ITM ROS pose message
+			void PublishROSPoseMsg();
+
 			// VIZ
-			cv::viz::Viz3d viz_window_;
+			cv::viz::KeyboardEvent viz_key_event;
+			static cv::viz::Viz3d viz_window_;
+			static cv::Affine3f viz_itm_pose_;
+			static void VizKeyboardCallback(const cv::viz::KeyboardEvent&, void*) {
+        std::cout << "Setting VIZ viewing angle to camera's viewing direction" << std::endl;
+        cv::Affine3f viz_viewer_pose = viz_itm_pose_;
+        viz_viewer_pose = viz_viewer_pose.translate(cv::Vec3f(0.0, 0.0, -100.0));
+        viz_window_.setViewerPose(viz_viewer_pose);
+      }
 
 		public:
 			enum GetImageType
 			{
 				InfiniTAM_IMAGE_ORIGINAL_RGB,
 				InfiniTAM_IMAGE_ORIGINAL_DEPTH,
+				InfiniTAM_IMAGE_ORIGINAL_DEPTH_WITH_RGB,
 				InfiniTAM_IMAGE_SCENERAYCAST,
 				InfiniTAM_IMAGE_FREECAMERA_SHADED,
 				InfiniTAM_IMAGE_FREECAMERA_COLOUR_FROM_VOLUME,
 				InfiniTAM_IMAGE_FREECAMERA_COLOUR_FROM_NORMAL,
 				InfiniTAM_IMAGE_UNKNOWN
 			};
+
+			// timer to keep track of voxel update times
+      StopWatchInterface* main_timer;
 
 			/// Gives access to the current input frame
 			ITMView* GetView() { return view; }
@@ -99,8 +128,13 @@ namespace ITMLib
 			/// Gives access to the internal world representation
 			ITMScene<ITMVoxel, ITMVoxelIndex>* GetScene(void) { return scene; }
 
+			// VIZ ITM Tracker camera pose estimate
+			void VisualizeCameraPose();
+
 			/// Process a frame with rgb and depth images and optionally a corresponding imu measurement
-			void ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage, ITMIMUMeasurement *imuMeasurement = NULL);
+			void ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage);
+			void ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage, ITMIMUMeasurement *imuMeasurement);
+			void ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage, ITMOdometryMeasurement *odomMeasurement);
 
 			// Gives access to the data structure used internally to store any created meshes
 			ITMMesh* GetMesh(void) { return mesh; }

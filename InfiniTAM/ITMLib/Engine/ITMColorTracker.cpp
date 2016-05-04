@@ -9,12 +9,14 @@ using namespace ITMLib::Engine;
 
 static inline bool minimizeLM(const ITMColorTracker & tracker, ITMPose & initialization);
 
-ITMColorTracker::ITMColorTracker(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels,
+ITMColorTracker::ITMColorTracker(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels, ITMLibSettings::TrackerType tracker_type,
 	const ITMLowLevelEngine *lowLevelEngine, MemoryDeviceType memoryType)
 {
 	viewHierarchy = new ITMImageHierarchy<ITMViewHierarchyLevel>(imgSize, trackingRegime, noHierarchyLevels, memoryType);
 
 	this->lowLevelEngine = lowLevelEngine;
+
+	type = tracker_type;
 }
 
 ITMColorTracker::~ITMColorTracker(void)
@@ -28,9 +30,15 @@ void ITMColorTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 
 	this->PrepareForEvaluation(view);
 
-	ITMPose currentPara(view->calib->trafo_rgb_to_depth.calib_inv * trackingState->pose_d->GetM());
+	ITMPose currentPara;
+	if (type == ITMLibSettings::TRACKER_ODOMETRY_COLOR) {
+	  currentPara.SetM(trackingState->pose_d->GetM());
+	} else {
+	  currentPara.SetM(view->calib->trafo_rgb_to_depth.calib_inv * trackingState->pose_d->GetM());
+	}
 	for (int levelId = viewHierarchy->noLevels - 1; levelId >= 0; levelId--)
 	{
+	  std::cout << "Color Tracker Level ID: " << levelId << std::endl;
 		this->levelId = levelId;
 		this->iterationType = viewHierarchy->levels[levelId]->iterationType;
 
@@ -39,7 +47,11 @@ void ITMColorTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 
 	// these following will coerce the result back into the chosen
 	// parameterization for rotations
-	trackingState->pose_d->SetM(view->calib->trafo_rgb_to_depth.calib * currentPara.GetM());
+	if (type == ITMLibSettings::TRACKER_ODOMETRY_COLOR) {
+	  trackingState->pose_d->SetM(currentPara.GetM());
+	} else {
+	  trackingState->pose_d->SetM(view->calib->trafo_rgb_to_depth.calib * currentPara.GetM());
+	}
 
 	trackingState->pose_d->Coerce();
 
@@ -49,7 +61,11 @@ void ITMColorTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
 
 void ITMColorTracker::PrepareForEvaluation(const ITMView *view)
 {
-	lowLevelEngine->CopyImage(viewHierarchy->levels[0]->rgb, view->rgb);
+  if (type == ITMLibSettings::TRACKER_ODOMETRY_COLOR) {
+    lowLevelEngine->CopyImage(viewHierarchy->levels[0]->rgb, view->rgb_d);
+  } else {
+    lowLevelEngine->CopyImage(viewHierarchy->levels[0]->rgb, view->rgb);
+  }
 
 	ITMImageHierarchy<ITMViewHierarchyLevel> *hierarchy = viewHierarchy;
 

@@ -19,6 +19,7 @@
 #include <ros/ros.h>
 #include <sensor_msgs/Imu.h>
 #include <nav_msgs/Odometry.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <opencv2/viz/vizcore.hpp>
 #include <opencv2/viz/types.hpp>
@@ -35,12 +36,24 @@ namespace InfiniTAM
       static const int BUF_SIZE = 2048;
       char imuMask[BUF_SIZE];
 
-      ITMIMUMeasurement *cached_imu;
-
       ros::NodeHandle node_;
       ros::Subscriber sub_pose_;
       ros::master::V_TopicInfo master_topics;
 
+      // Visualization
+      cv::viz::KeyboardEvent viz_key_event;
+      static cv::viz::Viz3d viz_window;
+      static cv::Affine3f viz_cam_pose;
+      static void VizKeyboardCallback(const cv::viz::KeyboardEvent&, void*) {
+        std::cout << "Setting VIZ viewing angle to camera's viewing direction" << std::endl;
+        cv::Affine3f viz_viewer_pose = viz_cam_pose;
+        viz_viewer_pose = viz_viewer_pose.translate(cv::Vec3f(0.0, 0.0, 10.0));
+        viz_window.setViewerPose(viz_viewer_pose);
+      }
+      void VisualizePose();
+
+    protected:
+      ITMIMUMeasurement *cached_imu;
       struct Quaternion {
         double x;
         double y;
@@ -75,24 +88,13 @@ namespace InfiniTAM
 
       // conversion from quaternion to ITM IMU Measurement
       void quat2ITMIMU(const Quaternion q);
-      void ROSOdometryCallback(const nav_msgs::Odometry::ConstPtr& msg);
-      void ROSIMUCallback(const sensor_msgs::Imu::ConstPtr& msg);
-      void ROSTFCallback(const geometry_msgs::TransformStamped::ConstPtr& msg);
-
-      // Visualization
-      cv::viz::KeyboardEvent viz_key_event;
-      static cv::viz::Viz3d viz_window;
-      static cv::Affine3f viz_cam_pose;
-      static void VizKeyboardCallback(const cv::viz::KeyboardEvent&, void*) {
-        std::cout << "Setting VIZ viewing angle to camera's viewing direction" << std::endl;
-        cv::Affine3f viz_viewer_pose = viz_cam_pose;
-        viz_viewer_pose = viz_viewer_pose.translate(cv::Vec3f(0.0, 0.0, 10.0));
-        viz_window.setViewerPose(viz_viewer_pose);
-      }
-      void VisualizePose();
-
+      void ROSOdometryCallback_IMU(const nav_msgs::Odometry::ConstPtr& msg);
+      void ROSIMUCallback_IMU(const sensor_msgs::Imu::ConstPtr& msg);
+      void ROSTFCallback_IMU(const geometry_msgs::TransformStamped::ConstPtr& msg);
+      void ROSPoseCallback_IMU(const geometry_msgs::PoseStamped::ConstPtr& msg);
     public:
       ROSIMUSourceEngine(const char *imuMask);
+      ROSIMUSourceEngine();
       virtual ~ROSIMUSourceEngine() { }
 
       virtual bool hasMoreMeasurements(void);

@@ -1,12 +1,12 @@
 /*
- * RealsenseEngine.h
+ * ROSImageSourceEngine.h
  *
- *  Created on: Nov 18, 2015
+ *  Created on: Mar 17, 2016
  *      Author: anurag
  */
 
-#ifndef INFINITAM_INFINITAM_ENGINE_REALSENSEENGINE_H_
-#define INFINITAM_INFINITAM_ENGINE_REALSENSEENGINE_H_
+#ifndef INFINITAM_INFINITAM_ENGINE_ROSIMAGESOURCEENGINE_H_
+#define INFINITAM_INFINITAM_ENGINE_ROSIMAGESOURCEENGINE_H_
 
 #pragma once
 
@@ -41,27 +41,30 @@ namespace InfiniTAM
   namespace Engine
   {
     /** This class provides an interface for reading from the
-        Skybotix VI-Sensor.
+        ROS Image topics
     */
-    class RealsenseEngine : public ImageSourceEngine
+    class ROSImageSourceEngine : public ImageSourceEngine
     {
     private:
       typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> MySyncPolicy;
 
-      void RealsenseCallBackFunction(const sensor_msgs::ImageConstPtr rgb_msg,
-                                     const sensor_msgs::ImageConstPtr depth_msg);
-
-      char timestamp_[16];
-      cv::Mat rgb_, depth_;
       ros::Subscriber sub_rgb_;
       ros::NodeHandle node_;
       message_filters::Subscriber<sensor_msgs::Image> mf_sub_rgb_, mf_sub_depth_;
       message_filters::Synchronizer<MySyncPolicy> sync_;
+
+    protected:
+      void ROSImageCallback(const sensor_msgs::ImageConstPtr rgb_msg,
+                            const sensor_msgs::ImageConstPtr depth_msg);
+      cv::Mat rgb_, depth_;
       Vector2i imageSize_d_, imageSize_rgb_;
       bool colorAvailable_, depthAvailable_;
+
     public:
-      RealsenseEngine(const char *calibFilename);
-      ~RealsenseEngine() {};
+      ROSImageSourceEngine(const char *calibFilename, const char *rgbTopic, const char *depthTopic,
+                           const Vector2i rgbSize, const Vector2i depthSize);
+      ROSImageSourceEngine(const char *calibFilename, const Vector2i rgbSize, const Vector2i depthSize);
+      ~ROSImageSourceEngine() {};
 
       bool hasMoreImages(void);
       void getImages(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage);
@@ -71,4 +74,5 @@ namespace InfiniTAM
   }
 }
 
-#endif /* INFINITAM_INFINITAM_ENGINE_REALSENSEENGINE_H_ */
+
+#endif /* INFINITAM_INFINITAM_ENGINE_ROSIMAGESOURCEENGINE_H_ */

@@ -7,6 +7,7 @@
 
 #include "../Objects/ITMView.h"
 #include "../Objects/ITMViewIMU.h"
+#include "../Objects/ITMViewOdometry.h"
 #include "../Objects/ITMRGBDCalib.h"
 
 using namespace ITMLib::Objects;
@@ -37,6 +38,9 @@ namespace ITMLib
 
 			virtual void UpdateView(ITMView **view, ITMUChar4Image *rgbImage, ITMShortImage *depthImage, bool useBilateralFilter,
 				ITMIMUMeasurement *imuMeasurement) = 0;
+
+			virtual void UpdateView(ITMView **view, ITMUChar4Image *rgbImage, ITMShortImage *depthImage, bool useBilateralFilter,
+        ITMOdometryMeasurement *odomMeasurement) = 0;
 
 			ITMViewBuilder(const ITMRGBDCalib *calib)
 			{

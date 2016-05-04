@@ -2,11 +2,12 @@ cmake_minimum_required(VERSION 2.8)
 project(InfiniTAM)
 
 find_package(catkin REQUIRED COMPONENTS 
-	            roscpp 
-	            message_generation 
-	            std_msgs
-	            cv_bridge
-	            image_transport)
+	           roscpp 
+	           rosbag
+	           message_generation 
+	           std_msgs
+	           cv_bridge
+	           image_transport)
 	            
 find_package(Boost REQUIRED)
 
@@ -60,6 +61,22 @@ message(STATUS "libuvc found: ${libuvc_FOUND}")
 find_package(PNG QUIET)
 CANONIFY_BOOL(PNG_FOUND)
 message(STATUS "libpng found: ${PNG_FOUND}")
+
+#----------------------------
+# DEPENDENCY: libpointmatcher
+#----------------------------
+find_package(libpointmatcher REQUIRED) 
+include_directories(${libpointmatcher_INCLUDE_DIRS}) 
+message("-- libpointmatcher found, version ${libpointmatcher_VERSION}")
+
+#--------------------
+# DEPENDENCY: PCL
+#--------------------
+find_package(PCL 1.8 REQUIRED)
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
+message("-- PCL found, version ${PCL_VERSION}")
 
 OPTION(WITH_CUDA "Build with CUDA support?" ${CUDA_FOUND})
 INCLUDE(${PROJECT_SOURCE_DIR}/cmake/UseOpenMP.cmake)

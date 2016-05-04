@@ -27,7 +27,7 @@ namespace ITMLib
 
 			virtual ~IITMVisualisationEngine(void) {}
 
-			static void DepthToUchar4(ITMUChar4Image *dst, ITMFloatImage *src);
+			static void DepthToUchar4(ITMUChar4Image *dst, ITMFloatImage *src, Vector2f view_frustum);
 			static void NormalToUchar4(ITMUChar4Image* dst, ITMFloat4Image *src);
 			static void WeightToUchar4(ITMUChar4Image *dst, ITMFloatImage *src);
 
@@ -48,7 +48,7 @@ namespace ITMLib
 
 			/** This will render an image using raycasting. */
 			virtual void RenderImage(const ITMPose *pose, const ITMIntrinsics *intrinsics,
-				const ITMRenderState *renderState, ITMUChar4Image *outputImage, RenderImageType type = RENDER_SHADED_GREYSCALE) const = 0;
+				ITMRenderState *renderState, ITMUChar4Image *outputImage, RenderImageType type = RENDER_SHADED_GREYSCALE) const = 0;
 
 			/** Finds the scene surface using raycasting. */
 			virtual void FindSurface(const ITMPose *pose, const ITMIntrinsics *intrinsics,
@@ -77,7 +77,7 @@ namespace ITMLib
 			/** Creates a render state, containing rendering info
 			for the scene.
 			*/
-			virtual ITMRenderState* CreateRenderState(const Vector2i & imgSize) const = 0;
+			virtual ITMRenderState* CreateRenderState(const Vector2i & imgSize, const float rewind_time) const = 0;
 		};
 
 		template<class TIndex> struct IndexToRenderState { typedef ITMRenderState type; };
@@ -106,7 +106,7 @@ namespace ITMLib
 			}
 		public:
 			/** Override */
-			virtual typename IndexToRenderState<TIndex>::type *CreateRenderState(const Vector2i & imgSize) const = 0;
+			virtual typename IndexToRenderState<TIndex>::type *CreateRenderState(const Vector2i & imgSize, const float rewind_time) const = 0;
 		};
 	}
 }

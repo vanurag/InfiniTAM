@@ -6,8 +6,8 @@
 
 using namespace ITMLib::Engine;
 
-ITMColorTracker_CPU::ITMColorTracker_CPU(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels, const ITMLowLevelEngine *lowLevelEngine)
-	: ITMColorTracker(imgSize, trackingRegime, noHierarchyLevels, lowLevelEngine, MEMORYDEVICE_CPU) {  }
+ITMColorTracker_CPU::ITMColorTracker_CPU(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels, ITMLibSettings::TrackerType tracker_type, const ITMLowLevelEngine *lowLevelEngine)
+	: ITMColorTracker(imgSize, trackingRegime, noHierarchyLevels, tracker_type, lowLevelEngine, MEMORYDEVICE_CPU) {  }
 
 ITMColorTracker_CPU::~ITMColorTracker_CPU(void) { }
 
@@ -15,7 +15,12 @@ void ITMColorTracker_CPU::F_oneLevel(float *f, ITMPose *pose)
 {
 	int noTotalPoints = trackingState->pointCloud->noTotalPoints;
 
-	Vector4f projParams = view->calib->intrinsics_rgb.projectionParamsSimple.all;
+	Vector4f projParams;
+	if (type == ITMLibSettings::TRACKER_ODOMETRY_COLOR) {
+	  projParams.setValues(view->calib->intrinsics_d.projectionParamsSimple.all);
+	} else {
+	  projParams.setValues(view->calib->intrinsics_rgb.projectionParamsSimple.all);
+	}
 	projParams.x /= 1 << levelId; projParams.y /= 1 << levelId;
 	projParams.z /= 1 << levelId; projParams.w /= 1 << levelId;
 
@@ -46,7 +51,12 @@ void ITMColorTracker_CPU::G_oneLevel(float *gradient, float *hessian, ITMPose *p
 {
 	int noTotalPoints = trackingState->pointCloud->noTotalPoints;
 
-	Vector4f projParams = view->calib->intrinsics_rgb.projectionParamsSimple.all;
+	Vector4f projParams;
+  if (type == ITMLibSettings::TRACKER_ODOMETRY_COLOR) {
+    projParams.setValues(view->calib->intrinsics_d.projectionParamsSimple.all);
+  } else {
+    projParams.setValues(view->calib->intrinsics_rgb.projectionParamsSimple.all);
+  }
 	projParams.x /= 1 << levelId; projParams.y /= 1 << levelId;
 	projParams.z /= 1 << levelId; projParams.w /= 1 << levelId;
 

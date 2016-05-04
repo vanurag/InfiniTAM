@@ -9,6 +9,7 @@
 
 #include "ImageSourceEngine.h"
 #include "IMUSourceEngine.h"
+#include "OdometrySourceEngine.h"
 
 #include <vector>
 
@@ -32,12 +33,13 @@ namespace InfiniTAM
 				 : name(_name), type(_type)
 				{}
 			};
-			std::vector<UIColourMode> colourModes;
-			int currentColourMode;
+			std::vector<UIColourMode> colourModes, rgbModes;
+			int currentColourMode, currentRGBMode;
 
 			ITMLibSettings internalSettings;
 			ImageSourceEngine *imageSource;
 			IMUSourceEngine *imuSource;
+			OdometrySourceEngine *odomSource;
 			ITMMainEngine *mainEngine;
 
 			StopWatchInterface *timer_instant;
@@ -53,6 +55,7 @@ namespace InfiniTAM
 
 			ITMUChar4Image *inputRGBImage; ITMShortImage *inputRawDepthImage;
 			ITMIMUMeasurement *inputIMUMeasurement;
+			ITMOdometryMeasurement *inputOdometryMeasurement;
 
 			bool freeviewActive;
 			bool intergrationActive;
@@ -85,8 +88,10 @@ namespace InfiniTAM
 			bool needsRefresh;
 			ITMUChar4Image *saveImage;
 
-			void Initialise(int & argc, char** argv, ImageSourceEngine *imageSource, IMUSourceEngine *imuSource, ITMMainEngine *mainEngine,
-				const char *outFolder, ITMLibSettings* itmSettings);
+			void Initialise(
+			    int & argc, char** argv, ImageSourceEngine *imageSource, IMUSourceEngine *imuSource,
+			    OdometrySourceEngine *odomSource, ITMMainEngine *mainEngine,
+			    const char *outFolder, ITMLibSettings* itmSettings);
 			void Shutdown();
 
 			void Run();

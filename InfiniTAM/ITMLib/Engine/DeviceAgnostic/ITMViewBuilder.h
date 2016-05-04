@@ -112,3 +112,26 @@ _CPU_AND_GPU_CODE_ inline void computeNormalAndWeight(const CONSTPTR(float) *dep
 
 	sigmaZ_out[idx] = (0.0012f + 0.0019f * (z - 0.4f) * (z - 0.4f) + 0.0001f / sqrt(z) * theta_diff * theta_diff);
 }
+
+_CPU_AND_GPU_CODE_ inline void computeColorForDepth(
+    DEVICEPTR(Vector4u) * rgb_out, const CONSTPTR(Matrix4f) & M_depth_to_rgb, const float depth, const CONSTPTR(Vector2i) & pt_depth_image,
+    const CONSTPTR(Vector4f) & projParams_depth, const CONSTPTR(Vector2i) & depthImgSize, const CONSTPTR(Vector4f) & projParams_rgb,
+    const CONSTPTR(Vector4u) *rgb, const CONSTPTR(Vector2i) & rgbImgSize)
+{
+  Vector4f pt_depth_camera, pt_rgb_camera;
+  Vector2i pt_rgb_image;
+
+  pt_depth_camera.x = (pt_depth_image.x - projParams_depth.z) * depth / projParams_depth.x;
+  pt_depth_camera.y = (pt_depth_image.y - projParams_depth.w) * depth / projParams_depth.y;
+  pt_depth_camera.z = depth;
+  pt_depth_camera.w = 1.0;
+
+  pt_rgb_camera = M_depth_to_rgb * pt_depth_camera;
+
+  pt_rgb_image.x = projParams_rgb.x * pt_rgb_camera.x / pt_rgb_camera.z + projParams_rgb.z;
+  pt_rgb_image.y = projParams_rgb.y * pt_rgb_camera.y / pt_rgb_camera.z + projParams_rgb.w;
+
+  if ((pt_rgb_image.x < 0) || (pt_rgb_image.x >= rgbImgSize.x) || (pt_rgb_image.y < 0) || (pt_rgb_image.y >= rgbImgSize.y)) return;
+
+  rgb_out[pt_depth_image.x + pt_depth_image.y * depthImgSize.x] = rgb[pt_rgb_image.x + pt_rgb_image.y * rgbImgSize.x];
+}

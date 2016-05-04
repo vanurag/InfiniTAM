@@ -32,11 +32,17 @@ class StopWatchInterface
         //! Start time measurement
         virtual void start() = 0;
 
+        //! Start time measurement and set start delta time behind current time
+        virtual void startAndRewindByTime(const float delta) = 0;
+
         //! Stop time measurement
         virtual void stop() = 0;
 
         //! Reset time counters to zero
         virtual void reset() = 0;
+
+        //! Set start time delta time behind current time
+        virtual void rewindByTime(const float delta) = 0;
 
         //! Time in msec. after start. If the stop watch is still running (i.e. there
         //! was no call to stop()) then the elapsed time is returned, otherwise the
@@ -92,11 +98,17 @@ class StopWatchWin : public StopWatchInterface
         //! Start time measurement
         inline void start();
 
+        //! Start time measurement and set start delta time behind current time
+        inline void startAndRewindByTime(const float delta);
+
         //! Stop time measurement
         inline void stop();
 
         //! Reset time counters to zero
         inline void reset();
+
+        //! Set start time delta time behind current time
+        inline void rewindByTime(const float delta);
 
         //! Time in msec. after start. If the stop watch is still running (i.e. there
         //! was no call to stop()) then the elapsed time is returned, otherwise the
@@ -148,6 +160,18 @@ StopWatchWin::start()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+//! Start time measurement with start delta behind current time
+////////////////////////////////////////////////////////////////////////////////
+inline void
+StopWatchWin::startAndRewindByTime(const float delta)
+{
+    LARGE_INTEGER current_time;
+    QueryPerformanceCounter((LARGE_INTEGER *) &current_time);
+    start_time = current_time - (LARGE_INTEGER *) &delta;
+    running = true;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 //! Stop time measurement and increment add to the current diff_time summation
 //! variable. Also increment the number of times this clock has been run.
 ////////////////////////////////////////////////////////////////////////////////
@@ -180,6 +204,24 @@ StopWatchWin::reset()
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////
+//! Rewind timer by delta. Does not change the timer running state but does
+//! set start time delta behind current time if it is running.
+////////////////////////////////////////////////////////////////////////////////
+inline void
+StopWatchWin::rewindByTime(const float delta)
+{
+    diff_time = 0;
+    total_time = 0;
+    clock_sessions = 0;
+
+    if (running)
+    {
+      LARGE_INTEGER current_time;
+      QueryPerformanceCounter((LARGE_INTEGER *) &current_time);
+      start_time = current_time - (LARGE_INTEGER *) &delta;
+    }
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 //! Time in msec. after start. If the stop watch is still running (i.e. there
@@ -237,11 +279,17 @@ class StopWatchLinux : public StopWatchInterface
         //! Start time measurement
         inline void start();
 
+        //! Start time measurement and set start delta time behind current time
+        inline void startAndRewindByTime(const float delta);
+
         //! Stop time measurement
         inline void stop();
 
         //! Reset time counters to zero
         inline void reset();
+
+        //! Set start time delta time behind current time
+        inline void rewindByTime(const float delta);
 
         //! Time in msec. after start. If the stop watch is still running (i.e. there
         //! was no call to stop()) then the elapsed time is returned, otherwise the
@@ -293,6 +341,19 @@ StopWatchLinux::start()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+//! Start time measurement with start delta behind current time
+////////////////////////////////////////////////////////////////////////////////
+inline void
+StopWatchLinux::startAndRewindByTime(const float delta)
+{
+    struct timeval current_time;
+    gettimeofday(&current_time, 0);
+    start_time.tv_sec = current_time.tv_sec - static_cast<long>(std::floor(0.001*delta));
+    start_time.tv_usec = current_time.tv_usec - static_cast<long>(std::floor(1000000.0*(0.001*delta-std::floor(0.001*delta))));
+    running = true;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 //! Stop time measurement and increment add to the current diff_time summation
 //! variable. Also increment the number of times this clock has been run.
 ////////////////////////////////////////////////////////////////////////////////
@@ -319,6 +380,26 @@ StopWatchLinux::reset()
     if (running)
     {
         gettimeofday(&start_time, 0);
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//! Rewind timer by delta. Does not change the timer running state but does
+//! set start time delta behind current time if it is running.
+////////////////////////////////////////////////////////////////////////////////
+inline void
+StopWatchLinux::rewindByTime(const float delta)
+{
+    diff_time = 0;
+    total_time = 0;
+    clock_sessions = 0;
+
+    if (running)
+    {
+      struct timeval current_time;
+      gettimeofday(&current_time, 0);
+      start_time.tv_sec = current_time.tv_sec - static_cast<long>(std::floor(0.001*delta));
+      start_time.tv_usec = current_time.tv_usec - static_cast<long>(std::floor(1000000.0*(0.001*delta-std::floor(0.001*delta))));
     }
 }
 
@@ -422,6 +503,23 @@ sdkStartTimer(StopWatchInterface **timer_interface)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+//! Start the timer with name \a name with start time as provided
+//! @param name  name of the timer to start
+//! @param rewind_time  rewind by this much time
+////////////////////////////////////////////////////////////////////////////////
+inline bool
+sdkStartTimerAndRewindByTime(StopWatchInterface **timer_interface, const float rewind_time)
+{
+    //printf("sdkStartTimer called object %08x\n", (void *)*timer_interface);
+    if (*timer_interface)
+    {
+        (*timer_interface)->startAndRewindByTime(rewind_time);
+    }
+
+    return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 //! Stop the time with name \a name. Does not reset.
 //! @param name  name of the timer to stop
 ////////////////////////////////////////////////////////////////////////////////
@@ -448,6 +546,23 @@ sdkResetTimer(StopWatchInterface **timer_interface)
     if (*timer_interface)
     {
         (*timer_interface)->reset();
+    }
+
+    return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//! Resets the timer's counter with start time as provided
+//! @param name  name of the timer to reset.
+//! @param rewind_time  rewind by this much time
+////////////////////////////////////////////////////////////////////////////////
+inline bool
+sdkRewindTimerByTime(StopWatchInterface **timer_interface, const float rewind_time)
+{
+    // printf("sdkResetTimer called object %08x\n", (void *)*timer_interface);
+    if (*timer_interface)
+    {
+        (*timer_interface)->rewindByTime(rewind_time);
     }
 
     return true;
