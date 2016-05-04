@@ -11,7 +11,7 @@ __global__ void buildListToSwapIn_device(int *neededEntryIDs, int *noNeededEntri
 
 template<class TVoxel>
 __global__ void integrateOldIntoActiveData_device(TVoxel *localVBA, ITMHashSwapState *swapStates, TVoxel *syncedVoxelBlocks_local,
-	int *neededEntryIDs_local, ITMHashEntry *hashTable, int maxW);
+	int *neededEntryIDs_local, ITMHashEntry *hashTable, int maxW, const double update_time);
 
 __global__ void buildListToSwapOut_device(int *neededEntryIDs, int *noNeededEntries, ITMHashSwapState *swapStates,
 	ITMHashEntry *hashTable, uchar *entriesVisibleType, int noTotalEntries);
@@ -112,7 +112,7 @@ void ITMSwappingEngine_CUDA<TVoxel, ITMVoxelBlockHash>::IntegrateGlobalIntoLocal
 		dim3 gridSize(noNeededEntries);
 
 		integrateOldIntoActiveData_device << <gridSize, blockSize >> >(localVBA, swapStates, syncedVoxelBlocks_local,
-			neededEntryIDs_local, hashTable, maxW);
+			neededEntryIDs_local, hashTable, maxW, sdkGetTimerValue(&renderState->timer));
 	}
 }
 
@@ -279,7 +279,7 @@ __global__ void moveActiveDataToTransferBuffer_device(TVoxel *syncedVoxelBlocks_
 
 template<class TVoxel>
 __global__ void integrateOldIntoActiveData_device(TVoxel *localVBA, ITMHashSwapState *swapStates, TVoxel *syncedVoxelBlocks_local,
-	int *neededEntryIDs_local, ITMHashEntry *hashTable, int maxW)
+	int *neededEntryIDs_local, ITMHashEntry *hashTable, int maxW, const double update_time)
 {
 	int entryDestId = neededEntryIDs_local[blockIdx.x];
 
@@ -288,7 +288,7 @@ __global__ void integrateOldIntoActiveData_device(TVoxel *localVBA, ITMHashSwapS
 
 	int vIdx = threadIdx.x + threadIdx.y * SDF_BLOCK_SIZE + threadIdx.z * SDF_BLOCK_SIZE * SDF_BLOCK_SIZE;
 
-	CombineVoxelInformation<TVoxel::hasColorInformation, TVoxel>::compute(srcVB[vIdx], dstVB[vIdx], maxW);
+	CombineVoxelInformation<TVoxel::hasColorInformation, TVoxel>::compute(srcVB[vIdx], dstVB[vIdx], maxW, update_time);
 
 	if (vIdx == 0) swapStates[entryDestId].state = 2;
 }

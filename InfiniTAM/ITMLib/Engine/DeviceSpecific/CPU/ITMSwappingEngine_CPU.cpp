@@ -95,7 +95,7 @@ void ITMSwappingEngine_CPU<TVoxel, ITMVoxelBlockHash>::IntegrateGlobalIntoLocal(
 
 			for (int vIdx = 0; vIdx < SDF_BLOCK_SIZE3; vIdx++)
 			{
-				CombineVoxelInformation<TVoxel::hasColorInformation, TVoxel>::compute(srcVB[vIdx], dstVB[vIdx], maxW);
+				CombineVoxelInformation<TVoxel::hasColorInformation, TVoxel>::compute(srcVB[vIdx], dstVB[vIdx], maxW, sdkGetTimerValue(&renderState->timer));
 			}
 		}
 
