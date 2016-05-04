@@ -6,6 +6,7 @@
 #include <ostream>
 
 #include "PlatformIndependence.h"
+#include "MathUtils.h"
 
 namespace ORUtils {
 	//////////////////////////////////////////////////////////////////////////
@@ -104,7 +105,7 @@ namespace ORUtils {
 		////////////////////////////////////////////////////////
 
 		// scalar multiply assign
-		_CPU_AND_GPU_CODE_ friend Vector2<T> &operator *= (const Vector2<T> &lhs, T d) {
+		_CPU_AND_GPU_CODE_ friend Vector2<T> &operator *= (Vector2<T> &lhs, T d) {
 			lhs.x *= d; lhs.y *= d; return lhs;
 		}
 
