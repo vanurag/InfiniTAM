@@ -302,7 +302,7 @@ static void CreateICPMaps_common(const ITMScene<TVoxel,TIndex> *scene, const ITM
 	  int locId = x + y * imgSize.x;
     Vector3f point = pointsRay[locId].toVector3();
 	  short int voxel_time = readFromSDF_voxel_update_time<TVoxel, TIndex>(scene->localVBA.GetVoxelBlocks(), scene->index.getIndexData(), point);
-		processPixelICP<true>(outRendering, pointsMap, normalsMap, pointsRay, activePointsMap, inactivePointsMap, imgSize, x, y, voxelSize, lightSource, voxel_time, render_time);
+		processPixelICP<true>(outRendering, pointsMap, activePointsMap, inactivePointsMap, normalsMap, pointsRay, imgSize, x, y, voxelSize, lightSource, voxel_time, render_time);
 	}
 }
 
