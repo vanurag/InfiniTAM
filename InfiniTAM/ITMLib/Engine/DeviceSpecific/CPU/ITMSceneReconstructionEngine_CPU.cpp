@@ -137,6 +137,7 @@ void ITMSceneReconstructionEngine_CPU<TVoxel, ITMVoxelBlockHash>::AllocateSceneF
 
 	float *depth = view->depth->GetData(MEMORYDEVICE_CPU);
 	int *voxelAllocationList = scene->localVBA.GetAllocationList();
+	TVoxel *localVBA = scene->localVBA.GetVoxelBlocks();
 	int *excessAllocationList = scene->index.GetExcessAllocationList();
 	ITMHashEntry *hashTable = scene->index.GetEntries();
 	ITMHashSwapState *swapStates = scene->useSwapping ? scene->globalCache->GetSwapStates(false) : 0;
@@ -235,12 +236,15 @@ void ITMSceneReconstructionEngine_CPU<TVoxel, ITMVoxelBlockHash>::AllocateSceneF
 		
 		if (hashVisibleType == 3)
 		{
-			bool isVisibleEnlarged, isVisible;
+			bool isVisibleEnlarged, isVisible, isInactive;
 
 			if (useSwapping)
 			{
 				checkBlockVisibility<true>(isVisible, isVisibleEnlarged, hashEntry.pos, M_d, projParams_d, voxelSize, depthImgSize);
-				if (!isVisibleEnlarged) hashVisibleType = 0;
+				short int current_time = static_cast<short int>(sdkGetTimerValue(&(this->scene_timer))/1000.0);
+				TVoxel *localVoxelBlock = &(localVBA[hashEntry.ptr * (SDF_BLOCK_SIZE3)]);
+				checkBlockLastUpdateTime<TVoxel>(isInactive, localVoxelBlock, current_time);
+				if (!isVisibleEnlarged && isInactive) hashVisibleType = 0;
 			} else {
 				checkBlockVisibility<false>(isVisible, isVisibleEnlarged, hashEntry.pos, M_d, projParams_d, voxelSize, depthImgSize);
 				if (!isVisible) { hashVisibleType = 0; }

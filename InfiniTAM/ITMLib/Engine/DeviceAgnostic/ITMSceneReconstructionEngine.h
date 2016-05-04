@@ -282,3 +282,19 @@ _CPU_AND_GPU_CODE_ inline void checkBlockVisibility(THREADPTR(bool) &isVisible, 
 	checkPointVisibility<useSwapping>(isVisible, isVisibleEnlarged, pt_image, M_d, projParams_d, imgSize);
 	if (isVisible) return;
 }
+
+
+template<class TVoxel>
+_CPU_AND_GPU_CODE_ inline void checkBlockLastUpdateTime(THREADPTR(bool) &isInactive, const DEVICEPTR(TVoxel) *voxelBlock, const CONSTPTR(short int) &current_time) {
+
+  short int delta_time = 5;  // TODO(vanurag) : Make it a parameter
+  for (int z = 0; z < SDF_BLOCK_SIZE; z++) for (int y = 0; y < SDF_BLOCK_SIZE; y++) for (int x = 0; x < SDF_BLOCK_SIZE; x++) {
+    int locId = x + y * SDF_BLOCK_SIZE * z * SDF_BLOCK_SIZE * SDF_BLOCK_SIZE;
+    if (voxelBlock[locId].last_update_time > current_time - delta_time) {  // active voxel
+      isInactive = false;
+      return;
+    }
+  }
+  isInactive = true;  // all voxels in the blcok are inactive
+  return;
+}
