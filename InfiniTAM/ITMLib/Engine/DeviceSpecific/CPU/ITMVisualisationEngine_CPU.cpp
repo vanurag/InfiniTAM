@@ -236,7 +236,7 @@ static void RenderImage_common(const ITMScene<TVoxel,TIndex> *scene, const ITMPo
 			Vector4f ptRay = pointsRay[locId];
 			processPixelTimeColour<TVoxel, TIndex>(
 			    outRendering[locId], ptRay.toVector3(), ptRay.w > 0, voxelData, voxelIndex,
-			    lightSource, static_cast<short int>(sdkGetTimerValue(&renderState->timer)/1000.0));
+			    lightSource, sdkGetTimerValue(&renderState->timer)/1000.0);
 		}
 	}
 }
@@ -266,7 +266,7 @@ static void CreatePointCloud_common(const ITMScene<TVoxel,TIndex> *scene, const 
 		scene->sceneParams->voxelSize,
 		imgSize,
 		-Vector3f(invM.getColumn(2)),
-    static_cast<short int>(sdkGetTimerValue(&renderState->timer)/1000.0)
+    sdkGetTimerValue(&renderState->timer)/1000.0
 	);
 
 	 trackingState->pointCloud->noTotalPoints = ret.get<0>();
@@ -297,11 +297,11 @@ static void CreateICPMaps_common(const ITMScene<TVoxel,TIndex> *scene, const ITM
 #ifdef WITH_OPENMP
 	#pragma omp parallel for
 #endif
-	short int render_time = static_cast<short int>(sdkGetTimerValue(&renderState->timer)/1000.0);
+	float render_time = sdkGetTimerValue(&renderState->timer)/1000.0;
 	for (int y = 0; y < imgSize.y; y++) for (int x = 0; x < imgSize.x; x++) {
 	  int locId = x + y * imgSize.x;
     Vector3f point = pointsRay[locId].toVector3();
-	  short int voxel_time = readFromSDF_voxel_update_time<TVoxel, TIndex>(scene->localVBA.GetVoxelBlocks(), scene->index.getIndexData(), point);
+	  float voxel_time = readFromSDF_voxel_update_time<TVoxel, TIndex>(scene->localVBA.GetVoxelBlocks(), scene->index.getIndexData(), point);
 		processPixelICP<true>(outRendering, pointsMap, activePointsMap, inactivePointsMap, normalsMap, pointsRay, imgSize, x, y, voxelSize, lightSource, voxel_time, render_time);
 	}
 }
@@ -444,7 +444,7 @@ void ITMVisualisationEngine_CPU<TVoxel, ITMVoxelBlockHash>::ForwardRender(const 
 template<class TVoxel, class TIndex>
 static boost::tuple<int,int,int> RenderPointCloud(Vector4u *outRendering, Vector4f *locations, Vector4f *active_locations, Vector4f *inactive_locations, Vector4f *colours, Vector4f *active_colours, Vector4f *inactive_colours, const Vector4f *ptsRay,
 	const TVoxel *voxelData, const typename TIndex::IndexData *voxelIndex, bool skipPoints, float voxelSize, 
-	Vector2i imgSize, Vector3f lightSource, const short int render_time)
+	Vector2i imgSize, Vector3f lightSource, const float render_time)
 {
 	int noTotalPoints = 0;
 	int noTotalActivePoints = 0;
@@ -476,9 +476,9 @@ static boost::tuple<int,int,int> RenderPointCloud(Vector4u *outRendering, Vector
 			pt_ray_out.z = point.z * voxelSize; pt_ray_out.w = 1.0f;
 			locations[noTotalPoints] = pt_ray_out;
 
-			short int voxel_time = readFromSDF_voxel_update_time<TVoxel, TIndex>(voxelData, voxelIndex, point);
+			float voxel_time = readFromSDF_voxel_update_time<TVoxel, TIndex>(voxelData, voxelIndex, point);
 
-      short int delta_time = 5;  // TODO(vanurag) : Make it a parameter
+      float delta_time = 5;  // TODO(vanurag) : Make it a parameter
       if (voxel_time > render_time - delta_time) {  // last few frames
         active_locations[noTotalActivePoints] = pt_ray_out;
         active_colours[noTotalActivePoints] = tmp;

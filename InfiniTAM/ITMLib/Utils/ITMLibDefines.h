@@ -152,7 +152,7 @@ struct ITMVoxel_s_rgb_time
   /** Number of fused observations that make up @p sdf. */
   uchar w_depth;
   /** Time when the voxel data is last updated. (-1 if not assigned depth) */
-  short int last_update_time;
+  float last_update_time;
   /** Padding that may or may not improve performance on certain GPUs */
   //uchar pad;
   /** RGB colour information stored for this voxel. */
@@ -205,7 +205,7 @@ struct ITMVoxel_s_time
   /** Number of fused observations that make up @p sdf. */
   uchar w_depth;
   /** Time when the voxel data is last updated. (-1 if not assigned depth) */
-  short int last_update_time;
+  float last_update_time;
   /** Padding that may or may not improve performance on certain GPUs */
   //uchar pad;
 

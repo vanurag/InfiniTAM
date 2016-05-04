@@ -142,7 +142,7 @@ _CPU_AND_GPU_CODE_ inline TVoxel readVoxel(const CONSTPTR(TVoxel) *voxelData, co
 }
 
 template<class TVoxel, class TIndex>
-_CPU_AND_GPU_CODE_ inline short int readFromSDF_voxel_update_time(const CONSTPTR(TVoxel) *voxelData,
+_CPU_AND_GPU_CODE_ inline float readFromSDF_voxel_update_time(const CONSTPTR(TVoxel) *voxelData,
   const CONSTPTR(typename TIndex::IndexData) *voxelIndex, const THREADPTR(Vector3f) & point,
   THREADPTR(typename TIndex::IndexCache) & cache) {
 
@@ -154,7 +154,7 @@ _CPU_AND_GPU_CODE_ inline short int readFromSDF_voxel_update_time(const CONSTPTR
 }
 
 template<class TVoxel, class TIndex>
-_CPU_AND_GPU_CODE_ inline short int readFromSDF_voxel_update_time(const CONSTPTR(TVoxel) *voxelData,
+_CPU_AND_GPU_CODE_ inline float readFromSDF_voxel_update_time(const CONSTPTR(TVoxel) *voxelData,
   const CONSTPTR(typename TIndex::IndexData) *voxelIndex, const THREADPTR(Vector3f) & point)
 {
   typename TIndex::IndexCache cache;

@@ -44,7 +44,7 @@ _CPU_AND_GPU_CODE_ inline float computeUpdatedVoxelDepthInfo(DEVICEPTR(TVoxel) &
 	// write back
 	voxel.sdf = TVoxel::SDF_floatToValue(newF);
 	voxel.w_depth = newW;
-	voxel.last_update_time = static_cast<short int>(update_time/1000.0);
+	voxel.last_update_time = update_time/1000.0;
 
 	return eta;
 }
@@ -285,9 +285,9 @@ _CPU_AND_GPU_CODE_ inline void checkBlockVisibility(THREADPTR(bool) &isVisible, 
 
 
 template<class TVoxel>
-_CPU_AND_GPU_CODE_ inline void checkBlockLastUpdateTime(THREADPTR(bool) &isInactive, const DEVICEPTR(TVoxel) *voxelBlock, const CONSTPTR(short int) &current_time) {
+_CPU_AND_GPU_CODE_ inline void checkBlockLastUpdateTime(THREADPTR(bool) &isInactive, const DEVICEPTR(TVoxel) *voxelBlock, const CONSTPTR(float) &current_time) {
 
-  short int delta_time = 5;  // TODO(vanurag) : Make it a parameter
+  float delta_time = 5;  // TODO(vanurag) : Make it a parameter
   for (int z = 0; z < SDF_BLOCK_SIZE; z++) for (int y = 0; y < SDF_BLOCK_SIZE; y++) for (int x = 0; x < SDF_BLOCK_SIZE; x++) {
     int locId = x + y * SDF_BLOCK_SIZE + z * SDF_BLOCK_SIZE * SDF_BLOCK_SIZE;
     if (voxelBlock[locId].last_update_time > current_time - delta_time) {  // active voxel

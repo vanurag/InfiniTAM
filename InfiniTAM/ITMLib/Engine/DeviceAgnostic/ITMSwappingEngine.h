@@ -19,7 +19,7 @@ _CPU_AND_GPU_CODE_ inline void combineVoxelDepthInformation(const CONSTPTR(TVoxe
 	newF /= newW;
 	newW = MIN(newW, maxW);
 
-	dst.last_update_time = static_cast<short int>(update_time/1000.0);
+	dst.last_update_time = update_time/1000.0;
 	dst.w_depth = newW;
 	dst.sdf = TVoxel::SDF_floatToValue(newF);
 }

@@ -266,17 +266,18 @@ _CPU_AND_GPU_CODE_ inline void drawPixelGrey(DEVICEPTR(Vector4u) & dest, const T
 
 template<class TVoxel, class TIndex>
 _CPU_AND_GPU_CODE_ inline void drawPixelTimeColour(DEVICEPTR(Vector4u) & dest, const THREADPTR(float) & angle, const CONSTPTR(Vector3f) & point,
-  const CONSTPTR(TVoxel) *voxelBlockData, const CONSTPTR(typename TIndex::IndexData) *indexData, const short int render_time)
+  const CONSTPTR(TVoxel) *voxelBlockData, const CONSTPTR(typename TIndex::IndexData) *indexData, const float render_time)
 {
-  short int voxel_time = readFromSDF_voxel_update_time<TVoxel, TIndex>(voxelBlockData, indexData, point);
+  float voxel_time = readFromSDF_voxel_update_time<TVoxel, TIndex>(voxelBlockData, indexData, point);
 
   float outRes = (0.8f * angle + 0.2f) * 255.0f;
-  short int delta_time = 5;  // TODO(vanurag) : Make it a parameter
+  float delta_time = 5;  // TODO(vanurag) : Make it a parameter
+  float epsilon_time = 0.1;
   dest.r = (uchar)outRes;
-  if (voxel_time > render_time - delta_time && voxel_time < render_time) {  // last few frames
+  if (voxel_time > render_time - delta_time && voxel_time < render_time-epsilon_time) {  // last few frames
     dest.g = (uchar)0;
     dest.b = (uchar)0;
-  } else if (voxel_time >= render_time) { // current frame
+  } else if (voxel_time >= render_time-epsilon_time) { // current frame
     dest.g = (uchar)outRes;
     dest.b = (uchar)0;
   }
@@ -309,7 +310,7 @@ _CPU_AND_GPU_CODE_ inline void drawPixelColour(DEVICEPTR(Vector4u) & dest, const
 template<class TVoxel, class TIndex>
 _CPU_AND_GPU_CODE_ inline void processPixelICP(DEVICEPTR(Vector4u) &outRendering, DEVICEPTR(Vector4f) &pointsMap, DEVICEPTR(Vector4f) &activePointsMap, DEVICEPTR(Vector4f) &inactivePointsMap, DEVICEPTR(Vector4f) &normalsMap,
 	const THREADPTR(Vector3f) & point, bool foundPoint, const CONSTPTR(TVoxel) *voxelData, const CONSTPTR(typename TIndex::IndexData) *voxelIndex,
-	float voxelSize, const THREADPTR(Vector3f) &lightSource, const short int render_time)
+	float voxelSize, const THREADPTR(Vector3f) &lightSource, const float render_time)
 {
 	Vector3f outNormal;
 	float angle;
@@ -329,8 +330,8 @@ _CPU_AND_GPU_CODE_ inline void processPixelICP(DEVICEPTR(Vector4u) &outRendering
 		outNormal4.x = outNormal.x; outNormal4.y = outNormal.y; outNormal4.z = outNormal.z; outNormal4.w = 0.0f;
 		normalsMap = outNormal4;
 
-		short int voxel_time = readFromSDF_voxel_update_time<TVoxel, TIndex>(voxelData, voxelIndex, point);
-    short int delta_time = 5;  // TODO(vanurag) : Make it a parameter
+		float voxel_time = readFromSDF_voxel_update_time<TVoxel, TIndex>(voxelData, voxelIndex, point);
+    float delta_time = 5;  // TODO(vanurag) : Make it a parameter
     if (voxel_time > render_time - delta_time) { // last few frames
       activePointsMap = outPoint4;
     } else { // other frames
@@ -349,7 +350,7 @@ _CPU_AND_GPU_CODE_ inline void processPixelICP(DEVICEPTR(Vector4u) &outRendering
 template<bool useSmoothing>
 _CPU_AND_GPU_CODE_ inline void processPixelICP(DEVICEPTR(Vector4u) *outRendering, DEVICEPTR(Vector4f) *pointsMap, DEVICEPTR(Vector4f) *activePointsMap, DEVICEPTR(Vector4f) *inactivePointsMap, DEVICEPTR(Vector4f) *normalsMap,
 	const CONSTPTR(Vector4f) *pointsRay, const THREADPTR(Vector2i) &imgSize, const THREADPTR(int) &x, const THREADPTR(int) &y, float voxelSize,
-	const THREADPTR(Vector3f) &lightSource, const short int voxel_time, const short int render_time)
+	const THREADPTR(Vector3f) &lightSource, const float voxel_time, const float render_time)
 {
 	Vector3f outNormal;
 	float angle;
@@ -374,7 +375,7 @@ _CPU_AND_GPU_CODE_ inline void processPixelICP(DEVICEPTR(Vector4u) *outRendering
 		outNormal4.x = outNormal.x; outNormal4.y = outNormal.y; outNormal4.z = outNormal.z; outNormal4.w = 0.0f;
 		normalsMap[locId] = outNormal4;
 
-    short int delta_time = 5;  // TODO(vanurag) : Make it a parameter
+    float delta_time = 5;  // TODO(vanurag) : Make it a parameter
     if (voxel_time > render_time - delta_time) { // last few frames
       activePointsMap[locId] = outPoint4;
     } else { // other frames
@@ -424,7 +425,7 @@ _CPU_AND_GPU_CODE_ inline void processPixelGrey(DEVICEPTR(Vector4u) &outRenderin
 template<class TVoxel, class TIndex>
 _CPU_AND_GPU_CODE_ inline void processPixelTimeColour(DEVICEPTR(Vector4u) &outRendering, const CONSTPTR(Vector3f) & point,
   bool foundPoint, const CONSTPTR(TVoxel) *voxelData, const CONSTPTR(typename TIndex::IndexData) *voxelIndex,
-  Vector3f lightSource, const short int render_time)
+  Vector3f lightSource, const float render_time)
 {
   Vector3f outNormal;
   float angle;

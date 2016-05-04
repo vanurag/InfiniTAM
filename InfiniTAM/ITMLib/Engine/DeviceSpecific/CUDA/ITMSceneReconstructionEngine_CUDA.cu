@@ -38,7 +38,7 @@ __global__ void setToType3(uchar *entriesVisibleType, int *visibleEntryIDs, int 
 template<class TVoxel, bool useSwapping>
 __global__ void buildVisibleList_device(TVoxel *localVBA, ITMHashEntry *hashTable, ITMHashSwapState *swapStates, int noTotalEntries,
 	int *visibleEntryIDs, AllocationTempData *allocData, uchar *entriesVisibleType,
-	Matrix4f M_d, Vector4f projParams_d, Vector2i depthImgSize, float voxelSize, const short int current_time);
+	Matrix4f M_d, Vector4f projParams_d, Vector2i depthImgSize, float voxelSize, const float current_time);
 
 // host methods
 
@@ -155,10 +155,10 @@ void ITMSceneReconstructionEngine_CUDA<TVoxel, ITMVoxelBlockHash>::AllocateScene
 
 	if (useSwapping)
 		buildVisibleList_device<TVoxel, true> << <gridSizeAL, cudaBlockSizeAL >> >(localVBA, hashTable, swapStates, noTotalEntries, visibleEntryIDs,
-			(AllocationTempData*)allocationTempData_device, entriesVisibleType, M_d, projParams_d, depthImgSize, voxelSize, static_cast<short int>(sdkGetTimerValue(&(this->scene_timer))/1000.0));
+			(AllocationTempData*)allocationTempData_device, entriesVisibleType, M_d, projParams_d, depthImgSize, voxelSize, sdkGetTimerValue(&(this->scene_timer))/1000.0);
 	else
 		buildVisibleList_device<TVoxel, false> << <gridSizeAL, cudaBlockSizeAL >> >(localVBA, hashTable, swapStates, noTotalEntries, visibleEntryIDs,
-			(AllocationTempData*)allocationTempData_device, entriesVisibleType, M_d, projParams_d, depthImgSize, voxelSize, static_cast<short int>(sdkGetTimerValue(&(this->scene_timer))/1000.0));
+			(AllocationTempData*)allocationTempData_device, entriesVisibleType, M_d, projParams_d, depthImgSize, voxelSize, sdkGetTimerValue(&(this->scene_timer))/1000.0);
 
 	if (useSwapping)
 	{
@@ -436,7 +436,7 @@ __global__ void reAllocateSwappedOutVoxelBlocks_device(int *voxelAllocationList,
 template<class TVoxel, bool useSwapping>
 __global__ void buildVisibleList_device(TVoxel *localVBA, ITMHashEntry *hashTable, ITMHashSwapState *swapStates, int noTotalEntries,
 	int *visibleEntryIDs, AllocationTempData *allocData, uchar *entriesVisibleType, 
-	Matrix4f M_d, Vector4f projParams_d, Vector2i depthImgSize, float voxelSize, const short int current_time)
+	Matrix4f M_d, Vector4f projParams_d, Vector2i depthImgSize, float voxelSize, const float current_time)
 {
 	int targetIdx = threadIdx.x + blockIdx.x * blockDim.x;
 	if (targetIdx > noTotalEntries - 1) return;

@@ -241,7 +241,7 @@ void ITMSceneReconstructionEngine_CPU<TVoxel, ITMVoxelBlockHash>::AllocateSceneF
 			if (useSwapping)
 			{
 				checkBlockVisibility<true>(isVisible, isVisibleEnlarged, hashEntry.pos, M_d, projParams_d, voxelSize, depthImgSize);
-				short int current_time = static_cast<short int>(sdkGetTimerValue(&(this->scene_timer))/1000.0);
+				float current_time = sdkGetTimerValue(&(this->scene_timer))/1000.0;
 				TVoxel *localVoxelBlock = &(localVBA[hashEntry.ptr * (SDF_BLOCK_SIZE3)]);
 				checkBlockLastUpdateTime<TVoxel>(isInactive, localVoxelBlock, current_time);
 				if (!isVisibleEnlarged && isInactive) hashVisibleType = 0;
