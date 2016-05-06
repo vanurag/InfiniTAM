@@ -307,9 +307,9 @@ _CPU_AND_GPU_CODE_ inline void drawPixelColour(DEVICEPTR(Vector4u) & dest, const
 
 
 template<class TVoxel, class TIndex>
-_CPU_AND_GPU_CODE_ inline void processPixelICP(DEVICEPTR(Vector4u) &outRendering, DEVICEPTR(Vector4f) &pointsMap, DEVICEPTR(Vector4f) &activePointsMap, DEVICEPTR(Vector4f) &inactivePointsMap, DEVICEPTR(Vector4f) &normalsMap,
+_CPU_AND_GPU_CODE_ inline void processPixelICP(DEVICEPTR(Vector4u) &outRendering, DEVICEPTR(Vector4f) &pointsMap, DEVICEPTR(Vector4f) &normalsMap,
 	const THREADPTR(Vector3f) & point, bool foundPoint, const CONSTPTR(TVoxel) *voxelData, const CONSTPTR(typename TIndex::IndexData) *voxelIndex,
-	float voxelSize, const THREADPTR(Vector3f) &lightSource, const float render_time, const float delta_time)
+	float voxelSize, const THREADPTR(Vector3f) &lightSource)
 {
 	Vector3f outNormal;
 	float angle;
@@ -328,27 +328,20 @@ _CPU_AND_GPU_CODE_ inline void processPixelICP(DEVICEPTR(Vector4u) &outRendering
 		Vector4f outNormal4;
 		outNormal4.x = outNormal.x; outNormal4.y = outNormal.y; outNormal4.z = outNormal.z; outNormal4.w = 0.0f;
 		normalsMap = outNormal4;
-
-		float voxel_time = readFromSDF_voxel_update_time<TVoxel, TIndex>(voxelData, voxelIndex, point);
-    if (voxel_time > render_time - delta_time) { // last few frames
-      activePointsMap = outPoint4;
-    } else { // other frames
-      inactivePointsMap = outPoint4;
-    }
 	}
 	else
 	{
 		Vector4f out4;
 		out4.x = 0.0f; out4.y = 0.0f; out4.z = 0.0f; out4.w = -1.0f;
 
-		pointsMap = out4; activePointsMap = out4; inactivePointsMap = out4; normalsMap = out4; outRendering = Vector4u((uchar)0);
+		pointsMap = out4; normalsMap = out4; outRendering = Vector4u((uchar)0);
 	}
 }
 
 template<bool useSmoothing>
-_CPU_AND_GPU_CODE_ inline void processPixelICP(DEVICEPTR(Vector4u) *outRendering, DEVICEPTR(Vector4f) *pointsMap, DEVICEPTR(Vector4f) *activePointsMap, DEVICEPTR(Vector4f) *inactivePointsMap, DEVICEPTR(Vector4f) *normalsMap,
+_CPU_AND_GPU_CODE_ inline void processPixelICP(DEVICEPTR(Vector4u) *outRendering, DEVICEPTR(Vector4f) *pointsMap, DEVICEPTR(Vector4f) *normalsMap,
 	const CONSTPTR(Vector4f) *pointsRay, const THREADPTR(Vector2i) &imgSize, const THREADPTR(int) &x, const THREADPTR(int) &y, float voxelSize,
-	const THREADPTR(Vector3f) &lightSource, const float voxel_time, const float render_time, const float delta_time)
+	const THREADPTR(Vector3f) &lightSource)
 {
 	Vector3f outNormal;
 	float angle;
@@ -372,19 +365,13 @@ _CPU_AND_GPU_CODE_ inline void processPixelICP(DEVICEPTR(Vector4u) *outRendering
 		Vector4f outNormal4;
 		outNormal4.x = outNormal.x; outNormal4.y = outNormal.y; outNormal4.z = outNormal.z; outNormal4.w = 0.0f;
 		normalsMap[locId] = outNormal4;
-
-    if (voxel_time > render_time - delta_time) { // last few frames
-      activePointsMap[locId] = outPoint4;
-    } else { // other frames
-      inactivePointsMap[locId] = outPoint4;
-    }
 	}
 	else
 	{
 		Vector4f out4;
 		out4.x = 0.0f; out4.y = 0.0f; out4.z = 0.0f; out4.w = -1.0f;
 
-		pointsMap[locId] = out4; activePointsMap[locId] = out4; inactivePointsMap[locId] = out4; normalsMap[locId] = out4; outRendering[locId] = Vector4u((uchar)0);
+		pointsMap[locId] = out4; normalsMap[locId] = out4; outRendering[locId] = Vector4u((uchar)0);
 	}
 }
 

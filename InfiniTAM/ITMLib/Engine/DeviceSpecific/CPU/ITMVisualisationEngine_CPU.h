@@ -20,8 +20,8 @@ namespace ITMLib
 			void RenderImage(const ITMPose *pose, const ITMIntrinsics *intrinsics, ITMRenderState *renderState,
 				ITMUChar4Image *outputImage, const float delta_time, IITMVisualisationEngine::RenderImageType type = IITMVisualisationEngine::RENDER_SHADED_GREYSCALE) const;
 			void FindSurface(const ITMPose *pose, const ITMIntrinsics *intrinsics, const ITMRenderState *renderState) const;
-			void CreatePointCloud(const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState, bool skipPoints, float delta_time) const;
-			void CreateICPMaps(const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState, float delta_time) const;
+			void CreatePointCloud(const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState, bool skipPoints) const;
+			void CreateICPMaps(const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState) const;
 			void ForwardRender(const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState) const;
 
 			ITMRenderState* CreateRenderState(const Vector2i & imgSize, const float rewind_time) const;
@@ -40,8 +40,8 @@ namespace ITMLib
 			void RenderImage(const ITMPose *pose, const ITMIntrinsics *intrinsics, ITMRenderState *renderState,
 				ITMUChar4Image *outputImage, const float delta_time, IITMVisualisationEngine::RenderImageType type = IITMVisualisationEngine::RENDER_SHADED_GREYSCALE) const;
 			void FindSurface(const ITMPose *pose, const ITMIntrinsics *intrinsics, const ITMRenderState *renderState) const;
-			void CreatePointCloud(const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState, bool skipPoints, float delta_time) const;
-			void CreateICPMaps(const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState, float delta_time) const;
+			void CreatePointCloud(const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState, bool skipPoints) const;
+			void CreateICPMaps(const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState) const;
 			void ForwardRender(const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState) const;
 
 			ITMRenderState_VH* CreateRenderState(const Vector2i & imgSize, const float rewind_time) const;

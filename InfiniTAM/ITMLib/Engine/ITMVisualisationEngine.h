@@ -58,13 +58,13 @@ namespace ITMLib
 			ITMLib::Engine::ITMColorTracker classes.
 			*/
 			virtual void CreatePointCloud(const ITMView *view, ITMTrackingState *trackingState, 
-				ITMRenderState *renderState, bool skipPoints, float delta_time) const = 0;
+				ITMRenderState *renderState, bool skipPoints) const = 0;
 
 			/** Create an image of reference points and normals as
 			required by the ITMLib::Engine::ITMDepthTracker classes.
 			*/
 			virtual void CreateICPMaps(const ITMView *view, ITMTrackingState *trackingState, 
-				ITMRenderState *renderState, float delta_time) const = 0;
+				ITMRenderState *renderState) const = 0;
 
 			/** Create an image of reference points and normals as
 			required by the ITMLib::Engine::ITMDepthTracker classes.
