@@ -26,7 +26,7 @@ namespace ITMLib
 			// This class is currently just for debugging purposes -- swaps CPU memory to CPU memory.
 			// Potentially this could stream into the host memory from somwhere else (disk, database, etc.).
 
-			void IntegrateGlobalIntoLocal(ITMScene<TVoxel, ITMVoxelBlockHash> *scene, ITMRenderState *renderState);
+			void IntegrateGlobalIntoLocal(ITMScene<TVoxel, ITMVoxelBlockHash> *scene, const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState);
 			void SaveToGlobalMemory(ITMScene<TVoxel, ITMVoxelBlockHash> *scene, ITMRenderState *renderState);
 
 			ITMSwappingEngine_CPU(void);

@@ -4,6 +4,25 @@
 
 #include "../../Utils/ITMLibDefines.h"
 
+_CPU_AND_GPU_CODE_ inline int forwardProjectPoint(const THREADPTR(Vector4f) &pt_model,
+  const CONSTPTR(Matrix4f) & M_d, const CONSTPTR(Vector4f) &projParams_d, const CONSTPTR(Vector2i) &imgSize)
+{
+  Vector4f pt_camera;
+  Vector2f pt_image;
+
+  pt_camera = M_d * pt_model;
+
+  if (pt_camera.z < 1e-10f) return -1;
+
+  pt_image.x = projParams_d.x * pt_camera.x / pt_camera.z + projParams_d.z;
+  pt_image.y = projParams_d.y * pt_camera.y / pt_camera.z + projParams_d.w;
+
+  if (pt_image.x < 0 || pt_image.x > imgSize.x-1 || pt_image.y < 0 || pt_image.y > imgSize.y-1) return -1;
+
+  return (int)(pt_image.x + 0.5f) + (int)(pt_image.y + 0.5f) * imgSize.x;
+}
+
+
 template<class TVoxel>
 _CPU_AND_GPU_CODE_ inline void combineVoxelDepthInformation(const CONSTPTR(TVoxel) & src, DEVICEPTR(TVoxel) & dst, int maxW, const double update_time)
 {

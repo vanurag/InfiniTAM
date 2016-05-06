@@ -48,7 +48,7 @@ void ITMDenseMapper<TVoxel,TIndex>::ResetScene(ITMScene<TVoxel,TIndex> *scene, c
 }
 
 template<class TVoxel, class TIndex>
-void ITMDenseMapper<TVoxel,TIndex>::ProcessFrame(const ITMView *view, const ITMTrackingState *trackingState, ITMScene<TVoxel,TIndex> *scene, ITMRenderState *renderState, const float delta_time)
+void ITMDenseMapper<TVoxel,TIndex>::ProcessFrame(const ITMView *view, ITMTrackingState *trackingState, ITMScene<TVoxel,TIndex> *scene, ITMRenderState *renderState, const float delta_time)
 {
 	// allocation
 	sceneRecoEngine->AllocateSceneFromDepth(scene, view, trackingState, renderState, delta_time);
@@ -59,7 +59,7 @@ void ITMDenseMapper<TVoxel,TIndex>::ProcessFrame(const ITMView *view, const ITMT
 	if (swappingEngine != NULL) {
 		// swapping: CPU -> GPU
 	  float bla_t = sdkGetTimerValue(&renderState->timer);
-		swappingEngine->IntegrateGlobalIntoLocal(scene, renderState);
+		swappingEngine->IntegrateGlobalIntoLocal(scene, view, trackingState, renderState);
 	  float cpu_to_gpu_time = sdkGetTimerValue(&renderState->timer) - bla_t;
 	  std::cout << "took " << cpu_to_gpu_time << " ms to transfer from CPU to GPU" << std::endl;
 		// swapping: GPU -> CPU

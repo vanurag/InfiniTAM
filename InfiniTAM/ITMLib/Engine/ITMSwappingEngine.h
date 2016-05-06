@@ -8,6 +8,8 @@
 #include "../Objects/ITMView.h"
 #include "../Objects/ITMRenderState.h"
 
+#include "../Objects/ITMTrackingState.h"
+
 using namespace ITMLib::Objects;
 
 namespace ITMLib
@@ -23,7 +25,7 @@ namespace ITMLib
 		class ITMSwappingEngine
 		{
 		public:
-			virtual void IntegrateGlobalIntoLocal(ITMScene<TVoxel, TIndex> *scene, ITMRenderState *renderState) = 0;
+			virtual void IntegrateGlobalIntoLocal(ITMScene<TVoxel, TIndex> *scene, const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState) = 0;
 
 			virtual void SaveToGlobalMemory(ITMScene<TVoxel, TIndex> *scene, ITMRenderState *renderState) = 0;
 

@@ -66,7 +66,8 @@ int ITMSwappingEngine_CPU<TVoxel, ITMVoxelBlockHash>::LoadFromGlobalMemory(ITMSc
 }
 
 template<class TVoxel>
-void ITMSwappingEngine_CPU<TVoxel, ITMVoxelBlockHash>::IntegrateGlobalIntoLocal(ITMScene<TVoxel, ITMVoxelBlockHash> *scene, ITMRenderState *renderState)
+void ITMSwappingEngine_CPU<TVoxel, ITMVoxelBlockHash>::IntegrateGlobalIntoLocal(ITMScene<TVoxel, ITMVoxelBlockHash> *scene,
+    const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState)
 {
 	ITMGlobalCache<TVoxel> *globalCache = scene->globalCache;
 
@@ -80,6 +81,12 @@ void ITMSwappingEngine_CPU<TVoxel, ITMVoxelBlockHash>::IntegrateGlobalIntoLocal(
 
 	TVoxel *localVBA = scene->localVBA.GetVoxelBlocks();
 
+	Vector4f * inactiveLocations = trackingState->pointCloud->inactive_locations->GetData(MEMORYDEVICE_CPU);
+	Matrix4f M_d = trackingState->pose_d->GetM();
+  Vector4f projParams_d = view->calib->intrinsics_d.projectionParamsSimple.all;
+  Vector2i imgSize = view->depth->noDims;
+  float voxelSize = scene->sceneParams->voxelSize;
+
 	int noNeededEntries = this->LoadFromGlobalMemory(scene);
 
 	int maxW = scene->sceneParams->maxW;
@@ -88,16 +95,37 @@ void ITMSwappingEngine_CPU<TVoxel, ITMVoxelBlockHash>::IntegrateGlobalIntoLocal(
 	{
 		int entryDestId = neededEntryIDs_local[i];
 
-//		if (hasSyncedData_local[i])
-//		{
+		if (hasSyncedData_local[i])
+		{
 //			TVoxel *srcVB = syncedVoxelBlocks_local + i * SDF_BLOCK_SIZE3;
 //			TVoxel *dstVB = localVBA + hashTable[entryDestId].ptr * SDF_BLOCK_SIZE3;
-//
-//			for (int vIdx = 0; vIdx < SDF_BLOCK_SIZE3; vIdx++)
-//			{
-//				CombineVoxelInformation<TVoxel::hasColorInformation, TVoxel>::compute(srcVB[vIdx], dstVB[vIdx], maxW, sdkGetTimerValue(&renderState->timer));
-//			}
-//		}
+
+			Vector3i globalPos;
+			globalPos.x = hashTable[entryDestId].pos.x;
+      globalPos.y = hashTable[entryDestId].pos.x;
+      globalPos.z = hashTable[entryDestId].pos.z;
+      globalPos *= SDF_BLOCK_SIZE;
+
+      for (int z = 0; z < SDF_BLOCK_SIZE; z++) for (int y = 0; y < SDF_BLOCK_SIZE; y++) for (int x = 0; x < SDF_BLOCK_SIZE; x++)
+      {
+        Vector4f pt_model; int locId;
+
+        locId = x + y * SDF_BLOCK_SIZE + z * SDF_BLOCK_SIZE * SDF_BLOCK_SIZE;
+
+        pt_model.x = (float)(globalPos.x + x) * voxelSize;
+        pt_model.y = (float)(globalPos.y + y) * voxelSize;
+        pt_model.z = (float)(globalPos.z + z) * voxelSize;
+        pt_model.w = 1.0f;
+
+        // project into camera image and get x,y
+        int pixelLoc = forwardProjectPoint(pt_model, M_d, projParams_d, imgSize);
+        if (pixelLoc >= 0) {
+          inactiveLocations[pixelLoc] = pt_model;
+        }
+
+//        CombineVoxelInformation<TVoxel::hasColorInformation, TVoxel>::compute(srcVB[locId], dstVB[vIdx], maxW, sdkGetTimerValue(&renderState->timer));
+      }
+		}
 
 		swapStates[entryDestId].state = 2;
 	}
