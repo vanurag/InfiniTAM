@@ -160,11 +160,11 @@ void ITMSceneReconstructionEngine_CUDA<TVoxel, ITMVoxelBlockHash>::AllocateScene
 		buildVisibleList_device<TVoxel, false> << <gridSizeAL, cudaBlockSizeAL >> >(localVBA, hashTable, swapStates, noTotalEntries, visibleEntryIDs,
 			(AllocationTempData*)allocationTempData_device, entriesVisibleType, M_d, projParams_d, depthImgSize, voxelSize, sdkGetTimerValue(&(this->scene_timer))/1000.0, delta_time);
 
-//	if (useSwapping)
-//	{
-//		reAllocateSwappedOutVoxelBlocks_device << <gridSizeAL, cudaBlockSizeAL >> >(voxelAllocationList, hashTable, noTotalEntries,
-//			(AllocationTempData*)allocationTempData_device, entriesVisibleType);
-//	}
+	if (useSwapping)
+	{
+		reAllocateSwappedOutVoxelBlocks_device << <gridSizeAL, cudaBlockSizeAL >> >(voxelAllocationList, hashTable, noTotalEntries,
+			(AllocationTempData*)allocationTempData_device, entriesVisibleType);
+	}
 
 	ITMSafeCall(cudaMemcpy(tempData, allocationTempData_device, sizeof(AllocationTempData), cudaMemcpyDeviceToHost));
 	renderState_vh->noVisibleEntries = tempData->noVisibleEntries;
@@ -469,7 +469,7 @@ __global__ void buildVisibleList_device(TVoxel *localVBA, ITMHashEntry *hashTabl
 
 	if (useSwapping)
 	{
-		if (hashVisibleType > 0 && swapStates[targetIdx].state != 2) swapStates[targetIdx].state = 2;
+		if (hashVisibleType > 0 && swapStates[targetIdx].state != 2) swapStates[targetIdx].state = 1;
 	}
 
 	__syncthreads();

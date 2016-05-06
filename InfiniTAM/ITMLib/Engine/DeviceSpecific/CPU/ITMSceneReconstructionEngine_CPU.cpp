@@ -254,7 +254,7 @@ void ITMSceneReconstructionEngine_CPU<TVoxel, ITMVoxelBlockHash>::AllocateSceneF
 
 		if (useSwapping)
 		{
-			if (hashVisibleType > 0 && swapStates[targetIdx].state != 2) swapStates[targetIdx].state = 2;
+			if (hashVisibleType > 0 && swapStates[targetIdx].state != 2) swapStates[targetIdx].state = 1;
 		}
 
 		if (hashVisibleType > 0)
@@ -274,20 +274,20 @@ void ITMSceneReconstructionEngine_CPU<TVoxel, ITMVoxelBlockHash>::AllocateSceneF
 	}
 
 	//reallocate deleted ones from previous swap operation
-//	if (useSwapping)
-//	{
-//		for (int targetIdx = 0; targetIdx < noTotalEntries; targetIdx++)
-//		{
-//			int vbaIdx;
-//			ITMHashEntry hashEntry = hashTable[targetIdx];
-//
-//			if (entriesVisibleType[targetIdx] > 0 && hashEntry.ptr == -1)
-//			{
-//				vbaIdx = lastFreeVoxelBlockId; lastFreeVoxelBlockId--;
-//				if (vbaIdx >= 0) hashTable[targetIdx].ptr = voxelAllocationList[vbaIdx];
-//			}
-//		}
-//	}
+	if (useSwapping)
+	{
+		for (int targetIdx = 0; targetIdx < noTotalEntries; targetIdx++)
+		{
+			int vbaIdx;
+			ITMHashEntry hashEntry = hashTable[targetIdx];
+
+			if (entriesVisibleType[targetIdx] > 0 && hashEntry.ptr == -1)
+			{
+				vbaIdx = lastFreeVoxelBlockId; lastFreeVoxelBlockId--;
+				if (vbaIdx >= 0) hashTable[targetIdx].ptr = voxelAllocationList[vbaIdx];
+			}
+		}
+	}
 
 	renderState_vh->noVisibleEntries = noVisibleEntries;
 

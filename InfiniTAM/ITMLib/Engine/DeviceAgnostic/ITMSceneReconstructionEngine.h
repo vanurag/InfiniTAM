@@ -162,10 +162,10 @@ _CPU_AND_GPU_CODE_ inline void buildHashAllocAndVisibleTypePP(DEVICEPTR(uchar) *
 
 		ITMHashEntry hashEntry = hashTable[hashIdx];
 
-		if (IS_EQUAL3(hashEntry.pos, blockPos) && hashEntry.ptr > -1)
+		if (IS_EQUAL3(hashEntry.pos, blockPos) && hashEntry.ptr >= -1)
 		{
 			//entry has been streamed out but is visible or in memory and visible
-			entriesVisibleType[hashIdx] = 1;//(hashEntry.ptr == -1) ? 2 : 1;
+			entriesVisibleType[hashIdx] = (hashEntry.ptr == -1) ? 2 : 1;
 
 			isFound = true;
 		}
@@ -173,17 +173,17 @@ _CPU_AND_GPU_CODE_ inline void buildHashAllocAndVisibleTypePP(DEVICEPTR(uchar) *
 		if (!isFound)
 		{
 			bool isExcess = false;
-			if (hashEntry.ptr > -1) //seach excess list only if there is no room in ordered part
+			if (hashEntry.ptr >= -1) //seach excess list only if there is no room in ordered part
 			{
 				while (hashEntry.offset >= 1)
 				{
 					hashIdx = SDF_BUCKET_NUM + hashEntry.offset - 1;
 					hashEntry = hashTable[hashIdx];
 
-					if (IS_EQUAL3(hashEntry.pos, blockPos) && hashEntry.ptr > -1)
+					if (IS_EQUAL3(hashEntry.pos, blockPos) && hashEntry.ptr >= -1)
 					{
 						//entry has been streamed out but is visible or in memory and visible
-						entriesVisibleType[hashIdx] = 1;//(hashEntry.ptr == -1) ? 2 : 1;
+						entriesVisibleType[hashIdx] = (hashEntry.ptr == -1) ? 2 : 1;
 
 						isFound = true;
 						break;

@@ -88,16 +88,16 @@ void ITMSwappingEngine_CPU<TVoxel, ITMVoxelBlockHash>::IntegrateGlobalIntoLocal(
 	{
 		int entryDestId = neededEntryIDs_local[i];
 
-		if (hasSyncedData_local[i])
-		{
-			TVoxel *srcVB = syncedVoxelBlocks_local + i * SDF_BLOCK_SIZE3;
-			TVoxel *dstVB = localVBA + hashTable[entryDestId].ptr * SDF_BLOCK_SIZE3;
-
-			for (int vIdx = 0; vIdx < SDF_BLOCK_SIZE3; vIdx++)
-			{
-				CombineVoxelInformation<TVoxel::hasColorInformation, TVoxel>::compute(srcVB[vIdx], dstVB[vIdx], maxW, sdkGetTimerValue(&renderState->timer));
-			}
-		}
+//		if (hasSyncedData_local[i])
+//		{
+//			TVoxel *srcVB = syncedVoxelBlocks_local + i * SDF_BLOCK_SIZE3;
+//			TVoxel *dstVB = localVBA + hashTable[entryDestId].ptr * SDF_BLOCK_SIZE3;
+//
+//			for (int vIdx = 0; vIdx < SDF_BLOCK_SIZE3; vIdx++)
+//			{
+//				CombineVoxelInformation<TVoxel::hasColorInformation, TVoxel>::compute(srcVB[vIdx], dstVB[vIdx], maxW, sdkGetTimerValue(&renderState->timer));
+//			}
+//		}
 
 		swapStates[entryDestId].state = 2;
 	}
