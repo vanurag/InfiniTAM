@@ -14,14 +14,13 @@ namespace ITMLib
 		class ITMPointCloud
 		{
 		public:
-			uint noTotalPoints, noTotalActivePoints, noTotalInactivePoints;
+			uint noTotalPoints, noTotalInactivePoints;
 
 			ORUtils::Image<Vector4f> *locations, *colours, *inactive_locations, *inactive_colours;
 
 			explicit ITMPointCloud(Vector2i imgSize, MemoryDeviceType memoryType)
 			{
 				this->noTotalPoints = 0;
-				this->noTotalActivePoints = 0;
 				this->noTotalInactivePoints = 0;
 
 				locations = new ORUtils::Image<Vector4f>(imgSize, memoryType);

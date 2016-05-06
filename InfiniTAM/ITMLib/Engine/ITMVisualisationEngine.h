@@ -47,7 +47,7 @@ namespace ITMLib
 				ITMRenderState *renderState) const = 0;
 
 			/** This will render an image using raycasting. */
-			virtual void RenderImage(const ITMPose *pose, const ITMIntrinsics *intrinsics,
+			virtual void RenderImage(const ITMPose *pose, const ITMIntrinsics *intrinsics, const ITMTrackingState *trackingState,
 				ITMRenderState *renderState, ITMUChar4Image *outputImage, const float delta_time, RenderImageType type = RENDER_SHADED_GREYSCALE) const = 0;
 
 			/** Finds the scene surface using raycasting. */

@@ -41,7 +41,7 @@ namespace ITMLib
 			This is typically created as a by-product of
 			raycasting operations.
 			*/
-			ORUtils::Image<Vector4f> *raycastResult;
+			ORUtils::Image<Vector4f> *raycastResult, *inactiveRaycastResult;
 
 			ORUtils::Image<Vector4f> *forwardProjection;
 			ORUtils::Image<int> *fwdProjMissingPoints;
@@ -56,6 +56,7 @@ namespace ITMLib
 			{
 				renderingRangeImage = new ORUtils::Image<Vector2f>(imgSize, memoryType);
 				raycastResult = new ORUtils::Image<Vector4f>(imgSize, memoryType);
+				inactiveRaycastResult = new ORUtils::Image<Vector4f>(imgSize, memoryType);
 				forwardProjection = new ORUtils::Image<Vector4f>(imgSize, memoryType);
 				fwdProjMissingPoints = new ORUtils::Image<int>(imgSize, memoryType);
 				raycastImage = new ORUtils::Image<Vector4u>(imgSize, memoryType);
@@ -85,6 +86,7 @@ namespace ITMLib
 			{
 				delete renderingRangeImage;
 				delete raycastResult;
+				delete inactiveRaycastResult;
 				delete forwardProjection;
 				delete fwdProjMissingPoints;
 				delete raycastImage;

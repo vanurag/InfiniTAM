@@ -187,11 +187,30 @@ static void GenericRaycast(const ITMScene<TVoxel,TIndex> *scene, const Vector2i&
 	}
 }
 
+static void ReProjectPoints(const Vector4f *oldPoints, const Vector2i& oldImgSize, const Vector2i& newImgSize, const Matrix4f& newM, const Vector4f newProjParams, Vector4f *newPoints) {
+
+  for (int oldLocId = 0; oldLocId < oldImgSize.x*oldImgSize.y; ++oldLocId) {
+    Vector4f pt_new_camera = newM * oldPoints[oldLocId];
+    Vector2f pt_new_image;
+
+    if (pt_new_camera.z < 1e-10f) continue;
+
+    pt_new_image.x = newProjParams.x * pt_new_camera.x / pt_new_camera.z + newProjParams.z;
+    pt_new_image.y = newProjParams.y * pt_new_camera.y / pt_new_camera.z + newProjParams.w;
+
+    if (pt_new_image.x < 0 || pt_new_image.x > newImgSize.x-1 || pt_new_image.y < 0 || pt_new_image.y > newImgSize.y-1) continue;
+
+    int newLocId = (int)(pt_new_image.x + 0.5f) + (int)(pt_new_image.y + 0.5f) * newImgSize.x;
+    newPoints[newLocId] = oldPoints[oldLocId];
+  }
+}
+
 template<class TVoxel, class TIndex>
-static void RenderImage_common(const ITMScene<TVoxel,TIndex> *scene, const ITMPose *pose, const ITMIntrinsics *intrinsics, 
+static void RenderImage_common(const ITMScene<TVoxel,TIndex> *scene, const ITMPose *pose, const ITMIntrinsics *intrinsics, const ITMTrackingState *trackingState,
 	ITMRenderState *renderState, ITMUChar4Image *outputImage, const float delta_time, IITMVisualisationEngine::RenderImageType type)
 {
 	Vector2i imgSize = outputImage->noDims;
+	Matrix4f M = pose->GetM();
 	Matrix4f invM = pose->GetInvM();
 
 	GenericRaycast(scene, imgSize, invM, intrinsics->projectionParamsSimple.all, renderState);
@@ -199,6 +218,9 @@ static void RenderImage_common(const ITMScene<TVoxel,TIndex> *scene, const ITMPo
 	Vector3f lightSource = -Vector3f(invM.getColumn(2));
 	Vector4u *outRendering = outputImage->GetData(MEMORYDEVICE_CPU);
 	Vector4f *pointsRay = renderState->raycastResult->GetData(MEMORYDEVICE_CPU);
+	Vector4f *inactivePointsRay = renderState->inactiveRaycastResult->GetData(MEMORYDEVICE_CPU);
+	Vector4f *inactivePoints_global = trackingState->pointCloud->inactive_locations->GetData(MEMORYDEVICE_CPU);
+	ReProjectPoints(inactivePoints_global, trackingState->pointCloud->inactive_locations->noDims, imgSize, M, intrinsics->projectionParamsSimple.all, inactivePointsRay);
 	const TVoxel *voxelData = scene->localVBA.GetVoxelBlocks();
 	const typename TIndex::IndexData *voxelIndex = scene->index.getIndexData();
 
@@ -234,8 +256,9 @@ static void RenderImage_common(const ITMScene<TVoxel,TIndex> *scene, const ITMPo
 		for (int locId = 0; locId < imgSize.x * imgSize.y; locId++)
 		{
 			Vector4f ptRay = pointsRay[locId];
+			Vector4f inactivePtRay = inactivePointsRay[locId];
 			processPixelTimeColour<TVoxel, TIndex>(
-			    outRendering[locId], ptRay.toVector3(), ptRay.w > 0, voxelData, voxelIndex,
+			    outRendering[locId], ptRay.toVector3(), ptRay.w > 0, inactivePtRay.toVector3(), inactivePtRay.w > 0, voxelData, voxelIndex,
 			    lightSource, sdkGetTimerValue(&renderState->timer)/1000.0, delta_time);
 		}
 	}
@@ -361,17 +384,17 @@ static void ForwardRender_common(const ITMScene<TVoxel, TIndex> *scene, const IT
 }
 
 template<class TVoxel, class TIndex>
-void ITMVisualisationEngine_CPU<TVoxel,TIndex>::RenderImage(const ITMPose *pose, const ITMIntrinsics *intrinsics, 
+void ITMVisualisationEngine_CPU<TVoxel,TIndex>::RenderImage(const ITMPose *pose, const ITMIntrinsics *intrinsics, const ITMTrackingState *trackingState,
 	ITMRenderState *renderState, ITMUChar4Image *outputImage, const float delta_time, IITMVisualisationEngine::RenderImageType type) const
 {
-	RenderImage_common(this->scene, pose, intrinsics, renderState, outputImage, delta_time, type);
+	RenderImage_common(this->scene, pose, intrinsics, trackingState, renderState, outputImage, delta_time, type);
 }
 
 template<class TVoxel>
-void ITMVisualisationEngine_CPU<TVoxel,ITMVoxelBlockHash>::RenderImage(const ITMPose *pose,  const ITMIntrinsics *intrinsics, 
+void ITMVisualisationEngine_CPU<TVoxel,ITMVoxelBlockHash>::RenderImage(const ITMPose *pose,  const ITMIntrinsics *intrinsics, const ITMTrackingState *trackingState,
 	ITMRenderState *renderState, ITMUChar4Image *outputImage, const float delta_time, IITMVisualisationEngine::RenderImageType type) const
 {
-	RenderImage_common(this->scene, pose, intrinsics, renderState, outputImage, delta_time, type);
+	RenderImage_common(this->scene, pose, intrinsics, trackingState, renderState, outputImage, delta_time, type);
 }
 
 template<class TVoxel, class TIndex>
