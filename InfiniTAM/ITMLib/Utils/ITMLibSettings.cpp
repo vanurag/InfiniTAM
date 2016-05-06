@@ -34,6 +34,9 @@ ITMLibSettings::ITMLibSettings(void)
 	/// enables or disables swapping. HERE BE DRAGONS: It should work, but requires more testing
 	useSwapping = true;
 
+	// Time after which a voxel, if not updated, turns inactive
+	deltaTime = 2.0;
+
 	/// enables or disables approximate raycast
 	useApproximateRaycast = false;
 

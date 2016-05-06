@@ -38,7 +38,7 @@ __global__ void setToType3(uchar *entriesVisibleType, int *visibleEntryIDs, int 
 template<class TVoxel, bool useSwapping>
 __global__ void buildVisibleList_device(TVoxel *localVBA, ITMHashEntry *hashTable, ITMHashSwapState *swapStates, int noTotalEntries,
 	int *visibleEntryIDs, AllocationTempData *allocData, uchar *entriesVisibleType,
-	Matrix4f M_d, Vector4f projParams_d, Vector2i depthImgSize, float voxelSize, const float current_time);
+	Matrix4f M_d, Vector4f projParams_d, Vector2i depthImgSize, float voxelSize, const float current_time, const float delta_time);
 
 // host methods
 
@@ -88,7 +88,7 @@ void ITMSceneReconstructionEngine_CUDA<TVoxel,ITMVoxelBlockHash>::ResetScene(ITM
 
 template<class TVoxel>
 void ITMSceneReconstructionEngine_CUDA<TVoxel, ITMVoxelBlockHash>::AllocateSceneFromDepth(ITMScene<TVoxel, ITMVoxelBlockHash> *scene, const ITMView *view, 
-	const ITMTrackingState *trackingState, const ITMRenderState *renderState, bool onlyUpdateVisibleList)
+	const ITMTrackingState *trackingState, const ITMRenderState *renderState, const float delta_time, bool onlyUpdateVisibleList)
 {
 	Vector2i depthImgSize = view->depth->noDims;
 	float voxelSize = scene->sceneParams->voxelSize;
@@ -155,10 +155,10 @@ void ITMSceneReconstructionEngine_CUDA<TVoxel, ITMVoxelBlockHash>::AllocateScene
 
 	if (useSwapping)
 		buildVisibleList_device<TVoxel, true> << <gridSizeAL, cudaBlockSizeAL >> >(localVBA, hashTable, swapStates, noTotalEntries, visibleEntryIDs,
-			(AllocationTempData*)allocationTempData_device, entriesVisibleType, M_d, projParams_d, depthImgSize, voxelSize, sdkGetTimerValue(&(this->scene_timer))/1000.0);
+			(AllocationTempData*)allocationTempData_device, entriesVisibleType, M_d, projParams_d, depthImgSize, voxelSize, sdkGetTimerValue(&(this->scene_timer))/1000.0, delta_time);
 	else
 		buildVisibleList_device<TVoxel, false> << <gridSizeAL, cudaBlockSizeAL >> >(localVBA, hashTable, swapStates, noTotalEntries, visibleEntryIDs,
-			(AllocationTempData*)allocationTempData_device, entriesVisibleType, M_d, projParams_d, depthImgSize, voxelSize, sdkGetTimerValue(&(this->scene_timer))/1000.0);
+			(AllocationTempData*)allocationTempData_device, entriesVisibleType, M_d, projParams_d, depthImgSize, voxelSize, sdkGetTimerValue(&(this->scene_timer))/1000.0, delta_time);
 
 //	if (useSwapping)
 //	{
@@ -237,7 +237,7 @@ void ITMSceneReconstructionEngine_CUDA<TVoxel,ITMPlainVoxelArray>::ResetScene(IT
 
 template<class TVoxel>
 void ITMSceneReconstructionEngine_CUDA<TVoxel, ITMPlainVoxelArray>::AllocateSceneFromDepth(ITMScene<TVoxel, ITMPlainVoxelArray> *scene, const ITMView *view,
-	const ITMTrackingState *trackingState, const ITMRenderState *renderState, bool onlyUpdateVisibleList)
+	const ITMTrackingState *trackingState, const ITMRenderState *renderState, const float delta_time, bool onlyUpdateVisibleList)
 {
 }
 
@@ -436,7 +436,7 @@ __global__ void reAllocateSwappedOutVoxelBlocks_device(int *voxelAllocationList,
 template<class TVoxel, bool useSwapping>
 __global__ void buildVisibleList_device(TVoxel *localVBA, ITMHashEntry *hashTable, ITMHashSwapState *swapStates, int noTotalEntries,
 	int *visibleEntryIDs, AllocationTempData *allocData, uchar *entriesVisibleType, 
-	Matrix4f M_d, Vector4f projParams_d, Vector2i depthImgSize, float voxelSize, const float current_time)
+	Matrix4f M_d, Vector4f projParams_d, Vector2i depthImgSize, float voxelSize, const float current_time, const float delta_time)
 {
 	int targetIdx = threadIdx.x + blockIdx.x * blockDim.x;
 	if (targetIdx > noTotalEntries - 1) return;
@@ -456,7 +456,7 @@ __global__ void buildVisibleList_device(TVoxel *localVBA, ITMHashEntry *hashTabl
 		{
 			checkBlockVisibility<true>(isVisible, isVisibleEnlarged, hashEntry.pos, M_d, projParams_d, voxelSize, depthImgSize);
 			TVoxel *localVoxelBlock = &(localVBA[hashEntry.ptr * (SDF_BLOCK_SIZE3)]);
-			checkBlockLastUpdateTime<TVoxel>(isInactive, localVoxelBlock, current_time);
+			checkBlockLastUpdateTime<TVoxel>(isInactive, localVoxelBlock, current_time, delta_time);
 			if (!isVisibleEnlarged && isInactive) hashVisibleType = 0;
 		} else {
 			checkBlockVisibility<false>(isVisible, isVisibleEnlarged, hashEntry.pos, M_d, projParams_d, voxelSize, depthImgSize);

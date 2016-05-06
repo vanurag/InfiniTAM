@@ -30,7 +30,7 @@ namespace ITMLib
 			void ResetScene(ITMScene<TVoxel,TIndex> *scene, const float rewind_time);
 
 			/// Process a single frame
-			void ProcessFrame(const ITMView *view, const ITMTrackingState *trackingState, ITMScene<TVoxel,TIndex> *scene, ITMRenderState *renderState_live);
+			void ProcessFrame(const ITMView *view, const ITMTrackingState *trackingState, ITMScene<TVoxel,TIndex> *scene, ITMRenderState *renderState_live, const float delta_time);
 
 			/// Update the visible list (this can be called to update the visible list when fusion is turned off)
 			void UpdateVisibleList(const ITMView *view, const ITMTrackingState *trackingState, ITMScene<TVoxel,TIndex> *scene, ITMRenderState *renderState);

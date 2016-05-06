@@ -23,7 +23,7 @@ void ITMTrackingController::Prepare(ITMTrackingState *trackingState, const ITMVi
 	{
 		ITMPose pose_rgb(view->calib->trafo_rgb_to_depth.calib_inv * trackingState->pose_d->GetM());
 		visualisationEngine->CreateExpectedDepths(&pose_rgb, &(view->calib->intrinsics_rgb), renderState);
-		visualisationEngine->CreatePointCloud(view, trackingState, renderState, settings->skipPoints);
+		visualisationEngine->CreatePointCloud(view, trackingState, renderState, settings->skipPoints, settings->deltaTime);
 		trackingState->age_pointCloud = 0;
 	}
 	else
@@ -32,7 +32,7 @@ void ITMTrackingController::Prepare(ITMTrackingState *trackingState, const ITMVi
 
 		if (trackingState->requiresFullRendering)
 		{
-			visualisationEngine->CreateICPMaps(view, trackingState, renderState);
+			visualisationEngine->CreateICPMaps(view, trackingState, renderState, settings->deltaTime);
 			trackingState->pose_pointCloud->SetFrom(trackingState->pose_d);
 			if (trackingState->age_pointCloud==-1) trackingState->age_pointCloud=-2;
 			else trackingState->age_pointCloud = 0;

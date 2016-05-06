@@ -46,7 +46,7 @@ __global__ void forwardProject_device(Vector4f *forwardProjection, const Vector4
 
 template<class TVoxel, class TIndex>
 __global__ void renderICP_device(Vector4u *outRendering, Vector4f *pointsMap, Vector4f *activePointsMap, Vector4f *inactivePointsMap, Vector4f *normalsMap, const Vector4f *pointsRay,
-	const TVoxel *voxelData, const typename TIndex::IndexData *voxelIndex, float voxelSize, Vector2i imgSize, Vector3f lightSource, const float render_time);
+	const TVoxel *voxelData, const typename TIndex::IndexData *voxelIndex, float voxelSize, Vector2i imgSize, Vector3f lightSource, const float render_time, const float delta_time);
 
 __global__ void renderForward_device(Vector4u *outRendering, const Vector4f *pointsRay, float voxelSize, Vector2i imgSize, Vector3f lightSource);
 
@@ -56,7 +56,7 @@ __global__ void renderGrey_device(Vector4u *outRendering, const Vector4f *ptsRay
 
 template<class TVoxel, class TIndex>
 __global__ void renderColourFromTime_device(Vector4u *outRendering, const Vector4f *ptsRay, const TVoxel *voxelData,
-	const typename TIndex::IndexData *voxelIndex, Vector2i imgSize, Vector3f lightSource, const float render_time);
+	const typename TIndex::IndexData *voxelIndex, Vector2i imgSize, Vector3f lightSource, const float render_time, const float delta_time);
 
 template<class TVoxel, class TIndex>
 __global__ void renderColourFromNormal_device(Vector4u *outRendering, const Vector4f *ptsRay, const TVoxel *voxelData,
@@ -66,7 +66,7 @@ template<class TVoxel, class TIndex>
 __global__ void renderPointCloud_device(Vector4u *outRendering, Vector4f *locations, Vector4f *active_locations,
 	Vector4f *inactive_locations,  Vector4f *colours, Vector4f *active_colours, Vector4f *inactive_colours, uint *noTotalPoints, uint *noTotalActivePoints, uint *noTotalInactivePoints,
 	const Vector4f *ptsRay, const TVoxel *voxelData, const typename TIndex::IndexData *voxelIndex, bool skipPoints,
-	float voxelSize, Vector2i imgSize, Vector3f lightSource, const float render_time);
+	float voxelSize, Vector2i imgSize, Vector3f lightSource, const float render_time, const float delta_time);
 
 template<class TVoxel, class TIndex>
 __global__ void renderColour_device(Vector4u *outRendering, const Vector4f *ptsRay, const TVoxel *voxelData,
@@ -243,7 +243,7 @@ static void GenericRaycast(const ITMScene<TVoxel, TIndex> *scene, const Vector2i
 
 template<class TVoxel, class TIndex>
 static void RenderImage_common(const ITMScene<TVoxel, TIndex> *scene, const ITMPose *pose, const ITMIntrinsics *intrinsics, ITMRenderState *renderState,
-	ITMUChar4Image *outputImage, IITMVisualisationEngine::RenderImageType type)
+	ITMUChar4Image *outputImage, IITMVisualisationEngine::RenderImageType type, const float delta_time)
 {
 	Vector2i imgSize = outputImage->noDims;
 	Matrix4f invM = pose->GetInvM();
@@ -272,14 +272,14 @@ static void RenderImage_common(const ITMScene<TVoxel, TIndex> *scene, const ITMP
 	case IITMVisualisationEngine::RENDER_SHADED_GREYSCALE:
 	default:
 		renderColourFromTime_device<TVoxel, TIndex> <<<gridSize, cudaBlockSize>>>(outRendering, pointsRay, scene->localVBA.GetVoxelBlocks(),
-			scene->index.getIndexData(), imgSize, lightSource, sdkGetTimerValue(&renderState->timer)/1000.0);
+			scene->index.getIndexData(), imgSize, lightSource, sdkGetTimerValue(&renderState->timer)/1000.0, delta_time);
 		break;
 	}
 }
 
 template<class TVoxel, class TIndex>
 static void CreatePointCloud_common(const ITMScene<TVoxel, TIndex> *scene, const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState,
-	bool skipPoints, uint *noTotalPoints_device, uint *noTotalActivePoints_device, uint *noTotalInactivePoints_device)
+	bool skipPoints, uint *noTotalPoints_device, uint *noTotalActivePoints_device, uint *noTotalInactivePoints_device, const float delta_time)
 {
 	Vector2i imgSize = renderState->raycastResult->noDims;
 	Matrix4f invM = trackingState->pose_d->GetInvM() * view->calib->trafo_rgb_to_depth.calib;
@@ -305,7 +305,7 @@ static void CreatePointCloud_common(const ITMScene<TVoxel, TIndex> *scene, const
 	dim3 gridSize = getGridSize(imgSize, cudaBlockSize);
 	renderPointCloud_device<TVoxel, TIndex> << <gridSize, cudaBlockSize >> >(outRendering, locations, active_locations, inactive_locations, colours, active_colours, inactive_colours, noTotalPoints_device,
 			noTotalActivePoints_device, noTotalInactivePoints_device, pointsRay, scene->localVBA.GetVoxelBlocks(), scene->index.getIndexData(), skipPoints,
-			scene->sceneParams->voxelSize, imgSize, lightSource, sdkGetTimerValue(&renderState->timer)/1000.0);
+			scene->sceneParams->voxelSize, imgSize, lightSource, sdkGetTimerValue(&renderState->timer)/1000.0, delta_time);
 
 	ITMSafeCall(cudaMemcpy(&trackingState->pointCloud->noTotalPoints, noTotalPoints_device, sizeof(uint), cudaMemcpyDeviceToHost));
 	ITMSafeCall(cudaMemcpy(&trackingState->pointCloud->noTotalActivePoints, noTotalActivePoints_device, sizeof(uint), cudaMemcpyDeviceToHost));
@@ -313,7 +313,7 @@ static void CreatePointCloud_common(const ITMScene<TVoxel, TIndex> *scene, const
 }
 
 template<class TVoxel, class TIndex>
-void CreateICPMaps_common(const ITMScene<TVoxel, TIndex> *scene, const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState)
+void CreateICPMaps_common(const ITMScene<TVoxel, TIndex> *scene, const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState, const float delta_time)
 {
 	Vector2i imgSize = renderState->raycastResult->noDims;
 	Matrix4f invM = trackingState->pose_d->GetInvM();
@@ -334,7 +334,7 @@ void CreateICPMaps_common(const ITMScene<TVoxel, TIndex> *scene, const ITMView *
 	dim3 cudaBlockSize(16, 12);
 	dim3 gridSize((int)ceil((float)imgSize.x / (float)cudaBlockSize.x), (int)ceil((float)imgSize.y / (float)cudaBlockSize.y));
 	renderICP_device<TVoxel, TIndex> <<<gridSize, cudaBlockSize>>>(outRendering, pointsMap, activePointsMap, inactivePointsMap, normalsMap, pointsRay,
-		scene->localVBA.GetVoxelBlocks(), scene->index.getIndexData(), scene->sceneParams->voxelSize, imgSize, lightSource, sdkGetTimerValue(&renderState->timer)/1000.0);
+		scene->localVBA.GetVoxelBlocks(), scene->index.getIndexData(), scene->sceneParams->voxelSize, imgSize, lightSource, sdkGetTimerValue(&renderState->timer)/1000.0, delta_time);
 }
 
 template<class TVoxel, class TIndex>
@@ -402,16 +402,16 @@ static void ForwardRender_common(const ITMScene<TVoxel, TIndex> *scene, const IT
 
 template<class TVoxel, class TIndex>
 void ITMVisualisationEngine_CUDA<TVoxel, TIndex>::RenderImage(const ITMPose *pose, const ITMIntrinsics *intrinsics, ITMRenderState *renderState,
-	ITMUChar4Image *outputImage, IITMVisualisationEngine::RenderImageType type) const
+	ITMUChar4Image *outputImage, const float delta_time, IITMVisualisationEngine::RenderImageType type) const
 {
-	RenderImage_common(this->scene, pose, intrinsics, renderState, outputImage, type);
+	RenderImage_common(this->scene, pose, intrinsics, renderState, outputImage, type, delta_time);
 }
 
 template<class TVoxel>
 void ITMVisualisationEngine_CUDA<TVoxel, ITMVoxelBlockHash>::RenderImage(const ITMPose *pose, const ITMIntrinsics *intrinsics, 
-	ITMRenderState *renderState, ITMUChar4Image *outputImage, IITMVisualisationEngine::RenderImageType type) const
+	ITMRenderState *renderState, ITMUChar4Image *outputImage, const float delta_time, IITMVisualisationEngine::RenderImageType type) const
 {
-	RenderImage_common(this->scene, pose, intrinsics, renderState, outputImage, type);
+	RenderImage_common(this->scene, pose, intrinsics, renderState, outputImage, type, delta_time);
 }
 
 template<class TVoxel, class TIndex>
@@ -429,30 +429,30 @@ void ITMVisualisationEngine_CUDA<TVoxel, ITMVoxelBlockHash>::FindSurface(const I
 
 template<class TVoxel, class TIndex>
 void ITMVisualisationEngine_CUDA<TVoxel, TIndex>::CreatePointCloud(const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState, 
-	bool skipPoints) const
+	bool skipPoints, const float delta_time) const
 {
-	CreatePointCloud_common(this->scene, view, trackingState, renderState, skipPoints, noTotalPoints_device, noTotalActivePoints_device, noTotalInactivePoints_device);
+	CreatePointCloud_common(this->scene, view, trackingState, renderState, skipPoints, noTotalPoints_device, noTotalActivePoints_device, noTotalInactivePoints_device, delta_time);
 }
 
 template<class TVoxel>
 void ITMVisualisationEngine_CUDA<TVoxel, ITMVoxelBlockHash>::CreatePointCloud(const ITMView *view, ITMTrackingState *trackingState, 
-	ITMRenderState *renderState, bool skipPoints) const
+	ITMRenderState *renderState, bool skipPoints, const float delta_time) const
 {
-	CreatePointCloud_common(this->scene, view, trackingState, renderState, skipPoints, noTotalPoints_device, noTotalActivePoints_device, noTotalInactivePoints_device);
+	CreatePointCloud_common(this->scene, view, trackingState, renderState, skipPoints, noTotalPoints_device, noTotalActivePoints_device, noTotalInactivePoints_device, delta_time);
 }
 
 template<class TVoxel, class TIndex>
 void ITMVisualisationEngine_CUDA<TVoxel, TIndex>::CreateICPMaps(const ITMView *view, ITMTrackingState *trackingState, 
-	ITMRenderState *renderState) const
+	ITMRenderState *renderState, const float delta_time) const
 {
-	CreateICPMaps_common(this->scene, view, trackingState, renderState);
+	CreateICPMaps_common(this->scene, view, trackingState, renderState, delta_time);
 }
 
 template<class TVoxel>
 void ITMVisualisationEngine_CUDA<TVoxel, ITMVoxelBlockHash>::CreateICPMaps(const ITMView *view, ITMTrackingState *trackingState, 
-	ITMRenderState *renderState) const
+	ITMRenderState *renderState, const float delta_time) const
 {
-	CreateICPMaps_common(this->scene, view, trackingState, renderState);
+	CreateICPMaps_common(this->scene, view, trackingState, renderState, delta_time);
 }
 
 template<class TVoxel, class TIndex>
@@ -630,7 +630,7 @@ __global__ void forwardProject_device(Vector4f *forwardProjection, const Vector4
 
 template<class TVoxel, class TIndex>
 __global__ void renderICP_device(Vector4u *outRendering, Vector4f *pointsMap, Vector4f *activePointsMap, Vector4f *inactivePointsMap, Vector4f *normalsMap, const Vector4f *pointsRay,
-		const TVoxel *voxelData, const typename TIndex::IndexData *voxelIndex, float voxelSize, Vector2i imgSize, Vector3f lightSource, const float render_time)
+		const TVoxel *voxelData, const typename TIndex::IndexData *voxelIndex, float voxelSize, Vector2i imgSize, Vector3f lightSource, const float render_time, const float delta_time)
 {
 	int x = (threadIdx.x + blockIdx.x * blockDim.x), y = (threadIdx.y + blockIdx.y * blockDim.y);
 
@@ -640,7 +640,7 @@ __global__ void renderICP_device(Vector4u *outRendering, Vector4f *pointsMap, Ve
 	Vector3f point = pointsRay[locId].toVector3();
 	float voxel_time = readFromSDF_voxel_update_time<TVoxel, TIndex>(voxelData, voxelIndex, point);
 
-	processPixelICP<true>(outRendering, pointsMap, activePointsMap, inactivePointsMap, normalsMap, pointsRay, imgSize, x, y, voxelSize, lightSource, voxel_time, render_time);
+	processPixelICP<true>(outRendering, pointsMap, activePointsMap, inactivePointsMap, normalsMap, pointsRay, imgSize, x, y, voxelSize, lightSource, voxel_time, render_time, delta_time);
 }
 
 __global__ void renderForward_device(Vector4u *outRendering, const Vector4f *pointsRay, float voxelSize, Vector2i imgSize, Vector3f lightSource)
@@ -669,7 +669,7 @@ __global__ void renderGrey_device(Vector4u *outRendering, const Vector4f *ptsRay
 
 template<class TVoxel, class TIndex>
 __global__ void renderColourFromTime_device(Vector4u *outRendering, const Vector4f *ptsRay, const TVoxel *voxelData,
-	const typename TIndex::IndexData *voxelIndex, Vector2i imgSize, Vector3f lightSource, const float render_time)
+	const typename TIndex::IndexData *voxelIndex, Vector2i imgSize, Vector3f lightSource, const float render_time, const float delta_time)
 {
 	int x = (threadIdx.x + blockIdx.x * blockDim.x), y = (threadIdx.y + blockIdx.y * blockDim.y);
 
@@ -679,7 +679,7 @@ __global__ void renderColourFromTime_device(Vector4u *outRendering, const Vector
 
 	Vector4f ptRay = ptsRay[locId];
 
-	processPixelTimeColour<TVoxel, TIndex>(outRendering[locId], ptRay.toVector3(), ptRay.w > 0, voxelData, voxelIndex, lightSource, render_time);
+	processPixelTimeColour<TVoxel, TIndex>(outRendering[locId], ptRay.toVector3(), ptRay.w > 0, voxelData, voxelIndex, lightSource, render_time, delta_time);
 }
 
 
@@ -702,7 +702,7 @@ template<class TVoxel, class TIndex>
 __global__ void renderPointCloud_device(Vector4u *outRendering, Vector4f *locations, Vector4f *active_locations,
 	Vector4f *inactive_locations, Vector4f *colours, Vector4f *active_colours, Vector4f *inactive_colours, uint *noTotalPoints, uint *noTotalActivePoints, uint *noTotalInactivePoints,
 	const Vector4f *ptsRay, const TVoxel *voxelData, const typename TIndex::IndexData *voxelIndex, bool skipPoints,
-	float voxelSize, Vector2i imgSize, Vector3f lightSource, const float render_time)
+	float voxelSize, Vector2i imgSize, Vector3f lightSource, const float render_time, const float delta_time)
 {
 	__shared__ bool shouldPrefix;
 	shouldPrefix = false;
@@ -751,7 +751,6 @@ __global__ void renderPointCloud_device(Vector4u *outRendering, Vector4f *locati
 		}
 
 		float voxel_time = readFromSDF_voxel_update_time<TVoxel, TIndex>(voxelData, voxelIndex, point);
-		float delta_time = 2;  // TODO(vanurag) : Make it a parameter
 
 		int active_offset = computePrefixSum_device<uint>(foundPoint, noTotalActivePoints, blockDim.x * blockDim.y, threadIdx.x + threadIdx.y * blockDim.x);
 		if (active_offset != -1 && voxel_time > render_time - delta_time)	// last few frames

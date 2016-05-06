@@ -141,7 +141,7 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
   VisualizeCameraPose();
 
   // fusion
-  if (fusionActive) denseMapper->ProcessFrame(view, trackingState, scene, renderState_live);
+  if (fusionActive) denseMapper->ProcessFrame(view, trackingState, scene, renderState_live, settings->deltaTime);
 
   // raycast to renderState_live for tracking and free visualisation
   trackingController->Prepare(trackingState, view, renderState_live);
@@ -165,7 +165,7 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 	VisualizeCameraPose();
 
 	// fusion
-	if (fusionActive) denseMapper->ProcessFrame(view, trackingState, scene, renderState_live);
+	if (fusionActive) denseMapper->ProcessFrame(view, trackingState, scene, renderState_live, settings->deltaTime);
 
 	// raycast to renderState_live for tracking and free visualisation
 	trackingController->Prepare(trackingState, view, renderState_live);
@@ -189,7 +189,7 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
   VisualizeCameraPose();
 
   // fusion
-  if (fusionActive) denseMapper->ProcessFrame(view, trackingState, scene, renderState_live);
+  if (fusionActive) denseMapper->ProcessFrame(view, trackingState, scene, renderState_live, settings->deltaTime);
 
   // raycast to renderState_live for tracking and free visualisation
   trackingController->Prepare(trackingState, view, renderState_live);
@@ -298,7 +298,7 @@ void ITMMainEngine::GetImage(ITMUChar4Image *out, GetImageType getImageType, ITM
 
 		visualisationEngine->FindVisibleBlocks(pose, intrinsics, renderState_freeview);
 		visualisationEngine->CreateExpectedDepths(pose, intrinsics, renderState_freeview);
-		visualisationEngine->RenderImage(pose, intrinsics, renderState_freeview, renderState_freeview->raycastImage, type);
+		visualisationEngine->RenderImage(pose, intrinsics, renderState_freeview, renderState_freeview->raycastImage, settings->deltaTime, type);
 
 		if (settings->deviceType == ITMLibSettings::DEVICE_CUDA)
 			out->SetFrom(renderState_freeview->raycastImage, ORUtils::MemoryBlock<Vector4u>::CUDA_TO_CPU);

@@ -116,7 +116,7 @@ void ITMSceneReconstructionEngine_CPU<TVoxel, ITMVoxelBlockHash>::IntegrateIntoS
 
 template<class TVoxel>
 void ITMSceneReconstructionEngine_CPU<TVoxel, ITMVoxelBlockHash>::AllocateSceneFromDepth(ITMScene<TVoxel, ITMVoxelBlockHash> *scene, const ITMView *view,
-	const ITMTrackingState *trackingState, const ITMRenderState *renderState, bool onlyUpdateVisibleList)
+	const ITMTrackingState *trackingState, const ITMRenderState *renderState, const float delta_time, bool onlyUpdateVisibleList)
 {
 	Vector2i depthImgSize = view->depth->noDims;
 	float voxelSize = scene->sceneParams->voxelSize;
@@ -243,7 +243,7 @@ void ITMSceneReconstructionEngine_CPU<TVoxel, ITMVoxelBlockHash>::AllocateSceneF
 				checkBlockVisibility<true>(isVisible, isVisibleEnlarged, hashEntry.pos, M_d, projParams_d, voxelSize, depthImgSize);
 				float current_time = sdkGetTimerValue(&(this->scene_timer))/1000.0;
 				TVoxel *localVoxelBlock = &(localVBA[hashEntry.ptr * (SDF_BLOCK_SIZE3)]);
-				checkBlockLastUpdateTime<TVoxel>(isInactive, localVoxelBlock, current_time);
+				checkBlockLastUpdateTime<TVoxel>(isInactive, localVoxelBlock, current_time, delta_time);
 				if (!isVisibleEnlarged && isInactive) hashVisibleType = 0;
 			} else {
 				checkBlockVisibility<false>(isVisible, isVisibleEnlarged, hashEntry.pos, M_d, projParams_d, voxelSize, depthImgSize);
@@ -319,7 +319,7 @@ void ITMSceneReconstructionEngine_CPU<TVoxel,ITMPlainVoxelArray>::ResetScene(ITM
 
 template<class TVoxel>
 void ITMSceneReconstructionEngine_CPU<TVoxel, ITMPlainVoxelArray>::AllocateSceneFromDepth(ITMScene<TVoxel, ITMPlainVoxelArray> *scene, const ITMView *view,
-	const ITMTrackingState *trackingState, const ITMRenderState *renderState, bool onlyUpdateVisibleList)
+	const ITMTrackingState *trackingState, const ITMRenderState *renderState, const float delta_time, bool onlyUpdateVisibleList)
 {}
 
 template<class TVoxel>

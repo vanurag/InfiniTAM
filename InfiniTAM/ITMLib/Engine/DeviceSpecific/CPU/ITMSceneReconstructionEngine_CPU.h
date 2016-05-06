@@ -23,7 +23,7 @@ namespace ITMLib
 			void ResetScene(ITMScene<TVoxel, ITMVoxelBlockHash> *scene, const float rewind_time);
 
 			void AllocateSceneFromDepth(ITMScene<TVoxel, ITMVoxelBlockHash> *scene, const ITMView *view, const ITMTrackingState *trackingState,
-				const ITMRenderState *renderState, bool onlyUpdateVisibleList = false);
+				const ITMRenderState *renderState, const float delta_time, bool onlyUpdateVisibleList = false);
 
 			void IntegrateIntoScene(ITMScene<TVoxel, ITMVoxelBlockHash> *scene, const ITMView *view, const ITMTrackingState *trackingState,
 				const ITMRenderState *renderState);
@@ -39,7 +39,7 @@ namespace ITMLib
 			void ResetScene(ITMScene<TVoxel, ITMPlainVoxelArray> *scene, const float rewind_time);
 
 			void AllocateSceneFromDepth(ITMScene<TVoxel, ITMPlainVoxelArray> *scene, const ITMView *view, const ITMTrackingState *trackingState,
-				const ITMRenderState *renderState, bool onlyUpdateVisibleList = false);
+				const ITMRenderState *renderState, const float delta_time, bool onlyUpdateVisibleList = false);
 
 			void IntegrateIntoScene(ITMScene<TVoxel, ITMPlainVoxelArray> *scene, const ITMView *view, const ITMTrackingState *trackingState,
 				const ITMRenderState *renderState);

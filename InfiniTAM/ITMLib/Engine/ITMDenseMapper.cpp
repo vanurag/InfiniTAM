@@ -48,10 +48,10 @@ void ITMDenseMapper<TVoxel,TIndex>::ResetScene(ITMScene<TVoxel,TIndex> *scene, c
 }
 
 template<class TVoxel, class TIndex>
-void ITMDenseMapper<TVoxel,TIndex>::ProcessFrame(const ITMView *view, const ITMTrackingState *trackingState, ITMScene<TVoxel,TIndex> *scene, ITMRenderState *renderState)
+void ITMDenseMapper<TVoxel,TIndex>::ProcessFrame(const ITMView *view, const ITMTrackingState *trackingState, ITMScene<TVoxel,TIndex> *scene, ITMRenderState *renderState, const float delta_time)
 {
 	// allocation
-	sceneRecoEngine->AllocateSceneFromDepth(scene, view, trackingState, renderState);
+	sceneRecoEngine->AllocateSceneFromDepth(scene, view, trackingState, renderState, delta_time);
 
 	// integration
 	sceneRecoEngine->IntegrateIntoScene(scene, view, trackingState, renderState);

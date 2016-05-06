@@ -25,6 +25,9 @@ namespace ITMLib
 			/// Enables swapping between host and device.
 			bool useSwapping;
 
+			// time after which if voxel is not updated, it turns inactive
+			float deltaTime;
+
 			bool useApproximateRaycast;
 
 			bool useBilateralFilter;

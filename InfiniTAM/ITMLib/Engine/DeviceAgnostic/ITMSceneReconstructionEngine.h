@@ -285,9 +285,8 @@ _CPU_AND_GPU_CODE_ inline void checkBlockVisibility(THREADPTR(bool) &isVisible, 
 
 
 template<class TVoxel>
-_CPU_AND_GPU_CODE_ inline void checkBlockLastUpdateTime(THREADPTR(bool) &isInactive, const DEVICEPTR(TVoxel) *voxelBlock, const CONSTPTR(float) &current_time) {
+_CPU_AND_GPU_CODE_ inline void checkBlockLastUpdateTime(THREADPTR(bool) &isInactive, const DEVICEPTR(TVoxel) *voxelBlock, const CONSTPTR(float) &current_time, const CONSTPTR(float) delta_time) {
 
-  float delta_time = 2;  // TODO(vanurag) : Make it a parameter
   for (int z = 0; z < SDF_BLOCK_SIZE; z++) for (int y = 0; y < SDF_BLOCK_SIZE; y++) for (int x = 0; x < SDF_BLOCK_SIZE; x++) {
     int locId = x + y * SDF_BLOCK_SIZE + z * SDF_BLOCK_SIZE * SDF_BLOCK_SIZE;
     if (voxelBlock[locId].last_update_time > current_time - delta_time) {  // active voxel
