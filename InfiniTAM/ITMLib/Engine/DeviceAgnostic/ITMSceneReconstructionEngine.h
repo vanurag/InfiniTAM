@@ -162,10 +162,10 @@ _CPU_AND_GPU_CODE_ inline void buildHashAllocAndVisibleTypePP(DEVICEPTR(uchar) *
 
 		ITMHashEntry hashEntry = hashTable[hashIdx];
 
-		if (IS_EQUAL3(hashEntry.pos, blockPos) && hashEntry.ptr >= -1)
+		if (IS_EQUAL3(hashEntry.pos, blockPos) && hashEntry.ptr > -1)
 		{
 			//entry has been streamed out but is visible or in memory and visible
-			entriesVisibleType[hashIdx] = (hashEntry.ptr == -1) ? 2 : 1;
+			entriesVisibleType[hashIdx] = 1;//(hashEntry.ptr == -1) ? 2 : 1;
 
 			isFound = true;
 		}
@@ -173,17 +173,17 @@ _CPU_AND_GPU_CODE_ inline void buildHashAllocAndVisibleTypePP(DEVICEPTR(uchar) *
 		if (!isFound)
 		{
 			bool isExcess = false;
-			if (hashEntry.ptr >= -1) //seach excess list only if there is no room in ordered part
+			if (hashEntry.ptr > -1) //seach excess list only if there is no room in ordered part
 			{
 				while (hashEntry.offset >= 1)
 				{
 					hashIdx = SDF_BUCKET_NUM + hashEntry.offset - 1;
 					hashEntry = hashTable[hashIdx];
 
-					if (IS_EQUAL3(hashEntry.pos, blockPos) && hashEntry.ptr >= -1)
+					if (IS_EQUAL3(hashEntry.pos, blockPos) && hashEntry.ptr > -1)
 					{
 						//entry has been streamed out but is visible or in memory and visible
-						entriesVisibleType[hashIdx] = (hashEntry.ptr == -1) ? 2 : 1;
+						entriesVisibleType[hashIdx] = 1;//(hashEntry.ptr == -1) ? 2 : 1;
 
 						isFound = true;
 						break;
@@ -287,7 +287,7 @@ _CPU_AND_GPU_CODE_ inline void checkBlockVisibility(THREADPTR(bool) &isVisible, 
 template<class TVoxel>
 _CPU_AND_GPU_CODE_ inline void checkBlockLastUpdateTime(THREADPTR(bool) &isInactive, const DEVICEPTR(TVoxel) *voxelBlock, const CONSTPTR(float) &current_time) {
 
-  float delta_time = 5;  // TODO(vanurag) : Make it a parameter
+  float delta_time = 2;  // TODO(vanurag) : Make it a parameter
   for (int z = 0; z < SDF_BLOCK_SIZE; z++) for (int y = 0; y < SDF_BLOCK_SIZE; y++) for (int x = 0; x < SDF_BLOCK_SIZE; x++) {
     int locId = x + y * SDF_BLOCK_SIZE + z * SDF_BLOCK_SIZE * SDF_BLOCK_SIZE;
     if (voxelBlock[locId].last_update_time > current_time - delta_time) {  // active voxel

@@ -271,7 +271,7 @@ _CPU_AND_GPU_CODE_ inline void drawPixelTimeColour(DEVICEPTR(Vector4u) & dest, c
   float voxel_time = readFromSDF_voxel_update_time<TVoxel, TIndex>(voxelBlockData, indexData, point);
 
   float outRes = (0.8f * angle + 0.2f) * 255.0f;
-  float delta_time = 5;  // TODO(vanurag) : Make it a parameter
+  float delta_time = 2;  // TODO(vanurag) : Make it a parameter
   float epsilon_time = 0.1;
   dest.r = (uchar)outRes;
   if (voxel_time > render_time - delta_time && voxel_time < render_time-epsilon_time) {  // last few frames
@@ -331,7 +331,7 @@ _CPU_AND_GPU_CODE_ inline void processPixelICP(DEVICEPTR(Vector4u) &outRendering
 		normalsMap = outNormal4;
 
 		float voxel_time = readFromSDF_voxel_update_time<TVoxel, TIndex>(voxelData, voxelIndex, point);
-    float delta_time = 5;  // TODO(vanurag) : Make it a parameter
+    float delta_time = 2;  // TODO(vanurag) : Make it a parameter
     if (voxel_time > render_time - delta_time) { // last few frames
       activePointsMap = outPoint4;
     } else { // other frames
@@ -375,7 +375,7 @@ _CPU_AND_GPU_CODE_ inline void processPixelICP(DEVICEPTR(Vector4u) *outRendering
 		outNormal4.x = outNormal.x; outNormal4.y = outNormal.y; outNormal4.z = outNormal.z; outNormal4.w = 0.0f;
 		normalsMap[locId] = outNormal4;
 
-    float delta_time = 5;  // TODO(vanurag) : Make it a parameter
+    float delta_time = 2;  // TODO(vanurag) : Make it a parameter
     if (voxel_time > render_time - delta_time) { // last few frames
       activePointsMap[locId] = outPoint4;
     } else { // other frames

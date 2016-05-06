@@ -478,7 +478,7 @@ static boost::tuple<int,int,int> RenderPointCloud(Vector4u *outRendering, Vector
 
 			float voxel_time = readFromSDF_voxel_update_time<TVoxel, TIndex>(voxelData, voxelIndex, point);
 
-      float delta_time = 5;  // TODO(vanurag) : Make it a parameter
+      float delta_time = 2;  // TODO(vanurag) : Make it a parameter
       if (voxel_time > render_time - delta_time) {  // last few frames
         active_locations[noTotalActivePoints] = pt_ray_out;
         active_colours[noTotalActivePoints] = tmp;

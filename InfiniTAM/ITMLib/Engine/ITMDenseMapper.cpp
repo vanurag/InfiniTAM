@@ -58,9 +58,18 @@ void ITMDenseMapper<TVoxel,TIndex>::ProcessFrame(const ITMView *view, const ITMT
 
 	if (swappingEngine != NULL) {
 		// swapping: CPU -> GPU
-		swappingEngine->IntegrateGlobalIntoLocal(scene, renderState);
+	  float bla_t = sdkGetTimerValue(&renderState->timer);
+//		swappingEngine->IntegrateGlobalIntoLocal(scene, renderState);
+	  float cpu_to_gpu_time = sdkGetTimerValue(&renderState->timer) - bla_t;
+	  std::cout << "took " << cpu_to_gpu_time << " ms to transfer from CPU to GPU" << std::endl;
 		// swapping: GPU -> CPU
 		swappingEngine->SaveToGlobalMemory(scene, renderState);
+		float gpu_to_cpu_time = sdkGetTimerValue(&renderState->timer) - bla_t - cpu_to_gpu_time;
+    std::cout << "took " << gpu_to_cpu_time << " ms to transfer from GPU to CPU" << std::endl;
+    if (gpu_to_cpu_time > 5000) {
+      std::cout << "transfer took too long!!!!!!!!!!1" << std::endl;
+      exit(1);
+    }
 	}
 }
 

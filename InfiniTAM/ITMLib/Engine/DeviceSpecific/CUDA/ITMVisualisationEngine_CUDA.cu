@@ -751,7 +751,7 @@ __global__ void renderPointCloud_device(Vector4u *outRendering, Vector4f *locati
 		}
 
 		float voxel_time = readFromSDF_voxel_update_time<TVoxel, TIndex>(voxelData, voxelIndex, point);
-		float delta_time = 5;  // TODO(vanurag) : Make it a parameter
+		float delta_time = 2;  // TODO(vanurag) : Make it a parameter
 
 		int active_offset = computePrefixSum_device<uint>(foundPoint, noTotalActivePoints, blockDim.x * blockDim.y, threadIdx.x + threadIdx.y * blockDim.x);
 		if (active_offset != -1 && voxel_time > render_time - delta_time)	// last few frames
