@@ -32,6 +32,7 @@ void ITMTrackingController::Prepare(ITMTrackingState *trackingState, const ITMVi
 
 		if (trackingState->requiresFullRendering)
 		{
+		  std::cout << "full rendering..." << std::endl;
 			visualisationEngine->CreateICPMaps(view, trackingState, renderState);
 			trackingState->pose_pointCloud->SetFrom(trackingState->pose_d);
 			if (trackingState->age_pointCloud==-1) trackingState->age_pointCloud=-2;
@@ -39,6 +40,7 @@ void ITMTrackingController::Prepare(ITMTrackingState *trackingState, const ITMVi
 		}
 		else
 		{
+		  std::cout << "forward rendering..." << std::endl;
 			visualisationEngine->ForwardRender(view, trackingState, renderState);
 			trackingState->age_pointCloud++;
 		}

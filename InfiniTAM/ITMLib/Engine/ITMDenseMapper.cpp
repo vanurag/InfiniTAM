@@ -61,11 +61,16 @@ void ITMDenseMapper<TVoxel,TIndex>::ProcessFrame(const ITMView *view, ITMTrackin
 	  float bla_t = sdkGetTimerValue(&renderState->timer);
 		swappingEngine->IntegrateGlobalIntoLocal(scene, view, trackingState, renderState);
 	  float cpu_to_gpu_time = sdkGetTimerValue(&renderState->timer) - bla_t;
-	  std::cout << "took " << cpu_to_gpu_time << " ms to transfer from CPU to GPU" << std::endl;
+	  std::cout << "Took " << cpu_to_gpu_time << " ms to transfer from CPU to GPU" << std::endl;
+//	  std::cout << "balsdasldsa: " << std::endl;
+//	  Vector4f * blabla = trackingState->pointCloud->locations->GetData(MEMORYDEVICE_CUDA);
+//	  for (int i = 0; i < 1; ++i) {
+//	    std::cout << "pix: " << blabla[i] << std::endl;
+//	  }
 		// swapping: GPU -> CPU
 		swappingEngine->SaveToGlobalMemory(scene, renderState);
 		float gpu_to_cpu_time = sdkGetTimerValue(&renderState->timer) - bla_t - cpu_to_gpu_time;
-    std::cout << "took " << gpu_to_cpu_time << " ms to transfer from GPU to CPU" << std::endl;
+    std::cout << "Took " << gpu_to_cpu_time << " ms to transfer from GPU to CPU" << std::endl;
     if (gpu_to_cpu_time > 5000) {
       std::cout << "transfer took too long!!!!!!!!!!1" << std::endl;
       exit(1);

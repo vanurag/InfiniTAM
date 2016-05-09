@@ -189,6 +189,9 @@ static void GenericRaycast(const ITMScene<TVoxel,TIndex> *scene, const Vector2i&
 
 static void ReProjectPoints(const Vector4f *oldPoints, const Vector2i& oldImgSize, const Vector2i& newImgSize, const Matrix4f& newM, const Vector4f newProjParams, Vector4f *newPoints) {
 
+  for (int newLocId = 0; newLocId < newImgSize.x*newImgSize.y; ++newLocId) {
+    newPoints[newLocId] = Vector4f(0,0,0,0);
+  }
   for (int oldLocId = 0; oldLocId < oldImgSize.x*oldImgSize.y; ++oldLocId) {
     Vector4f pt_new_camera = newM * oldPoints[oldLocId];
     Vector2f pt_new_image;

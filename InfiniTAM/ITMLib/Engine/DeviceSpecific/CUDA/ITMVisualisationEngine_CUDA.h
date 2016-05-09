@@ -14,7 +14,7 @@ namespace ITMLib
 		class ITMVisualisationEngine_CUDA : public ITMVisualisationEngine < TVoxel, TIndex >
 		{
 		private:
-			uint *noTotalPoints_device, *noTotalActivePoints_device, *noTotalInactivePoints_device;
+			uint *noTotalPoints_device, *noTotalInactivePoints_device;
 
 		public:
 			explicit ITMVisualisationEngine_CUDA(ITMScene<TVoxel, TIndex> *scene);

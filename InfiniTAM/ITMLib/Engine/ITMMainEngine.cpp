@@ -193,6 +193,19 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 
   // raycast to renderState_live for tracking and free visualisation
   trackingController->Prepare(trackingState, view, renderState_live);
+//  Vector4f * blabla = trackingState->pointCloud->inactive_locations->GetData(MEMORYDEVICE_CUDA);
+//  std::cout << "balsdasldsa: " << std::endl;
+//  Vector4f pix;
+//  for (int i = 0; i < 120000; ++i) {
+//#ifndef COMPILE_WITHOUT_CUDA
+//    ITMSafeCall(cudaMemcpy(&pix, &blabla[i], sizeof(Vector4f), cudaMemcpyDeviceToHost));
+//#else
+//    pix = blabla[i];
+//#endif
+//    if (pix.w > 0) {
+//      std::cout << "pix: " << pix << std::endl;
+//    }
+//  }
 }
 
 // VIZ ITM Tracker camera pose estimate
@@ -299,6 +312,19 @@ void ITMMainEngine::GetImage(ITMUChar4Image *out, GetImageType getImageType, ITM
 		visualisationEngine->FindVisibleBlocks(pose, intrinsics, renderState_freeview);
 		visualisationEngine->CreateExpectedDepths(pose, intrinsics, renderState_freeview);
 		visualisationEngine->RenderImage(pose, intrinsics, trackingState, renderState_freeview, renderState_freeview->raycastImage, settings->deltaTime, type);
+//    Vector4f * blabla = renderState_freeview->inactiveRaycastResult->GetData(MEMORYDEVICE_CUDA);
+//    std::cout << "balsdasldsa: " << std::endl;
+//    Vector4f pix;
+//    for (int i = 0; i < 20000; ++i) {
+//  #ifndef COMPILE_WITHOUT_CUDA
+//      ITMSafeCall(cudaMemcpy(&pix, &blabla[i], sizeof(Vector4f), cudaMemcpyDeviceToHost));
+//  #else
+//      pix = blabla[i];
+//  #endif
+////      if (pix.w > 0) {
+//        std::cout << "pix: " << pix << std::endl;
+////      }
+//    }
 
 		if (settings->deviceType == ITMLibSettings::DEVICE_CUDA)
 			out->SetFrom(renderState_freeview->raycastImage, ORUtils::MemoryBlock<Vector4u>::CUDA_TO_CPU);
