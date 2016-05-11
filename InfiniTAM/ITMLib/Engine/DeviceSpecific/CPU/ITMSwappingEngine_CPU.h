@@ -12,6 +12,7 @@ namespace ITMLib
 		class ITMSwappingEngine_CPU : public ITMSwappingEngine < TVoxel, TIndex >
 		{
 		public:
+		  void resetInactiveLocations(Vector4f* inactiveLocations, const Vector2i imgSize, const Matrix4f M_d, const Vector4f projParams_d);
 			void IntegrateGlobalIntoLocal(ITMScene<TVoxel, TIndex> *scene, ITMRenderState *renderState) {}
 			void SaveToGlobalMemory(ITMScene<TVoxel, TIndex> *scene, ITMRenderState *renderState) {}
 		};

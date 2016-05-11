@@ -13,6 +13,13 @@
 #include <ros/ros.h>
 #include <geometry_msgs/TransformStamped.h>
 
+// PCL
+#include <pcl/point_types.h>
+#include <pcl/visualization/cloud_viewer.h>
+#include <pcl/visualization/pcl_visualizer.h>
+#include <pcl/common/common_headers.h>
+#include <pcl/common/transforms.h>
+
 namespace rot = kindr::rotations::eigen_impl;
 
 typedef rot::RotationQuaternionPD QPD;
@@ -102,6 +109,13 @@ namespace ITMLib
         viz_viewer_pose = viz_viewer_pose.translate(cv::Vec3f(0.0, 0.0, -100.0));
         viz_window_.setViewerPose(viz_viewer_pose);
       }
+			// PCL
+      bool pcl_render_stop = false;
+      pcl::visualization::PCLVisualizer pc_viewer;
+      pcl::PointCloud<pcl::PointXYZRGB> pcl_cloud;
+      pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_cloud_pointer;
+      void visualizePcl(const Vector4f* pcl, const int cloudSize);
+      void pcl_render_loop();
 
 		public:
 			enum GetImageType

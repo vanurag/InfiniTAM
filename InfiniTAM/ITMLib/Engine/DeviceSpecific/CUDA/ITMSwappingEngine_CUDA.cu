@@ -13,8 +13,10 @@ template<class TVoxel>
 __global__ void integrateOldIntoActiveData_device(TVoxel *localVBA, ITMHashSwapState *swapStates, TVoxel *syncedVoxelBlocks_local,
 	int *neededEntryIDs_local, ITMHashEntry *hashTable, int maxW, const double update_time);
 
+__global__ void resetInactiveLocations_device(Vector4f* inactiveLocations, const Vector2i imgSize, const Matrix4f M_d, const Vector4f projParams_d);
+
 template<class TVoxel>
-__global__ void readSwappedInDataAsPointCloud_device(TVoxel *localVBA, Vector4f *inactiveLocations,
+__global__ void readSwappedInDataAsPointCloud_device(TVoxel *localVBA, TVoxel *syncedVoxelBlocks_local, Vector4f *inactiveLocations,
 	ITMHashSwapState *swapStates, int *neededEntryIDs_local, ITMHashEntry *hashTable, Matrix4f M_d, Vector4f projParams_d, Vector2i imgSize, float voxelSize);
 
 __global__ void buildListToSwapOut_device(int *neededEntryIDs, int *noNeededEntries, ITMHashSwapState *swapStates,
@@ -113,15 +115,20 @@ void ITMSwappingEngine_CUDA<TVoxel, ITMVoxelBlockHash>::IntegrateGlobalIntoLocal
 	Vector2i imgSize = view->depth->noDims;
 	float voxelSize = scene->sceneParams->voxelSize;
 
+	dim3 blockSize = dim3(16, 16);
+	dim3 gridSize = dim3((int)ceil((float)trackingState->pointCloud->inactive_locations->noDims.x / (float)blockSize.x), (int)ceil((float)trackingState->pointCloud->inactive_locations->noDims.y / (float)blockSize.y));
+	resetInactiveLocations_device << <gridSize, blockSize >> >(inactiveLocations, trackingState->pointCloud->inactive_locations->noDims, M_d, projParams_d);
+
 	int noNeededEntries = this->LoadFromGlobalMemory(scene);
+	std::cout << "needed: " << noNeededEntries << std::endl;
 
 	int maxW = scene->sceneParams->maxW;
 
 	if (noNeededEntries > 0) {
-		dim3 blockSize(SDF_BLOCK_SIZE, SDF_BLOCK_SIZE, SDF_BLOCK_SIZE);
-		dim3 gridSize(noNeededEntries);
+		blockSize = dim3(SDF_BLOCK_SIZE, SDF_BLOCK_SIZE, SDF_BLOCK_SIZE);
+		gridSize = dim3(noNeededEntries);
 
-		readSwappedInDataAsPointCloud_device << <gridSize, blockSize >> >(localVBA, inactiveLocations,
+		readSwappedInDataAsPointCloud_device << <gridSize, blockSize >> >(localVBA, syncedVoxelBlocks_local, inactiveLocations,
 			swapStates, neededEntryIDs_local, hashTable, M_d, projParams_d, imgSize, voxelSize);
 //		integrateOldIntoActiveData_device << <gridSize, blockSize >> >(localVBA, swapStates, syncedVoxelBlocks_local,
 //			neededEntryIDs_local, hashTable, maxW, sdkGetTimerValue(&renderState->timer));
@@ -305,33 +312,55 @@ __global__ void integrateOldIntoActiveData_device(TVoxel *localVBA, ITMHashSwapS
 	if (vIdx == 0) swapStates[entryDestId].state = 2;
 }
 
+__global__ void resetInactiveLocations_device(Vector4f* inactiveLocations, const Vector2i imgSize, const Matrix4f M_d, const Vector4f projParams_d) {
+	int x = (threadIdx.x + blockIdx.x * blockDim.x), y = (threadIdx.y + blockIdx.y * blockDim.y);
+
+	if (x >= imgSize.x || y >= imgSize.y) return;
+
+	int locId = x + y * imgSize.x;
+
+	int pixelLoc = forwardProjectPoint(inactiveLocations[locId], M_d, projParams_d, imgSize);
+	if (pixelLoc < 0) inactiveLocations[locId] = Vector4f(0,0,0,0);
+}
+
 template<class TVoxel>
-__global__ void readSwappedInDataAsPointCloud_device(TVoxel *localVBA, Vector4f *inactiveLocations,
+__global__ void readSwappedInDataAsPointCloud_device(TVoxel *localVBA, TVoxel *syncedVoxelBlocks_local, Vector4f *inactiveLocations,
 	ITMHashSwapState *swapStates, int *neededEntryIDs_local, ITMHashEntry *hashTable, Matrix4f M_d, Vector4f projParams_d, Vector2i imgSize, float voxelSize)
 {
 	int entryDestId = neededEntryIDs_local[blockIdx.x];
 
+	TVoxel *inactiveVB = syncedVoxelBlocks_local + blockIdx.x * SDF_BLOCK_SIZE3;
+	int vIdx = threadIdx.x + threadIdx.y * SDF_BLOCK_SIZE + threadIdx.z * SDF_BLOCK_SIZE * SDF_BLOCK_SIZE;
+	if (vIdx == 0) swapStates[entryDestId].state = 2;
+	if (inactiveVB[vIdx].w_depth == 0 || hashTable[entryDestId].ptr < 0) return;
+
 	Vector3i globalPos;
 	globalPos.x = hashTable[entryDestId].pos.x;
-	globalPos.y = hashTable[entryDestId].pos.x;
+	globalPos.y = hashTable[entryDestId].pos.y;
 	globalPos.z = hashTable[entryDestId].pos.z;
 	globalPos *= SDF_BLOCK_SIZE;
 
-	int vIdx = threadIdx.x + threadIdx.y * SDF_BLOCK_SIZE + threadIdx.z * SDF_BLOCK_SIZE * SDF_BLOCK_SIZE;
 	Vector4f pt_model;
 
-	pt_model.x = (float)(globalPos.x + threadIdx.x) * voxelSize;
-	pt_model.y = (float)(globalPos.y + threadIdx.y) * voxelSize;
-	pt_model.z = (float)(globalPos.z + threadIdx.z) * voxelSize;
+	int x = threadIdx.x, y = threadIdx.y, z = threadIdx.z;
+
+	pt_model.x = (float)(globalPos.x + x) * voxelSize;
+	pt_model.y = (float)(globalPos.y + y) * voxelSize;
+	pt_model.z = (float)(globalPos.z + z) * voxelSize;
 	pt_model.w = 1.0f;
+
+//	if (abs(pt_model.x) < 100 && abs(pt_model.y) < 100 && abs(pt_model.z) < 100) {
+//	inactiveLocations[0].x = (float)(globalPos.x + x);
+//	inactiveLocations[0].y = (float)(globalPos.y + y);
+//	inactiveLocations[0].z = (float)(globalPos.z + z);
+//	inactiveLocations[0].w = 1.0;
+//	}
 
 	// project into camera image and get x,y
 	int pixelLoc = forwardProjectPoint(pt_model, M_d, projParams_d, imgSize);
 	if (pixelLoc >= 0) {
 	  inactiveLocations[pixelLoc] = pt_model;
 	}
-
-	if (vIdx == 0) swapStates[entryDestId].state = 2;
 }
 
 template class ITMLib::Engine::ITMSwappingEngine_CUDA<ITMVoxel, ITMVoxelIndex>;

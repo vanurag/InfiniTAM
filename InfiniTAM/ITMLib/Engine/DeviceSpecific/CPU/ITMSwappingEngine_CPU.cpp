@@ -65,6 +65,13 @@ int ITMSwappingEngine_CPU<TVoxel, ITMVoxelBlockHash>::LoadFromGlobalMemory(ITMSc
 	return noNeededEntries;
 }
 
+void resetInactiveLocations(Vector4f* inactiveLocations, const Vector2i imgSize, const Matrix4f M_d, const Vector4f projParams_d) {
+  for (int locId = 0; locId < imgSize.x*imgSize.y; ++locId) {
+    int pixelLoc = forwardProjectPoint(inactiveLocations[locId], M_d, projParams_d, imgSize);
+    if (pixelLoc < 0) inactiveLocations[locId] = Vector4f(0,0,0,0);
+  }
+}
+
 template<class TVoxel>
 void ITMSwappingEngine_CPU<TVoxel, ITMVoxelBlockHash>::IntegrateGlobalIntoLocal(ITMScene<TVoxel, ITMVoxelBlockHash> *scene,
     const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState)
@@ -87,6 +94,8 @@ void ITMSwappingEngine_CPU<TVoxel, ITMVoxelBlockHash>::IntegrateGlobalIntoLocal(
   Vector2i imgSize = view->depth->noDims;
   float voxelSize = scene->sceneParams->voxelSize;
 
+  resetInactiveLocations(inactiveLocations, trackingState->pointCloud->inactive_locations->noDims, M_d, projParams_d);
+
 	int noNeededEntries = this->LoadFromGlobalMemory(scene);
 
 	int maxW = scene->sceneParams->maxW;
@@ -97,12 +106,12 @@ void ITMSwappingEngine_CPU<TVoxel, ITMVoxelBlockHash>::IntegrateGlobalIntoLocal(
 
 		if (hasSyncedData_local[i])
 		{
-//			TVoxel *srcVB = syncedVoxelBlocks_local + i * SDF_BLOCK_SIZE3;
+			TVoxel *inactiveVB = syncedVoxelBlocks_local + i * SDF_BLOCK_SIZE3;
 //			TVoxel *dstVB = localVBA + hashTable[entryDestId].ptr * SDF_BLOCK_SIZE3;
 
 			Vector3i globalPos;
 			globalPos.x = hashTable[entryDestId].pos.x;
-      globalPos.y = hashTable[entryDestId].pos.x;
+      globalPos.y = hashTable[entryDestId].pos.y;
       globalPos.z = hashTable[entryDestId].pos.z;
       globalPos *= SDF_BLOCK_SIZE;
 
@@ -111,6 +120,7 @@ void ITMSwappingEngine_CPU<TVoxel, ITMVoxelBlockHash>::IntegrateGlobalIntoLocal(
         Vector4f pt_model; int locId;
 
         locId = x + y * SDF_BLOCK_SIZE + z * SDF_BLOCK_SIZE * SDF_BLOCK_SIZE;
+        if (inactiveVB[locId].w_depth == 0) continue;
 
         pt_model.x = (float)(globalPos.x + x) * voxelSize;
         pt_model.y = (float)(globalPos.y + y) * voxelSize;

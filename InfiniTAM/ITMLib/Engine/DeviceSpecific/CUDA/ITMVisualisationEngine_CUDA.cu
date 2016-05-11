@@ -36,7 +36,7 @@ template<class TVoxel, class TIndex>
 __global__ void genericRaycast_device(Vector4f *out_ptsRay, Vector4f *out_inactivePtsRay, const TVoxel *voxelData, const typename TIndex::IndexData *voxelIndex,
 	Vector2i imgSize, Matrix4f invM, Vector4f projParams, float oneOverVoxelSize, const Vector2f *minmaxdata, float mu);
 
-__global__ void ReProjectPoints_device(const Vector4f *oldPoints, const Vector2i oldImgSize, const Vector2i newImgSize, const Matrix4f newM, const Vector4f newProjParams, Vector4f *newPoints);
+__global__ void ReProjectPoints_device(const Vector4f *oldPoints, const Vector2i oldImgSize, const Vector2i newImgSize, const Matrix4f newM, const Vector4f newProjParams, Vector4f *newPoints, float oneOverVoxelSize);
 
 template<class TVoxel, class TIndex>
 __global__ void genericRaycastMissingPoints_device(Vector4f *forwardProjection, const TVoxel *voxelData, const typename TIndex::IndexData *voxelIndex,
@@ -235,11 +235,11 @@ static void GenericRaycast(const ITMScene<TVoxel, TIndex> *scene, const Vector2i
 	);
 }
 
-static void ReProjectPoints(const Vector4f *oldPoints, const Vector2i& oldImgSize, const Vector2i& newImgSize, const Matrix4f& newM, const Vector4f newProjParams, const ITMRenderState *renderState) {
+static void ReProjectPoints(const Vector4f *oldPoints, const Vector2i& oldImgSize, const Vector2i& newImgSize, const Matrix4f& newM, const Vector4f newProjParams, const ITMRenderState *renderState, float oneOverVoxelSize) {
 
 	dim3 cudaBlockSize(16, 12);
 	dim3 gridSize((int)ceil((float)oldImgSize.x / (float)cudaBlockSize.x), (int)ceil((float)oldImgSize.y / (float)cudaBlockSize.y));
-	ReProjectPoints_device <<<gridSize, cudaBlockSize>>>(oldPoints, oldImgSize, newImgSize, newM, newProjParams, renderState->inactiveRaycastResult->GetData(MEMORYDEVICE_CUDA));
+	ReProjectPoints_device <<<gridSize, cudaBlockSize>>>(oldPoints, oldImgSize, newImgSize, newM, newProjParams, renderState->inactiveRaycastResult->GetData(MEMORYDEVICE_CUDA), oneOverVoxelSize);
 }
 
 template<class TVoxel, class TIndex>
@@ -258,7 +258,7 @@ static void RenderImage_common(const ITMScene<TVoxel, TIndex> *scene, const ITMP
 	Vector4f *inactivePointsRay = renderState->inactiveRaycastResult->GetData(MEMORYDEVICE_CUDA);
 	Vector4f *inactivePoints_global = trackingState->pointCloud->inactive_locations->GetData(MEMORYDEVICE_CUDA);
 
-	ReProjectPoints(inactivePoints_global, trackingState->pointCloud->inactive_locations->noDims, imgSize, M, intrinsics->projectionParamsSimple.all, renderState);
+	ReProjectPoints(inactivePoints_global, trackingState->pointCloud->inactive_locations->noDims, imgSize, M, intrinsics->projectionParamsSimple.all, renderState, 1.0/scene->sceneParams->voxelSize);
 
 	dim3 cudaBlockSize(8, 8);
 	dim3 gridSize((int)ceil((float)imgSize.x / (float)cudaBlockSize.x), (int)ceil((float)imgSize.y / (float)cudaBlockSize.y));
@@ -593,7 +593,7 @@ __global__ void genericRaycast_device(Vector4f *out_ptsRay, Vector4f *out_inacti
 	castRay<TVoxel, TIndex>(out_ptsRay[locId], x, y, voxelData, voxelIndex, invM, invProjParams, oneOverVoxelSize, mu, minmaximg[locId2]);
 }
 
-__global__ void ReProjectPoints_device(const Vector4f *oldPoints, const Vector2i oldImgSize, const Vector2i newImgSize, const Matrix4f newM, const Vector4f newProjParams, Vector4f *newPoints)
+__global__ void ReProjectPoints_device(const Vector4f *oldPoints, const Vector2i oldImgSize, const Vector2i newImgSize, const Matrix4f newM, const Vector4f newProjParams, Vector4f *newPoints, float oneOverVoxelSize)
 {
 	int x = (threadIdx.x + blockIdx.x * blockDim.x), y = (threadIdx.y + blockIdx.y * blockDim.y);
 
@@ -612,7 +612,10 @@ __global__ void ReProjectPoints_device(const Vector4f *oldPoints, const Vector2i
 	if (pt_new_image.x < 0 || pt_new_image.x > newImgSize.x-1 || pt_new_image.y < 0 || pt_new_image.y > newImgSize.y-1) return;
 
 	int newLocId = (int)(pt_new_image.x + 0.5f) + (int)(pt_new_image.y + 0.5f) * newImgSize.x;
-	if (newLocId > 0) newPoints[newLocId] = oldPoints[oldLocId];
+	if (newLocId > 0) {
+		newPoints[newLocId] = oldPoints[oldLocId];// * oneOverVoxelSize;
+		newPoints[newLocId].w = 1.0;
+	}
 }
 
 template<class TVoxel, class TIndex>
