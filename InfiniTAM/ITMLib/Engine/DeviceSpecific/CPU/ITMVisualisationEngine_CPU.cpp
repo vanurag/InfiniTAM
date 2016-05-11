@@ -11,7 +11,7 @@
 using namespace ITMLib::Engine;
 
 template<class TVoxel, class TIndex>
-static int RenderPointCloud(Vector4u *outRendering, Vector4f *locations, Vector4f *colours, const Vector4f *ptsRay,
+static int RenderPointCloud(Vector4u *outRendering, Vector4f *locations, Vector4f *colours, const Vector4f *ptsRay, const Vector4f *inactivePtsRay,
 	const TVoxel *voxelData, const typename TIndex::IndexData *voxelIndex, bool skipPoints, float voxelSize, 
 	Vector2i imgSize, Vector3f lightSource);
 
@@ -259,10 +259,13 @@ static void RenderImage_common(const ITMScene<TVoxel,TIndex> *scene, const ITMPo
 		for (int locId = 0; locId < imgSize.x * imgSize.y; locId++)
 		{
 			Vector4f ptRay = pointsRay[locId];
-			Vector4f inactivePtRay = inactivePointsRay[locId];
 			processPixelTimeColour<TVoxel, TIndex>(
-			    outRendering[locId], ptRay.toVector3(), ptRay.w > 0, inactivePtRay.toVector3(), inactivePtRay.w > 0, voxelData, voxelIndex,
+			    outRendering[locId], ptRay.toVector3(), ptRay.w > 0, voxelData, voxelIndex,
 			    lightSource, sdkGetTimerValue(&renderState->timer)/1000.0, delta_time);
+			int y = static_cast<int>(std::floor(locId/imgSize.x));
+			int x = locId - y*imgSize.x;
+			processPixelCustomColour<true>(outRendering[locId], Vector3f(255.0, 0.0, 255.0), inactivePointsRay,
+			                               imgSize, x, y, scene->sceneParams->voxelSize, lightSource);
 		}
 	}
 }
@@ -272,16 +275,22 @@ static void CreatePointCloud_common(const ITMScene<TVoxel,TIndex> *scene, const 
 	ITMRenderState *renderState, bool skipPoints)
 {
 	Vector2i imgSize = renderState->raycastResult->noDims;
+	Matrix4f M = view->calib->trafo_rgb_to_depth.calib_inv * trackingState->pose_d->GetM();
 	Matrix4f invM = trackingState->pose_d->GetInvM() * view->calib->trafo_rgb_to_depth.calib;
 
 	GenericRaycast(scene, imgSize, invM, view->calib->intrinsics_rgb.projectionParamsSimple.all, renderState);
 	trackingState->pose_pointCloud->SetFrom(trackingState->pose_d);
+
+	Vector4f *inactivePointsRay = renderState->inactiveRaycastResult->GetData(MEMORYDEVICE_CPU);
+  Vector4f *inactivePoints_global = trackingState->pointCloud->inactive_locations->GetData(MEMORYDEVICE_CPU);
+  ReProjectPoints(inactivePoints_global, trackingState->pointCloud->inactive_locations->noDims, imgSize, M, view->calib->intrinsics_rgb.projectionParamsSimple.all, inactivePointsRay);
 
 	int ret = RenderPointCloud<TVoxel, TIndex>(
 		renderState->raycastImage->GetData(MEMORYDEVICE_CPU),
 		trackingState->pointCloud->locations->GetData(MEMORYDEVICE_CPU),
 		trackingState->pointCloud->colours->GetData(MEMORYDEVICE_CPU),
 		renderState->raycastResult->GetData(MEMORYDEVICE_CPU),
+		inactivePointsRay,
 		scene->localVBA.GetVoxelBlocks(),
 		scene->index.getIndexData(),
 		skipPoints,
@@ -297,6 +306,7 @@ template<class TVoxel, class TIndex>
 static void CreateICPMaps_common(const ITMScene<TVoxel,TIndex> *scene, const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState)
 {
 	Vector2i imgSize = renderState->raycastResult->noDims;
+	Matrix4f M = trackingState->pose_d->GetM();
 	Matrix4f invM = trackingState->pose_d->GetInvM();
 
 	GenericRaycast(scene, imgSize, invM, view->calib->intrinsics_d.projectionParamsSimple.all, renderState);
@@ -307,6 +317,9 @@ static void CreateICPMaps_common(const ITMScene<TVoxel,TIndex> *scene, const ITM
 	Vector4u *outRendering = renderState->raycastImage->GetData(MEMORYDEVICE_CPU);
 	Vector4f *pointsMap = trackingState->pointCloud->locations->GetData(MEMORYDEVICE_CPU);
 	Vector4f *pointsRay = renderState->raycastResult->GetData(MEMORYDEVICE_CPU);
+	Vector4f *inactivePointsRay = renderState->inactiveRaycastResult->GetData(MEMORYDEVICE_CPU);
+  Vector4f *inactivePoints_global = trackingState->pointCloud->inactive_locations->GetData(MEMORYDEVICE_CPU);
+  ReProjectPoints(inactivePoints_global, trackingState->pointCloud->inactive_locations->noDims, imgSize, M, view->calib->intrinsics_d.projectionParamsSimple.all, inactivePointsRay);
 	float voxelSize = scene->sceneParams->voxelSize;
 
 #ifdef WITH_OPENMP
@@ -316,6 +329,8 @@ static void CreateICPMaps_common(const ITMScene<TVoxel,TIndex> *scene, const ITM
 	  int locId = x + y * imgSize.x;
     Vector3f point = pointsRay[locId].toVector3();
 		processPixelICP<true>(outRendering, pointsMap, normalsMap, pointsRay, imgSize, x, y, voxelSize, lightSource);
+    processPixelCustomColour<true>(outRendering[locId], Vector3f(255.0, 0.0, 255.0), inactivePointsRay,
+                                   imgSize, x, y, voxelSize, lightSource);
 	}
 }
 
@@ -455,7 +470,7 @@ void ITMVisualisationEngine_CPU<TVoxel, ITMVoxelBlockHash>::ForwardRender(const 
 }
 
 template<class TVoxel, class TIndex>
-static int RenderPointCloud(Vector4u *outRendering, Vector4f *locations, Vector4f *colours, const Vector4f *ptsRay,
+static int RenderPointCloud(Vector4u *outRendering, Vector4f *locations, Vector4f *colours, const Vector4f *ptsRay, const Vector4f *inactivePtsRay,
 	const TVoxel *voxelData, const typename TIndex::IndexData *voxelIndex, bool skipPoints, float voxelSize, 
 	Vector2i imgSize, Vector3f lightSource)
 {
@@ -472,6 +487,9 @@ static int RenderPointCloud(Vector4u *outRendering, Vector4f *locations, Vector4
 
 		if (foundPoint) drawPixelGrey(outRendering[locId], angle);
 		else outRendering[locId] = Vector4u((uchar)0);
+
+		processPixelCustomColour<true>(outRendering[locId], Vector3f(255.0, 0.0, 255.0), inactivePtsRay,
+                                   imgSize, x, y, voxelSize, lightSource);
 
 		if (skipPoints && ((x % 2 == 0) || (y % 2 == 0))) foundPoint = false;
 

@@ -408,7 +408,7 @@ _CPU_AND_GPU_CODE_ inline void processPixelGrey(DEVICEPTR(Vector4u) &outRenderin
 
 template<class TVoxel, class TIndex>
 _CPU_AND_GPU_CODE_ inline void processPixelTimeColour(DEVICEPTR(Vector4u) &outRendering, const CONSTPTR(Vector3f) & point,
-  bool foundPoint, const CONSTPTR(Vector3f) & inactivePoint, bool foundInactivePoint, const CONSTPTR(TVoxel) *voxelData, const CONSTPTR(typename TIndex::IndexData) *voxelIndex,
+  bool foundPoint, const CONSTPTR(TVoxel) *voxelData, const CONSTPTR(typename TIndex::IndexData) *voxelIndex,
   Vector3f lightSource, const float render_time, const float delta_time)
 {
   Vector3f outNormal;
@@ -416,12 +416,30 @@ _CPU_AND_GPU_CODE_ inline void processPixelTimeColour(DEVICEPTR(Vector4u) &outRe
 
   computeNormalAndAngle<TVoxel, TIndex>(foundPoint, point, voxelData, voxelIndex, lightSource, outNormal, angle);
 
-  if (foundInactivePoint) {
-    outRendering.r = (uchar) 255.0;
-    outRendering.g = (uchar) 0.0;
-    outRendering.b = (uchar) 255.0;
-  } else if (foundPoint) drawPixelTimeColour<TVoxel, TIndex>(outRendering, angle, point, voxelData, voxelIndex, render_time, delta_time);
+  if (foundPoint) drawPixelTimeColour<TVoxel, TIndex>(outRendering, angle, point, voxelData, voxelIndex, render_time, delta_time);
   else outRendering = Vector4u((uchar)0);
+}
+
+template<bool useSmoothing>
+_CPU_AND_GPU_CODE_ inline void processPixelCustomColour(DEVICEPTR(Vector4u) &outRendering, const CONSTPTR(Vector3f) colour, const CONSTPTR(Vector4f) *pointsRay,
+    const THREADPTR(Vector2i) &imgSize, const THREADPTR(int) &x, const THREADPTR(int) &y, float voxelSize, Vector3f lightSource)
+{
+  Vector3f outNormal;
+  float angle;
+
+  int locId = x + y * imgSize.x;
+  Vector4f point = pointsRay[locId];
+
+  bool foundPoint = point.w > 0.0f;
+
+  computeNormalAndAngle<useSmoothing>(foundPoint, x, y, pointsRay, lightSource, voxelSize, imgSize, outNormal, angle);
+
+  if (foundPoint) {
+    float outRes = (0.8f * angle + 0.2f);
+    outRendering.r = (uchar) (outRes * colour.r);
+    outRendering.g = (uchar) (outRes * colour.g);
+    outRendering.b = (uchar) (outRes * colour.b);
+  }
 }
 
 template<class TVoxel, class TIndex>
