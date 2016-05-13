@@ -13,7 +13,7 @@ template<class TVoxel>
 __global__ void integrateOldIntoActiveData_device(TVoxel *localVBA, ITMHashSwapState *swapStates, TVoxel *syncedVoxelBlocks_local,
 	int *neededEntryIDs_local, ITMHashEntry *hashTable, int maxW, const double update_time);
 
-__global__ void resetInactiveLocations_device(Vector4f* inactiveLocations, const Vector2i imgSize, const Matrix4f M_d, const Vector4f projParams_d);
+__global__ void remapInactiveLocations_device(const Vector4f* inactiveLocations, Vector4f* remappedLocations, const Vector2i imgSize, const Matrix4f M_d, const Vector4f projParams_d);
 
 template<class TVoxel>
 __global__ void readSwappedInDataAsPointCloud_device(TVoxel *localVBA, TVoxel *syncedVoxelBlocks_local, Vector4f *inactiveLocations,
@@ -110,15 +110,17 @@ void ITMSwappingEngine_CUDA<TVoxel, ITMVoxelBlockHash>::IntegrateGlobalIntoLocal
 	TVoxel *localVBA = scene->localVBA.GetVoxelBlocks();
 
 	Vector4f * inactiveLocations = trackingState->pointCloud->inactive_locations->GetData(MEMORYDEVICE_CUDA);
+	Vector4f * remappedInactiveLocations = trackingState->pointCloud->remapped_inactive_locations->GetData(MEMORYDEVICE_CUDA);
 	Matrix4f M_d = trackingState->pose_d->GetM();
 	Vector4f projParams_d = view->calib->intrinsics_d.projectionParamsSimple.all;
 	Vector2i imgSize = view->depth->noDims;
 	float voxelSize = scene->sceneParams->voxelSize;
 
+	ITMSafeCall(cudaMemset(remappedInactiveLocations, 0, trackingState->pointCloud->inactive_locations->noDims.x * trackingState->pointCloud->inactive_locations->noDims.y * sizeof(Vector4f)));
 	dim3 blockSize = dim3(16, 16);
 	dim3 gridSize = dim3((int)ceil((float)trackingState->pointCloud->inactive_locations->noDims.x / (float)blockSize.x), (int)ceil((float)trackingState->pointCloud->inactive_locations->noDims.y / (float)blockSize.y));
-	resetInactiveLocations_device << <gridSize, blockSize >> >(inactiveLocations, trackingState->pointCloud->inactive_locations->noDims, M_d, projParams_d);
-
+	remapInactiveLocations_device << <gridSize, blockSize >> >(inactiveLocations, remappedInactiveLocations, trackingState->pointCloud->inactive_locations->noDims, M_d, projParams_d);
+	ITMSafeCall(cudaMemcpy(inactiveLocations, remappedInactiveLocations, trackingState->pointCloud->inactive_locations->noDims.x * trackingState->pointCloud->inactive_locations->noDims.y * sizeof(Vector4f), cudaMemcpyDeviceToDevice));
 	int noNeededEntries = this->LoadFromGlobalMemory(scene);
 	std::cout << "needed: " << noNeededEntries << std::endl;
 
@@ -312,7 +314,7 @@ __global__ void integrateOldIntoActiveData_device(TVoxel *localVBA, ITMHashSwapS
 	if (vIdx == 0) swapStates[entryDestId].state = 2;
 }
 
-__global__ void resetInactiveLocations_device(Vector4f* inactiveLocations, const Vector2i imgSize, const Matrix4f M_d, const Vector4f projParams_d) {
+__global__ void remapInactiveLocations_device(const Vector4f* inactiveLocations, Vector4f* remappedLocations, const Vector2i imgSize, const Matrix4f M_d, const Vector4f projParams_d) {
 	int x = (threadIdx.x + blockIdx.x * blockDim.x), y = (threadIdx.y + blockIdx.y * blockDim.y);
 
 	if (x >= imgSize.x || y >= imgSize.y) return;
@@ -320,7 +322,7 @@ __global__ void resetInactiveLocations_device(Vector4f* inactiveLocations, const
 	int locId = x + y * imgSize.x;
 
 	int pixelLoc = forwardProjectPoint(inactiveLocations[locId], M_d, projParams_d, imgSize);
-	if (pixelLoc < 0) inactiveLocations[locId] = Vector4f(0,0,0,0);
+	if (pixelLoc >= 0) remappedLocations[pixelLoc] = inactiveLocations[locId];
 }
 
 template<class TVoxel>
@@ -348,13 +350,6 @@ __global__ void readSwappedInDataAsPointCloud_device(TVoxel *localVBA, TVoxel *s
 	pt_model.y = (float)(globalPos.y + y) * voxelSize;
 	pt_model.z = (float)(globalPos.z + z) * voxelSize;
 	pt_model.w = 1.0f;
-
-//	if (abs(pt_model.x) < 100 && abs(pt_model.y) < 100 && abs(pt_model.z) < 100) {
-//	inactiveLocations[0].x = (float)(globalPos.x + x);
-//	inactiveLocations[0].y = (float)(globalPos.y + y);
-//	inactiveLocations[0].z = (float)(globalPos.z + z);
-//	inactiveLocations[0].w = 1.0;
-//	}
 
 	// project into camera image and get x,y
 	int pixelLoc = forwardProjectPoint(pt_model, M_d, projParams_d, imgSize);

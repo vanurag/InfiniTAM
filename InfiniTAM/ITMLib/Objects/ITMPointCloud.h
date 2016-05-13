@@ -16,7 +16,7 @@ namespace ITMLib
 		public:
 			uint noTotalPoints, noTotalInactivePoints;
 
-			ORUtils::Image<Vector4f> *locations, *colours, *inactive_locations, *inactive_colours;
+			ORUtils::Image<Vector4f> *locations, *colours, *inactive_locations, *remapped_inactive_locations, *inactive_colours;
 
 			explicit ITMPointCloud(Vector2i imgSize, MemoryDeviceType memoryType)
 			{
@@ -25,6 +25,7 @@ namespace ITMLib
 
 				locations = new ORUtils::Image<Vector4f>(imgSize, memoryType);
 				inactive_locations = new ORUtils::Image<Vector4f>(imgSize, memoryType);
+				remapped_inactive_locations = new ORUtils::Image<Vector4f>(imgSize, memoryType);
 				colours = new ORUtils::Image<Vector4f>(imgSize, memoryType);
 				inactive_colours = new ORUtils::Image<Vector4f>(imgSize, memoryType);
 			}
@@ -33,6 +34,7 @@ namespace ITMLib
 			{
 				this->locations->UpdateHostFromDevice();
 				this->inactive_locations->UpdateHostFromDevice();
+				this->remapped_inactive_locations->UpdateHostFromDevice();
 				this->colours->UpdateHostFromDevice();
 				this->inactive_colours->UpdateHostFromDevice();
 			}
@@ -41,6 +43,7 @@ namespace ITMLib
 			{
 				this->locations->UpdateDeviceFromHost();
 				this->inactive_locations->UpdateDeviceFromHost();
+				this->remapped_inactive_locations->UpdateDeviceFromHost();
 				this->colours->UpdateDeviceFromHost();
 				this->inactive_colours->UpdateDeviceFromHost();
 			}
@@ -49,6 +52,7 @@ namespace ITMLib
 			{
 				delete locations;
 				delete inactive_locations;
+				delete remapped_inactive_locations;
 				delete colours;
 				delete inactive_colours;
 			}

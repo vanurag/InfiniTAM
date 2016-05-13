@@ -34,6 +34,22 @@ void ITMTrackingController::Prepare(ITMTrackingState *trackingState, const ITMVi
 		{
 		  std::cout << "full rendering..." << std::endl;
 			visualisationEngine->CreateICPMaps(view, trackingState, renderState);
+//      Vector4f * blabla = renderState->inactiveRaycastResult->GetData(MEMORYDEVICE_CUDA);
+//      int num_read = 0;
+//      Vector4f pix;
+//      for (int i = 0; i < renderState->inactiveRaycastResult->noDims.x * renderState->inactiveRaycastResult->noDims.y; ++i) {
+//    #ifndef COMPILE_WITHOUT_CUDA
+//        ITMSafeCall(cudaMemcpy(&pix, &blabla[i], sizeof(Vector4f), cudaMemcpyDeviceToHost));
+//    #else
+//        pix = blabla[i];
+//    #endif
+//        if (pix.w > 0) {
+//  //        std::cout << "pix: " << (float)pix.x << ", " << (float)pix.y << ", " << (float)pix.z << std::endl;
+//          num_read++;
+//        }
+//      }
+//      std::cout << "ICP maps contain: " << num_read << std::endl;
+			std::cout << "full rendering done!!" << std::endl;
 			trackingState->pose_pointCloud->SetFrom(trackingState->pose_d);
 			if (trackingState->age_pointCloud==-1) trackingState->age_pointCloud=-2;
 			else trackingState->age_pointCloud = 0;

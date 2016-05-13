@@ -65,10 +65,10 @@ int ITMSwappingEngine_CPU<TVoxel, ITMVoxelBlockHash>::LoadFromGlobalMemory(ITMSc
 	return noNeededEntries;
 }
 
-void resetInactiveLocations(Vector4f* inactiveLocations, const Vector2i imgSize, const Matrix4f M_d, const Vector4f projParams_d) {
+void remapInactiveLocations(const Vector4f* inactiveLocations, Vector4f* remappedLocations, const Vector2i imgSize, const Matrix4f M_d, const Vector4f projParams_d) {
   for (int locId = 0; locId < imgSize.x*imgSize.y; ++locId) {
     int pixelLoc = forwardProjectPoint(inactiveLocations[locId], M_d, projParams_d, imgSize);
-    if (pixelLoc < 0) inactiveLocations[locId] = Vector4f(0,0,0,0);
+    if (pixelLoc >= 0) remappedLocations[pixelLoc] = inactiveLocations[locId];
   }
 }
 
@@ -89,12 +89,15 @@ void ITMSwappingEngine_CPU<TVoxel, ITMVoxelBlockHash>::IntegrateGlobalIntoLocal(
 	TVoxel *localVBA = scene->localVBA.GetVoxelBlocks();
 
 	Vector4f * inactiveLocations = trackingState->pointCloud->inactive_locations->GetData(MEMORYDEVICE_CPU);
+	Vector4f * remappedInactiveLocations = trackingState->pointCloud->remapped_inactive_locations->GetData(MEMORYDEVICE_CPU);
 	Matrix4f M_d = trackingState->pose_d->GetM();
   Vector4f projParams_d = view->calib->intrinsics_d.projectionParamsSimple.all;
   Vector2i imgSize = view->depth->noDims;
   float voxelSize = scene->sceneParams->voxelSize;
 
-  resetInactiveLocations(inactiveLocations, trackingState->pointCloud->inactive_locations->noDims, M_d, projParams_d);
+  memset(remappedInactiveLocations, 0, trackingState->pointCloud->inactive_locations->noDims.x * trackingState->pointCloud->inactive_locations->noDims.y * sizeof(Vector4f));
+  remapInactiveLocations(inactiveLocations, remappedInactiveLocations, trackingState->pointCloud->inactive_locations->noDims, M_d, projParams_d);
+  memcpy(inactiveLocations, remappedInactiveLocations, trackingState->pointCloud->inactive_locations->noDims.x * trackingState->pointCloud->inactive_locations->noDims.y * sizeof(Vector4f));
 
 	int noNeededEntries = this->LoadFromGlobalMemory(scene);
 

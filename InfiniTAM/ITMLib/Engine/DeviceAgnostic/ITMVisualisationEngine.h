@@ -268,9 +268,11 @@ template<class TVoxel, class TIndex>
 _CPU_AND_GPU_CODE_ inline void drawPixelTimeColour(DEVICEPTR(Vector4u) & dest, const THREADPTR(float) & angle, const CONSTPTR(Vector3f) & point,
   const CONSTPTR(TVoxel) *voxelBlockData, const CONSTPTR(typename TIndex::IndexData) *indexData, const float render_time, const float delta_time)
 {
+  float weight = 1.0;
+  if (weight > 1) return;
   float voxel_time = readFromSDF_voxel_update_time<TVoxel, TIndex>(voxelBlockData, indexData, point);
 
-  float outRes = (0.8f * angle + 0.2f) * 255.0f;
+  float outRes = weight * (0.8f * angle + 0.2f) * 255.0f;
   float epsilon_time = 0.1;
   dest.r = (uchar)outRes;
   if (voxel_time > render_time - delta_time && voxel_time < render_time-epsilon_time) {  // last few frames
@@ -424,6 +426,8 @@ template<bool useSmoothing>
 _CPU_AND_GPU_CODE_ inline void processPixelCustomColour(DEVICEPTR(Vector4u) &outRendering, const CONSTPTR(Vector3f) colour, const CONSTPTR(Vector4f) *pointsRay,
     const THREADPTR(Vector2i) &imgSize, const THREADPTR(int) &x, const THREADPTR(int) &y, float voxelSize, Vector3f lightSource)
 {
+  float weight = 1.0;
+  if (weight > 1) return;
   Vector3f outNormal;
   float angle;
 
@@ -432,10 +436,10 @@ _CPU_AND_GPU_CODE_ inline void processPixelCustomColour(DEVICEPTR(Vector4u) &out
 
   bool foundPoint = point.w > 0.0f;
 
-  computeNormalAndAngle<useSmoothing>(foundPoint, x, y, pointsRay, lightSource, voxelSize, imgSize, outNormal, angle);
+//  computeNormalAndAngle<useSmoothing>(foundPoint, x, y, pointsRay, lightSource, voxelSize, imgSize, outNormal, angle);
 
   if (foundPoint) {
-    float outRes = (0.8f * angle + 0.2f);
+    float outRes = weight * (0.8f * 1 + 0.2f);
     outRendering.r = (uchar) (outRes * colour.r);
     outRendering.g = (uchar) (outRes * colour.g);
     outRendering.b = (uchar) (outRes * colour.b);

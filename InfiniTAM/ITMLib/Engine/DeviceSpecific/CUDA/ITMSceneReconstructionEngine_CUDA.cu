@@ -457,7 +457,7 @@ __global__ void buildVisibleList_device(TVoxel *localVBA, ITMHashEntry *hashTabl
 			checkBlockVisibility<true>(isVisible, isVisibleEnlarged, hashEntry.pos, M_d, projParams_d, voxelSize, depthImgSize);
 			TVoxel *localVoxelBlock = &(localVBA[hashEntry.ptr * (SDF_BLOCK_SIZE3)]);
 			checkBlockLastUpdateTime<TVoxel>(isInactive, localVoxelBlock, current_time, delta_time);
-			if (!isVisibleEnlarged && isInactive) hashVisibleType = 0;
+			if (!isVisible && isInactive) hashVisibleType = 0;
 		} else {
 			checkBlockVisibility<false>(isVisible, isVisibleEnlarged, hashEntry.pos, M_d, projParams_d, voxelSize, depthImgSize);
 			if (!isVisible) hashVisibleType = 0;

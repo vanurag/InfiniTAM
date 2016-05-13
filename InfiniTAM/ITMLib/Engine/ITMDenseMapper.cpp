@@ -63,18 +63,20 @@ void ITMDenseMapper<TVoxel,TIndex>::ProcessFrame(const ITMView *view, ITMTrackin
 	  float cpu_to_gpu_time = sdkGetTimerValue(&renderState->timer) - bla_t;
 	  std::cout << "Took " << cpu_to_gpu_time << " ms to transfer from CPU to GPU" << std::endl;
 //	  Vector4f * blabla = trackingState->pointCloud->inactive_locations->GetData(MEMORYDEVICE_CUDA);
-//    std::cout << "balsdasldsa: " << std::endl;
+//	  int num_read = 0;
 //    Vector4f pix;
-//    for (int i = 0; i < 120000; ++i) {
+//    for (int i = 0; i < trackingState->pointCloud->inactive_locations->noDims.x * trackingState->pointCloud->inactive_locations->noDims.y; ++i) {
 //  #ifndef COMPILE_WITHOUT_CUDA
 //      ITMSafeCall(cudaMemcpy(&pix, &blabla[i], sizeof(Vector4f), cudaMemcpyDeviceToHost));
 //  #else
 //      pix = blabla[i];
 //  #endif
 //      if (pix.w > 0) {
-//        std::cout << "pix: " << (float)pix.x << ", " << (float)pix.y << ", " << (float)pix.z << std::endl;
+////        std::cout << "pix: " << (float)pix.x << ", " << (float)pix.y << ", " << (float)pix.z << std::endl;
+//        num_read++;
 //      }
 //    }
+//    std::cout << "read from CPU: " << num_read << std::endl;
 		// swapping: GPU -> CPU
 		swappingEngine->SaveToGlobalMemory(scene, renderState);
 		float gpu_to_cpu_time = sdkGetTimerValue(&renderState->timer) - bla_t - cpu_to_gpu_time;
