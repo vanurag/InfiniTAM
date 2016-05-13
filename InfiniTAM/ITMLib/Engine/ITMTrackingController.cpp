@@ -8,11 +8,15 @@
 
 using namespace ITMLib::Engine;
 
-void ITMTrackingController::Track(ITMTrackingState *trackingState, const ITMView *view)
+void ITMTrackingController::Track(ITMTrackingState *trackingState, const ITMView *view, const ITMRenderState *renderState)
 {
 	if (trackingState->age_pointCloud!=-1) {
 	  tracker->TrackCamera(trackingState, view);
-//	  loopClosureDetector->DetectLoopClosure(trackingState, view);
+	  if (renderState->noTotalInactivePoints > 0.3*(trackingState->trackingImageSize.x*trackingState->trackingImageSize.y)) {
+	    std::cout << "checking for Loop Closures..." << std::endl;
+	    loopClosureDetector->DetectLoopClosure(trackingState, view);
+	    exit(1);
+	  }
 	}
 
 	trackingState->requiresFullRendering = trackingState->TrackerFarFromPointCloud() || !settings->useApproximateRaycast;

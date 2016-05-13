@@ -43,6 +43,8 @@ namespace ITMLib
 			*/
 			ORUtils::Image<Vector4f> *raycastResult, *inactiveRaycastResult;
 
+			int noTotalInactivePoints;
+
 			ORUtils::Image<Vector4f> *forwardProjection;
 			ORUtils::Image<int> *fwdProjMissingPoints;
 			int noFwdProjMissingPoints;
@@ -77,6 +79,7 @@ namespace ITMLib
 				delete buffImage;
 
 				noFwdProjMissingPoints = 0;
+				this->noTotalInactivePoints = 0;
 
 				sdkCreateTimer(&timer);
 				sdkStartTimerAndRewindByTime(&timer, rewind_time);

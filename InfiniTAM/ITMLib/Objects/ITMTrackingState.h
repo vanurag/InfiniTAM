@@ -38,6 +38,8 @@ namespace ITMLib
 
 			bool requiresFullRendering;
 
+			Vector2i trackingImageSize;
+
 			bool TrackerFarFromPointCloud(void) const
 			{
 				// if no point cloud exists, yet
@@ -60,6 +62,7 @@ namespace ITMLib
 
 			ITMTrackingState(Vector2i imgSize, MemoryDeviceType memoryType)
 			{
+			  this->trackingImageSize = imgSize;
 				this->pointCloud = new ITMPointCloud(imgSize, memoryType);
 
 				this->pose_d = new ITMPose();

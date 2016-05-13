@@ -187,8 +187,9 @@ static void GenericRaycast(const ITMScene<TVoxel,TIndex> *scene, const Vector2i&
 	}
 }
 
-static void ReProjectPoints(const Vector4f *oldPoints, const Vector2i& oldImgSize, const Vector2i& newImgSize, const Matrix4f& newM, const Vector4f newProjParams, Vector4f *newPoints) {
+static int ReProjectPoints(const Vector4f *oldPoints, const Vector2i& oldImgSize, const Vector2i& newImgSize, const Matrix4f& newM, const Vector4f newProjParams, Vector4f *newPoints) {
 
+  int noNewPoints = 0;
   for (int newLocId = 0; newLocId < newImgSize.x*newImgSize.y; ++newLocId) {
     newPoints[newLocId] = Vector4f(0,0,0,0);
   }
@@ -205,7 +206,9 @@ static void ReProjectPoints(const Vector4f *oldPoints, const Vector2i& oldImgSiz
 
     int newLocId = (int)(pt_new_image.x + 0.5f) + (int)(pt_new_image.y + 0.5f) * newImgSize.x;
     newPoints[newLocId] = oldPoints[oldLocId];
+    noNewPoints++;
   }
+  return noNewPoints;
 }
 
 template<class TVoxel, class TIndex>
@@ -223,7 +226,7 @@ static void RenderImage_common(const ITMScene<TVoxel,TIndex> *scene, const ITMPo
 	Vector4f *pointsRay = renderState->raycastResult->GetData(MEMORYDEVICE_CPU);
 	Vector4f *inactivePointsRay = renderState->inactiveRaycastResult->GetData(MEMORYDEVICE_CPU);
 	Vector4f *inactivePoints_global = trackingState->pointCloud->inactive_locations->GetData(MEMORYDEVICE_CPU);
-	ReProjectPoints(inactivePoints_global, trackingState->pointCloud->inactive_locations->noDims, imgSize, M, intrinsics->projectionParamsSimple.all, inactivePointsRay);
+	renderState->noTotalInactivePoints = ReProjectPoints(inactivePoints_global, trackingState->pointCloud->inactive_locations->noDims, imgSize, M, intrinsics->projectionParamsSimple.all, inactivePointsRay);
 	const TVoxel *voxelData = scene->localVBA.GetVoxelBlocks();
 	const typename TIndex::IndexData *voxelIndex = scene->index.getIndexData();
 
@@ -283,7 +286,7 @@ static void CreatePointCloud_common(const ITMScene<TVoxel,TIndex> *scene, const 
 
 	Vector4f *inactivePointsRay = renderState->inactiveRaycastResult->GetData(MEMORYDEVICE_CPU);
   Vector4f *inactivePoints_global = trackingState->pointCloud->inactive_locations->GetData(MEMORYDEVICE_CPU);
-  ReProjectPoints(inactivePoints_global, trackingState->pointCloud->inactive_locations->noDims, imgSize, M, view->calib->intrinsics_rgb.projectionParamsSimple.all, inactivePointsRay);
+  renderState->noTotalInactivePoints = ReProjectPoints(inactivePoints_global, trackingState->pointCloud->inactive_locations->noDims, imgSize, M, view->calib->intrinsics_rgb.projectionParamsSimple.all, inactivePointsRay);
 
 	int ret = RenderPointCloud<TVoxel, TIndex>(
 		renderState->raycastImage->GetData(MEMORYDEVICE_CPU),
@@ -319,7 +322,7 @@ static void CreateICPMaps_common(const ITMScene<TVoxel,TIndex> *scene, const ITM
 	Vector4f *pointsRay = renderState->raycastResult->GetData(MEMORYDEVICE_CPU);
 	Vector4f *inactivePointsRay = renderState->inactiveRaycastResult->GetData(MEMORYDEVICE_CPU);
   Vector4f *inactivePoints_global = trackingState->pointCloud->inactive_locations->GetData(MEMORYDEVICE_CPU);
-  ReProjectPoints(inactivePoints_global, trackingState->pointCloud->inactive_locations->noDims, imgSize, M, view->calib->intrinsics_d.projectionParamsSimple.all, inactivePointsRay);
+  renderState->noTotalInactivePoints = ReProjectPoints(inactivePoints_global, trackingState->pointCloud->inactive_locations->noDims, imgSize, M, view->calib->intrinsics_d.projectionParamsSimple.all, inactivePointsRay);
 	float voxelSize = scene->sceneParams->voxelSize;
 
 #ifdef WITH_OPENMP

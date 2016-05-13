@@ -31,7 +31,7 @@ namespace ITMLib
 			MemoryDeviceType memoryType;
 
 		public:
-			void Track(ITMTrackingState *trackingState, const ITMView *view);
+			void Track(ITMTrackingState *trackingState, const ITMView *view, const ITMRenderState *renderState);
 			void Prepare(ITMTrackingState *trackingState, const ITMView *view, ITMRenderState *renderState);
 
 			ITMTrackingController(ITMTracker *tracker, ITMLoopClosureDetection *loopClosureDetector, const IITMVisualisationEngine *visualisationEngine, const ITMLowLevelEngine *lowLevelEngine,

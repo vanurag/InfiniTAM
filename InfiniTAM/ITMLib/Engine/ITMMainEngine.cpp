@@ -154,7 +154,7 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
   if (!mainProcessingActive) return;
 
   // tracking
-  trackingController->Track(trackingState, view);
+  trackingController->Track(trackingState, view, renderState_live);
 
   // publish ITM tracker pose
   PublishROSPoseMsg();
@@ -178,7 +178,7 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 	if (!mainProcessingActive) return;
 
 	// tracking
-	trackingController->Track(trackingState, view);
+	trackingController->Track(trackingState, view, renderState_live);
 
 	// publish ITM tracker pose
   PublishROSPoseMsg();
@@ -202,7 +202,7 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
   if (!mainProcessingActive) return;
 
   // tracking
-  trackingController->Track(trackingState, view);
+  trackingController->Track(trackingState, view, renderState_live);
 
   // publish ITM tracker pose
   PublishROSPoseMsg();

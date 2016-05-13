@@ -36,10 +36,10 @@ namespace ITMLib
 		class ITMVisualisationEngine_CUDA<TVoxel, ITMVoxelBlockHash> : public ITMVisualisationEngine < TVoxel, ITMVoxelBlockHash >
 		{
 		private:
-			uint *noTotalPoints_device, *noTotalActivePoints_device, *noTotalInactivePoints_device;
+			uint *noTotalPoints_device;
 			RenderingBlock *renderingBlockList_device;
 			uint *noTotalBlocks_device;
-			int *noVisibleEntries_device;
+			int *noVisibleEntries_device, *noTotalInactivePoints_device;
 		public:
 			explicit ITMVisualisationEngine_CUDA(ITMScene<TVoxel, ITMVoxelBlockHash> *scene);
 			~ITMVisualisationEngine_CUDA(void);
