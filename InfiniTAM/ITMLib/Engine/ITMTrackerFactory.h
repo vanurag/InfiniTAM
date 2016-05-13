@@ -13,6 +13,7 @@
 
 #include "DeviceSpecific/CPU/ITMColorTracker_CPU.h"
 #include "DeviceSpecific/CPU/ITMDepthTracker_CPU.h"
+#include "DeviceSpecific/CPU/ITMLoopClosureDetection_CPU.h"
 #include "DeviceSpecific/CPU/ITMWeightedICPTracker_CPU.h"
 #include "DeviceSpecific/CPU/ITMRenTracker_CPU.h"
 #include "../Utils/ITMLibSettings.h"
@@ -20,6 +21,7 @@
 #ifndef COMPILE_WITHOUT_CUDA
 #include "DeviceSpecific/CUDA/ITMColorTracker_CUDA.h"
 #include "DeviceSpecific/CUDA/ITMDepthTracker_CUDA.h"
+#include "DeviceSpecific/CUDA/ITMLoopClosureDetection_CUDA.h"
 #include "DeviceSpecific/CUDA/ITMWeightedICPTracker_CUDA.h"
 #include "DeviceSpecific/CUDA/ITMRenTracker_CUDA.h"
 #endif

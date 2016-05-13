@@ -65,7 +65,22 @@ ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib 
 
 	imuCalibrator = new ITMIMUCalibrator_DRZ(calib->trafo_rgb_to_imu);
 	tracker = ITMTrackerFactory<ITMVoxel, ITMVoxelIndex>::Instance().Make(trackedImageSize, settings, lowLevelEngine, imuCalibrator, scene);
-	trackingController = new ITMTrackingController(tracker, visualisationEngine, lowLevelEngine, settings);
+	switch (settings->deviceType)
+  {
+  case ITMLibSettings::DEVICE_CPU:
+    loopClosureDetector = new ITMLoopClosureDetection_CPU(trackedImageSize, settings->trackingRegime, settings->noHierarchyLevels,
+        settings->noICPRunTillLevel, settings->depthTrackerICPThreshold, settings->depthTrackerTerminationThreshold, settings->depthTrackerType,
+        settings->visualizeICP, lowLevelEngine);
+    break;
+  case ITMLibSettings::DEVICE_CUDA:
+#ifndef COMPILE_WITHOUT_CUDA
+    loopClosureDetector = new ITMLoopClosureDetection_CUDA(trackedImageSize, settings->trackingRegime, settings->noHierarchyLevels,
+        settings->noICPRunTillLevel, settings->depthTrackerICPThreshold, settings->depthTrackerTerminationThreshold, settings->depthTrackerType,
+        settings->visualizeICP, lowLevelEngine);
+#endif
+    break;
+  }
+	trackingController = new ITMTrackingController(tracker, loopClosureDetector, visualisationEngine, lowLevelEngine, settings);
 
 	trackingState = trackingController->BuildTrackingState(trackedImageSize);
 	tracker->UpdateInitialPose(trackingState);
@@ -102,6 +117,7 @@ ITMMainEngine::~ITMMainEngine()
 	delete trackingController;
 
 	delete tracker;
+	delete loopClosureDetector;
 	delete imuCalibrator;
 
 	delete lowLevelEngine;

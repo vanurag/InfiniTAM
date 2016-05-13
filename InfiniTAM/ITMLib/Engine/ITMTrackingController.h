@@ -26,6 +26,7 @@ namespace ITMLib
 			const ITMLowLevelEngine *lowLevelEngine;
 
 			ITMTracker *tracker;
+			ITMLoopClosureDetection *loopClosureDetector;
 
 			MemoryDeviceType memoryType;
 
@@ -33,10 +34,11 @@ namespace ITMLib
 			void Track(ITMTrackingState *trackingState, const ITMView *view);
 			void Prepare(ITMTrackingState *trackingState, const ITMView *view, ITMRenderState *renderState);
 
-			ITMTrackingController(ITMTracker *tracker, const IITMVisualisationEngine *visualisationEngine, const ITMLowLevelEngine *lowLevelEngine,
+			ITMTrackingController(ITMTracker *tracker, ITMLoopClosureDetection *loopClosureDetector, const IITMVisualisationEngine *visualisationEngine, const ITMLowLevelEngine *lowLevelEngine,
 				const ITMLibSettings *settings)
 			{
 				this->tracker = tracker;
+				this->loopClosureDetector = loopClosureDetector;
 				this->settings = settings;
 				this->visualisationEngine = visualisationEngine;
 				this->lowLevelEngine = lowLevelEngine;

@@ -83,6 +83,7 @@ namespace ITMLib
 			ITMTrackingController *trackingController;
 
 			ITMTracker *tracker;
+			ITMLoopClosureDetection *loopClosureDetector;
 			ITMIMUCalibrator *imuCalibrator;
 
 			ITMView *view;

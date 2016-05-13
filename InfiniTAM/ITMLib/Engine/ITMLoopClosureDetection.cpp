@@ -220,7 +220,7 @@ void ITMLoopClosureDetection::DetectLoopClosure(ITMTrackingState *trackingState,
 
     for (int iterNo = 0; iterNo < noIterationsPerLevel[levelId]; iterNo++)
     {
-      std::cout << "[ Level ID, Iteration no ]: " << "[ " << levelId << ", "
+      std::cout << "LC [ Level ID, Iteration no ]: " << "[ " << levelId << ", "
           << iterNo << " ]" << std::endl;
       // evaluate error function and gradients
       std::pair<Vector4f*, int> res = this->ComputeGandH(f_new, nabla_new, hessian_new, approxInvPose);
@@ -262,7 +262,6 @@ void ITMLoopClosureDetection::DetectLoopClosure(ITMTrackingState *trackingState,
 
       // Visualization
       if (viz_icp) {
-        std::cout << "here1" << std::endl;
         std::vector<Matrix4f*> tf_chain{&approxInvPose, &scenePose};
         // visualize TF update
         std::cout << "vizing updated tf" << std::endl;

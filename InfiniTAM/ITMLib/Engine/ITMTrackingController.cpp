@@ -10,7 +10,10 @@ using namespace ITMLib::Engine;
 
 void ITMTrackingController::Track(ITMTrackingState *trackingState, const ITMView *view)
 {
-	if (trackingState->age_pointCloud!=-1) tracker->TrackCamera(trackingState, view);
+	if (trackingState->age_pointCloud!=-1) {
+	  tracker->TrackCamera(trackingState, view);
+//	  loopClosureDetector->DetectLoopClosure(trackingState, view);
+	}
 
 	trackingState->requiresFullRendering = trackingState->TrackerFarFromPointCloud() || !settings->useApproximateRaycast;
 }

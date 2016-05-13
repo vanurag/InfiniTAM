@@ -17,10 +17,11 @@
 #include "../Objects/ITMImageHierarchy.h"
 #include "../Objects/ITMTemplatedHierarchyLevel.h"
 #include "../Objects/ITMSceneHierarchyLevel.h"
+#include "../Objects/ITMTrackingState.h"
+#include "../Objects/ITMView.h"
 
 #include "../Utils/ITMLibSettings.h"
 
-#include "../Engine/ITMTracker.h"
 #include "../Engine/ITMLowLevelEngine.h"
 
 // Libnabo
@@ -49,7 +50,7 @@ namespace ITMLib
         A typical example would be the original KinectFusion
         tracking algorithm.
     */
-    class ITMLoopClosureDetection : public ITMTracker
+    class ITMLoopClosureDetection
     {
     private:
       const ITMLowLevelEngine *lowLevelEngine;

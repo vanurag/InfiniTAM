@@ -26,6 +26,12 @@
 #include "Engine/DeviceSpecific/Metal/ITMDepthTracker_Metal.h"
 #endif
 
+#include "Engine/ITMLoopClosureDetection.h"
+#include "Engine/DeviceSpecific/CPU/ITMLoopClosureDetection_CPU.h"
+#ifndef COMPILE_WITHOUT_CUDA
+#include "Engine/DeviceSpecific/CUDA/ITMLoopClosureDetection_CUDA.h"
+#endif
+
 #include "Engine/ITMWeightedICPTracker.h"
 #include "Engine/DeviceSpecific/CPU/ITMWeightedICPTracker_CPU.h"
 #ifndef COMPILE_WITHOUT_CUDA
