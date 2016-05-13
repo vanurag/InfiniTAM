@@ -73,7 +73,7 @@ namespace ITMLib
       void pcl_render_loop();
       //GNU Plot
       Gnuplot gp;
-      std::vector<double> gp_lc_dist;
+      std::vector<float> gp_lc_dist;
 
       void PrepareForEvaluation();
       void SetEvaluationParams(int levelId);

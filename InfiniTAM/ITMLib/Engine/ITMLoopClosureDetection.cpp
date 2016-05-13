@@ -16,7 +16,7 @@ using namespace ITMLib::Engine;
 
 ITMLoopClosureDetection::ITMLoopClosureDetection(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels, int noICPRunTillLevel, float distThresh,
   float terminationThreshold, ITMLibSettings::DepthTrackerType tracker_type, bool visualize_icp, const ITMLowLevelEngine *lowLevelEngine, MemoryDeviceType memoryType)
-    : pc_viewer("ICP visualizer"), scene_cloud_pointer(&scene_cloud),
+    : pc_viewer("LC visualizer"), scene_cloud_pointer(&scene_cloud),
       inactive_scene_cloud_pointer(&inactive_scene_cloud)
 {
   inactiveSceneHierarchy = new ITMImageHierarchy<ITMSceneHierarchyLevel>(imgSize, trackingRegime, noHierarchyLevels, memoryType, true);
@@ -92,8 +92,8 @@ void ITMLoopClosureDetection::PrepareForEvaluation()
   for (int i = 1; i < inactiveSceneHierarchy->noLevels; i++)
   {
     ITMSceneHierarchyLevel *currentLevelInactiveScene = inactiveSceneHierarchy->levels[i], *previousLevelInactiveScene = inactiveSceneHierarchy->levels[i - 1];
-//    lowLevelEngine->FilterSubsampleWithHoles(currentLevelInactiveScene->pointsMap, currentLevelInactiveScene->pointsMap);
-//    lowLevelEngine->FilterSubsampleWithHoles(currentLevelInactiveScene->normalsMap, currentLevelInactiveScene->normalsMap);
+    lowLevelEngine->FilterSubsampleWithHoles(currentLevelInactiveScene->pointsMap, previousLevelInactiveScene->pointsMap);
+//    lowLevelEngine->FilterSubsampleWithHoles(currentLevelInactiveScene->normalsMap, previousLevelInactiveScene->normalsMap);
     currentLevelInactiveScene->intrinsics = previousLevelInactiveScene->intrinsics * 0.5f;
 
     ITMSceneHierarchyLevel *currentLevelScene = sceneHierarchy->levels[i], *previousLevelScene = sceneHierarchy->levels[i - 1];
@@ -175,8 +175,10 @@ void ITMLoopClosureDetection::DetectLoopClosure(ITMTrackingState *trackingState,
 {
   this->SetEvaluationData(trackingState, view);
   this->PrepareForEvaluation();
-  ITMPose *inactiveScenePose(trackingState->pose_d);
-  Matrix4f initPose = inactiveScenePose->GetM();
+//  ITMPose *inactiveScenePose(trackingState->pose_d);
+  ITMPose inactiveScenePose(*(trackingState->pose_d));
+//  std::cout << "start inactiv pose: " << inactiveScenePose.GetM() << std::endl;
+  Matrix4f initPose = inactiveScenePose.GetM();
 
   float f_old = 1e10, f_new;  // error metric
   int noValidPoints_new;
@@ -192,8 +194,8 @@ void ITMLoopClosureDetection::DetectLoopClosure(ITMTrackingState *trackingState,
     if (iterationType == TRACKER_ITERATION_NONE) continue;
 
     // T_g,k =  approxInvPose
-    Matrix4f approxInvPose = inactiveScenePose->GetInvM();
-    ITMPose lastKnownGoodPose(*(inactiveScenePose));
+    Matrix4f approxInvPose = inactiveScenePose.GetInvM();
+    ITMPose lastKnownGoodPose(inactiveScenePose);
     f_old = 1e20f;
     float lambda = 1.0;
 
@@ -226,6 +228,7 @@ void ITMLoopClosureDetection::DetectLoopClosure(ITMTrackingState *trackingState,
       std::pair<Vector4f*, int> res = this->ComputeGandH(f_new, nabla_new, hessian_new, approxInvPose);
       matches = res.first;
       noValidPoints_new = res.second;
+//      std::cout << "num matches: " << noValidPoints_new << std::endl;
 
       if (viz_icp) {
         std::vector<Matrix4f*> tf_chain{&approxInvPose, &scenePose};
@@ -236,11 +239,11 @@ void ITMLoopClosureDetection::DetectLoopClosure(ITMTrackingState *trackingState,
 
       // check if error increased. If so, revert
       if ((noValidPoints_new <= 0)||(f_new > f_old)) {
-        inactiveScenePose->SetFrom(&lastKnownGoodPose);
-        approxInvPose = inactiveScenePose->GetInvM();
+        inactiveScenePose.SetFrom(&lastKnownGoodPose);
+        approxInvPose = inactiveScenePose.GetInvM();
         lambda *= 10.0f;
       } else {
-        lastKnownGoodPose.SetFrom(inactiveScenePose);
+        lastKnownGoodPose.SetFrom(&inactiveScenePose);
         f_old = f_new;
 
         for (int i = 0; i < 6*6; ++i) hessian_good[i] = hessian_new[i] / noValidPoints_new;
@@ -253,9 +256,11 @@ void ITMLoopClosureDetection::DetectLoopClosure(ITMTrackingState *trackingState,
       // compute a new step and make sure we've got an SE3
       ComputeDelta(step, nabla_good, A, iterationType != TRACKER_ITERATION_BOTH);
       ApplyDelta(approxInvPose, step, approxInvPose);
-      inactiveScenePose->SetInvM(approxInvPose);
-      inactiveScenePose->Coerce();
-      approxInvPose = inactiveScenePose->GetInvM();
+      inactiveScenePose.SetInvM(approxInvPose);
+      inactiveScenePose.Coerce();
+      approxInvPose = inactiveScenePose.GetInvM();
+
+//      std::cout << "new inactiv pose: " << inactiveScenePose->GetM() << std::endl;
 
       // if step is small, assume it's going to decrease the error and finish
       bool converged = HasConverged(step);
@@ -274,6 +279,18 @@ void ITMLoopClosureDetection::DetectLoopClosure(ITMTrackingState *trackingState,
       if (converged) break;
     } // iterations
   } // level change
+
+  // Loop Closure constraint plot
+  std::cout << "inactiv pose: " << inactiveScenePose.GetM() << std::endl;
+  Matrix4f lc_delta;
+  lc_delta.setIdentity();
+  lc_delta -= (inactiveScenePose.GetM() * trackingState->pose_d->GetInvM());
+  float lc_norm = lc_delta.getNorm();
+  std::cout << "LC constraint: " << lc_norm << std::endl;
+  gp_lc_dist.push_back(lc_norm);
+  // Un-comment to plot
+  gp << "plot '-' with lines title 'LC constraint'\n";
+  gp.send1d(gp_lc_dist);
 }
 
 

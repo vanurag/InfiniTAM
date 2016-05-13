@@ -250,6 +250,12 @@ namespace ORUtils {
     // get values
     _CPU_AND_GPU_CODE_ inline Vector4<T> getRow(int r) const { Vector4<T> v; for (int x = 0; x < 4; x++) v[x] = at(x, r); return v; }
     _CPU_AND_GPU_CODE_ inline Vector4<T> getColumn(int c) const { Vector4<T> v; memcpy(v.v, this->m + 4 * c, sizeof(T) * 4); return v; }
+    _CPU_AND_GPU_CODE_ inline float getNorm() const {
+      float norm = 0;
+      for (int x = 0; x < 4; x++) for (int y = 0; y < 4; y++)
+        norm += pow(at(y, x), 2);
+      return sqrt(norm/16);
+    }
     _CPU_AND_GPU_CODE_ inline Matrix3<T> getRot() const { // Top-Left 3x3 sub-matrix
       Matrix3<T> R(at(0, 0), at(0, 1), at(0, 2),
                    at(1, 0), at(1, 1), at(1, 2),

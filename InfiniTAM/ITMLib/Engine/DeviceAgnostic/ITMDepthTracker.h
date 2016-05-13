@@ -106,10 +106,6 @@ _CPU_AND_GPU_CODE_ inline Vector4f computePerPointGH_Depth_Ab(THREADPTR(float) *
   tmp3Dpoint.z = depthPoint.z;
   tmp3Dpoint.w = 1.0f;
 
-  // transform to previous frame coordinates
-  tmp3Dpoint = approxInvPose * tmp3Dpoint;
-  tmp3Dpoint.w = 1.0f;
-
   // project into previous rendered image
   tmp3Dpoint_reproj = scenePose * tmp3Dpoint;
   if (tmp3Dpoint_reproj.z <= 0.0f) {
