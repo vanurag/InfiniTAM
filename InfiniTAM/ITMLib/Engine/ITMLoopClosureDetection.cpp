@@ -171,7 +171,7 @@ void ITMLoopClosureDetection::ApplyDelta(const Matrix4f & para_old, const float 
   para_new = Tinc * para_old;
 }
 
-float ITMLoopClosureDetection::DetectLoopClosure(ITMTrackingState *trackingState, const ITMView *view)
+float ITMLoopClosureDetection::DetectLoopClosure(ITMTrackingState *trackingState, ITMRenderState *renderState, const ITMView *view)
 {
   this->SetEvaluationData(trackingState, view);
   this->PrepareForEvaluation();
@@ -287,7 +287,7 @@ float ITMLoopClosureDetection::DetectLoopClosure(ITMTrackingState *trackingState
   lc_delta -= (inactiveScenePose.GetM() * trackingState->pose_d->GetInvM());
   float lc_norm = lc_delta.getNorm();
   std::cout << "LC constraint: " << lc_norm << std::endl;
-  gp_lc_dist.push_back(lc_norm);
+  gp_lc_dist.push_back(std::make_pair(sdkGetTimerValue(&(renderState->timer))/1000.0, lc_norm));
   // Un-comment to plot
   gp << "plot '-' with lines title 'LC constraint'\n";
   gp.send1d(gp_lc_dist);

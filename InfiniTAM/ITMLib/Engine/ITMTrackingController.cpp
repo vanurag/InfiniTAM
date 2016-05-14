@@ -8,13 +8,13 @@
 
 using namespace ITMLib::Engine;
 
-void ITMTrackingController::Track(ITMTrackingState *trackingState, const ITMView *view, const ITMRenderState *renderState)
+void ITMTrackingController::Track(ITMTrackingState *trackingState, const ITMView *view, ITMRenderState *renderState)
 {
 	if (trackingState->age_pointCloud!=-1) {
 	  tracker->TrackCamera(trackingState, view);
 	  if (renderState->noTotalInactivePoints > 0.3*(trackingState->trackingImageSize.x*trackingState->trackingImageSize.y)) {
 	    std::cout << "checking for Loop Closures..." << std::endl;
-	    float lc_norm = loopClosureDetector->DetectLoopClosure(trackingState, view);
+	    float lc_norm = loopClosureDetector->DetectLoopClosure(trackingState, renderState, view);
 	    if (lc_norm > settings->lcNormThreshold) {
 	      settings->shouldFuse = false;
 	    }

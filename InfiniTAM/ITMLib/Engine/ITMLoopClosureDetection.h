@@ -19,6 +19,7 @@
 #include "../Objects/ITMSceneHierarchyLevel.h"
 #include "../Objects/ITMTrackingState.h"
 #include "../Objects/ITMView.h"
+#include "../Objects/ITMRenderState_VH.h"
 
 #include "../Utils/ITMLibSettings.h"
 
@@ -73,7 +74,7 @@ namespace ITMLib
       void pcl_render_loop();
       //GNU Plot
       Gnuplot gp;
-      std::vector<float> gp_lc_dist;
+      std::vector<std::pair<float,float> > gp_lc_dist;
 
       void PrepareForEvaluation();
       void SetEvaluationParams(int levelId);
@@ -129,7 +130,7 @@ namespace ITMLib
           int memory_type, std::vector<Matrix4f*>& tf_chain, bool converged);
 
     public:
-      float DetectLoopClosure(ITMTrackingState *trackingState, const ITMView *view);
+      float DetectLoopClosure(ITMTrackingState *trackingState, ITMRenderState *renderState, const ITMView *view);
 
       // libnabo kd-tree
       boost::shared_ptr<Nabo::NNSearchF> nns;

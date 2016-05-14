@@ -442,7 +442,7 @@ void UIEngine::Initialise(int & argc, char** argv, ImageSourceEngine *imageSourc
 	sdkCreateTimer(&timer_average);
 
 	sdkResetTimer(&timer_average);
-	sdkStartTimer(&timer_instant);
+	sdkStartTimerAndRewindByTime(&timer_instant, sdkGetTimerValue(&(mainEngine->main_timer)));
 
 	printf("initialised.\n");
 }
