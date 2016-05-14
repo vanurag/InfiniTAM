@@ -129,7 +129,7 @@ namespace ITMLib
           int memory_type, std::vector<Matrix4f*>& tf_chain, bool converged);
 
     public:
-      void DetectLoopClosure(ITMTrackingState *trackingState, const ITMView *view);
+      float DetectLoopClosure(ITMTrackingState *trackingState, const ITMView *view);
 
       // libnabo kd-tree
       boost::shared_ptr<Nabo::NNSearchF> nns;

@@ -96,7 +96,7 @@ int ITMSwappingEngine_CUDA<TVoxel,ITMVoxelBlockHash>::LoadFromGlobalMemory(ITMSc
 }
 
 template<class TVoxel>
-void ITMSwappingEngine_CUDA<TVoxel, ITMVoxelBlockHash>::IntegrateGlobalIntoLocal(ITMScene<TVoxel, ITMVoxelBlockHash> *scene, const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState)
+void ITMSwappingEngine_CUDA<TVoxel, ITMVoxelBlockHash>::IntegrateGlobalIntoLocal(ITMScene<TVoxel, ITMVoxelBlockHash> *scene, const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState, const bool should_fuse)
 {
 	ITMGlobalCache<TVoxel> *globalCache = scene->globalCache;
 
@@ -132,8 +132,10 @@ void ITMSwappingEngine_CUDA<TVoxel, ITMVoxelBlockHash>::IntegrateGlobalIntoLocal
 
 		readSwappedInDataAsPointCloud_device << <gridSize, blockSize >> >(localVBA, syncedVoxelBlocks_local, inactiveLocations,
 			swapStates, neededEntryIDs_local, hashTable, M_d, projParams_d, imgSize, voxelSize);
-//		integrateOldIntoActiveData_device << <gridSize, blockSize >> >(localVBA, swapStates, syncedVoxelBlocks_local,
-//			neededEntryIDs_local, hashTable, maxW, sdkGetTimerValue(&renderState->timer));
+		if (should_fuse) {
+			integrateOldIntoActiveData_device << <gridSize, blockSize >> >(localVBA, swapStates, syncedVoxelBlocks_local,
+				neededEntryIDs_local, hashTable, maxW, sdkGetTimerValue(&renderState->timer));
+		}
 	}
 }
 

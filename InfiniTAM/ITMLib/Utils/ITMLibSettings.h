@@ -25,6 +25,12 @@ namespace ITMLib
 			/// Enables swapping between host and device.
 			bool useSwapping;
 
+			// Whether to fuse swapped-in voxels or not
+			mutable bool shouldFuse = true;
+
+			// Loop Closure constraint. IF lc_norm > threshold -> no fusion of inactive voxels
+			float lcNormThreshold = 0.1;
+
 			// time after which if voxel is not updated, it turns inactive
 			float deltaTime;
 

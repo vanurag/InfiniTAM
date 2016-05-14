@@ -74,7 +74,7 @@ void remapInactiveLocations(const Vector4f* inactiveLocations, Vector4f* remappe
 
 template<class TVoxel>
 void ITMSwappingEngine_CPU<TVoxel, ITMVoxelBlockHash>::IntegrateGlobalIntoLocal(ITMScene<TVoxel, ITMVoxelBlockHash> *scene,
-    const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState)
+    const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState, const bool should_fuse)
 {
 	ITMGlobalCache<TVoxel> *globalCache = scene->globalCache;
 
@@ -110,7 +110,7 @@ void ITMSwappingEngine_CPU<TVoxel, ITMVoxelBlockHash>::IntegrateGlobalIntoLocal(
 		if (hasSyncedData_local[i])
 		{
 			TVoxel *inactiveVB = syncedVoxelBlocks_local + i * SDF_BLOCK_SIZE3;
-//			TVoxel *dstVB = localVBA + hashTable[entryDestId].ptr * SDF_BLOCK_SIZE3;
+			TVoxel *dstVB = localVBA + hashTable[entryDestId].ptr * SDF_BLOCK_SIZE3;
 
 			Vector3i globalPos;
 			globalPos.x = hashTable[entryDestId].pos.x;
@@ -136,7 +136,9 @@ void ITMSwappingEngine_CPU<TVoxel, ITMVoxelBlockHash>::IntegrateGlobalIntoLocal(
           inactiveLocations[pixelLoc] = pt_model;
         }
 
-//        CombineVoxelInformation<TVoxel::hasColorInformation, TVoxel>::compute(srcVB[locId], dstVB[vIdx], maxW, sdkGetTimerValue(&renderState->timer));
+        if (should_fuse) {
+          CombineVoxelInformation<TVoxel::hasColorInformation, TVoxel>::compute(inactiveVB[locId], dstVB[locId], maxW, sdkGetTimerValue(&renderState->timer));
+        }
       }
 		}
 

@@ -171,7 +171,7 @@ void ITMLoopClosureDetection::ApplyDelta(const Matrix4f & para_old, const float 
   para_new = Tinc * para_old;
 }
 
-void ITMLoopClosureDetection::DetectLoopClosure(ITMTrackingState *trackingState, const ITMView *view)
+float ITMLoopClosureDetection::DetectLoopClosure(ITMTrackingState *trackingState, const ITMView *view)
 {
   this->SetEvaluationData(trackingState, view);
   this->PrepareForEvaluation();
@@ -291,6 +291,8 @@ void ITMLoopClosureDetection::DetectLoopClosure(ITMTrackingState *trackingState,
   // Un-comment to plot
   gp << "plot '-' with lines title 'LC constraint'\n";
   gp.send1d(gp_lc_dist);
+
+  return lc_norm;
 }
 
 

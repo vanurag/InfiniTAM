@@ -79,7 +79,7 @@ void UIEngine::glutDisplayFunction()
 
 	glColor3f(1.0f, 0.0f, 0.0f); glRasterPos2f(0.85f, -0.962f);
 
-	char str[200]; sprintf(str, "%04.2lf", uiEngine->processedTime);
+	char str[200]; sprintf(str, "%04.2lf Hz \t %04.2lf", 1000/uiEngine->processedTime, uiEngine->currentTime/1000);
 	safe_glutBitmapString(GLUT_BITMAP_HELVETICA_18, (const char*)str);
 
 	glRasterPos2f(-0.95f, -0.95f);
@@ -92,6 +92,15 @@ void UIEngine::glutDisplayFunction()
 		sprintf(str, "n - next frame \t b - all frames \t r - rgb (currently %s) \t e/esc - exit \t f - free viewpoint \t t - turn fusion %s", uiEngine->rgbModes[uiEngine->currentRGBMode].name, uiEngine->intergrationActive ? "off" : "on");
 	}
 	safe_glutBitmapString(GLUT_BITMAP_HELVETICA_12, (const char*)str);
+
+	char lc_str[100];
+	if (!uiEngine->internalSettings->shouldFuse) {
+	  uiEngine->last_lc_time = uiEngine->currentTime/1000;
+	}
+	if (uiEngine->last_lc_time > 0) {
+	  sprintf(lc_str, "\t \t LC constraint exceeded at %04.2lf sec", uiEngine->last_lc_time);
+	  safe_glutBitmapString(GLUT_BITMAP_HELVETICA_18, (const char*)lc_str);
+	}
 
 	glutSwapBuffers();
 	uiEngine->needsRefresh = false;
@@ -333,6 +342,7 @@ void UIEngine::glutMouseWheelFunction(int button, int dir, int x, int y)
 void UIEngine::Initialise(int & argc, char** argv, ImageSourceEngine *imageSource, IMUSourceEngine *imuSource, OdometrySourceEngine *odomSource, ITMMainEngine *mainEngine,
 	const char *outFolder, ITMLibSettings* itmSettings)
 {
+  this->internalSettings = itmSettings;
 	this->freeviewActive = false;
 	this->intergrationActive = true;
 	this->currentColourMode = 0;
@@ -421,6 +431,8 @@ void UIEngine::Initialise(int & argc, char** argv, ImageSourceEngine *imageSourc
 	needsRefresh = false;
 	processedFrameNo = 0;
 	processedTime = 0.0f;
+	currentTime = 0.0f;
+	last_lc_time = 0.0f;
 
 #ifndef COMPILE_WITHOUT_CUDA
 	ITMSafeCall(cudaThreadSynchronize());
@@ -430,6 +442,7 @@ void UIEngine::Initialise(int & argc, char** argv, ImageSourceEngine *imageSourc
 	sdkCreateTimer(&timer_average);
 
 	sdkResetTimer(&timer_average);
+	sdkStartTimer(&timer_instant);
 
 	printf("initialised.\n");
 }
@@ -477,8 +490,7 @@ void UIEngine::ProcessFrame()
 		}
 	}
 
-	sdkResetTimer(&timer_instant);
-	sdkStartTimer(&timer_instant); sdkStartTimer(&timer_average);
+	sdkStartTimer(&timer_average);
 
 	//actual processing on the mailEngine
 	if (imuSource != NULL) {
@@ -492,9 +504,9 @@ void UIEngine::ProcessFrame()
 #ifndef COMPILE_WITHOUT_CUDA
 	ITMSafeCall(cudaThreadSynchronize());
 #endif
-	sdkStopTimer(&timer_instant); sdkStopTimer(&timer_average);
+	sdkStopTimer(&timer_average);
 
-	//processedTime = sdkGetTimerValue(&timer_instant);
+	currentTime = sdkGetTimerValue(&timer_instant);
 	processedTime = sdkGetAverageTimerValue(&timer_average);
 
 	currentFrameNo++;

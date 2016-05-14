@@ -13,7 +13,7 @@ namespace ITMLib
 		{
 		public:
 		  void resetInactiveLocations(Vector4f* inactiveLocations, const Vector2i imgSize, const Matrix4f M_d, const Vector4f projParams_d);
-			void IntegrateGlobalIntoLocal(ITMScene<TVoxel, TIndex> *scene, ITMRenderState *renderState) {}
+			void IntegrateGlobalIntoLocal(ITMScene<TVoxel, TIndex> *scene, ITMRenderState *renderState, const bool should_fuse) {}
 			void SaveToGlobalMemory(ITMScene<TVoxel, TIndex> *scene, ITMRenderState *renderState) {}
 		};
 
@@ -27,7 +27,7 @@ namespace ITMLib
 			// This class is currently just for debugging purposes -- swaps CPU memory to CPU memory.
 			// Potentially this could stream into the host memory from somwhere else (disk, database, etc.).
 
-			void IntegrateGlobalIntoLocal(ITMScene<TVoxel, ITMVoxelBlockHash> *scene, const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState);
+			void IntegrateGlobalIntoLocal(ITMScene<TVoxel, ITMVoxelBlockHash> *scene, const ITMView *view, ITMTrackingState *trackingState, ITMRenderState *renderState, const bool should_fuse);
 			void SaveToGlobalMemory(ITMScene<TVoxel, ITMVoxelBlockHash> *scene, ITMRenderState *renderState);
 
 			ITMSwappingEngine_CPU(void);

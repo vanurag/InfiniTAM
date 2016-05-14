@@ -148,6 +148,9 @@ void ITMMainEngine::SaveSceneToMesh(const char *objFileName)
 
 void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage)
 {
+  // deafult -> should fuse
+  settings->shouldFuse = true;
+
   // prepare image and turn it into a depth image
   viewBuilder->UpdateView(&view, rgbImage, rawDepthImage, settings->useBilateralFilter,settings->modelSensorNoise);
 
@@ -163,7 +166,7 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
   VisualizeCameraPose();
 
   // fusion
-  if (fusionActive) denseMapper->ProcessFrame(view, trackingState, scene, renderState_live, settings->deltaTime);
+  if (fusionActive) denseMapper->ProcessFrame(view, trackingState, scene, renderState_live, settings->deltaTime, settings->shouldFuse);
 
   // raycast to renderState_live for tracking and free visualisation
   trackingController->Prepare(trackingState, view, renderState_live);
@@ -171,6 +174,9 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 
 void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage, ITMIMUMeasurement *imuMeasurement)
 {
+  // deafult -> should fuse
+  settings->shouldFuse = true;
+
 	// prepare image and turn it into a depth image
 	if (imuMeasurement==NULL) viewBuilder->UpdateView(&view, rgbImage, rawDepthImage, settings->useBilateralFilter,settings->modelSensorNoise);
 	else viewBuilder->UpdateView(&view, rgbImage, rawDepthImage, settings->useBilateralFilter, imuMeasurement);
@@ -187,7 +193,7 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 	VisualizeCameraPose();
 
 	// fusion
-	if (fusionActive) denseMapper->ProcessFrame(view, trackingState, scene, renderState_live, settings->deltaTime);
+	if (fusionActive) denseMapper->ProcessFrame(view, trackingState, scene, renderState_live, settings->deltaTime, settings->shouldFuse);
 
 	// raycast to renderState_live for tracking and free visualisation
 	trackingController->Prepare(trackingState, view, renderState_live);
@@ -195,6 +201,9 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 
 void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDepthImage, ITMOdometryMeasurement *odomMeasurement)
 {
+  // deafult -> should fuse
+  settings->shouldFuse = true;
+
   // prepare image and turn it into a depth image
   if (odomMeasurement==NULL) viewBuilder->UpdateView(&view, rgbImage, rawDepthImage, settings->useBilateralFilter,settings->modelSensorNoise);
   else viewBuilder->UpdateView(&view, rgbImage, rawDepthImage, settings->useBilateralFilter, odomMeasurement);
@@ -211,7 +220,7 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
   VisualizeCameraPose();
 
   // fusion
-  if (fusionActive) denseMapper->ProcessFrame(view, trackingState, scene, renderState_live, settings->deltaTime);
+  if (fusionActive) denseMapper->ProcessFrame(view, trackingState, scene, renderState_live, settings->deltaTime, settings->shouldFuse);
 
 //  Vector4f * blabla = trackingState->pointCloud->inactive_locations->GetData(MEMORYDEVICE_CUDA);
 //  //  visualizePcl(blabla, trackingState->pointCloud->inactive_locations->noDims.x * trackingState->pointCloud->inactive_locations->noDims.y);

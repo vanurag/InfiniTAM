@@ -14,7 +14,10 @@ void ITMTrackingController::Track(ITMTrackingState *trackingState, const ITMView
 	  tracker->TrackCamera(trackingState, view);
 	  if (renderState->noTotalInactivePoints > 0.3*(trackingState->trackingImageSize.x*trackingState->trackingImageSize.y)) {
 	    std::cout << "checking for Loop Closures..." << std::endl;
-	    loopClosureDetector->DetectLoopClosure(trackingState, view);
+	    float lc_norm = loopClosureDetector->DetectLoopClosure(trackingState, view);
+	    if (lc_norm > settings->lcNormThreshold) {
+	      settings->shouldFuse = false;
+	    }
 	  }
 	}
 

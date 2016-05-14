@@ -36,7 +36,7 @@ namespace InfiniTAM
 			std::vector<UIColourMode> colourModes, rgbModes;
 			int currentColourMode, currentRGBMode;
 
-			ITMLibSettings internalSettings;
+			ITMLibSettings* internalSettings;
 			ImageSourceEngine *imageSource;
 			IMUSourceEngine *imuSource;
 			OdometrySourceEngine *odomSource;
@@ -82,7 +82,8 @@ namespace InfiniTAM
 			const Vector2i & getWindowSize(void) const
 			{ return winSize; }
 
-			float processedTime;
+			float processedTime, currentTime;
+			float last_lc_time;
 			int processedFrameNo;
 			char *outFolder;
 			bool needsRefresh;
