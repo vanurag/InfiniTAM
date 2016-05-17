@@ -27,6 +27,7 @@ namespace ITMLib
 
 			ITMTracker *tracker;
 			ITMLoopClosureDetection *loopClosureDetector;
+			float last_lc_time;
 
 			MemoryDeviceType memoryType;
 
@@ -42,6 +43,7 @@ namespace ITMLib
 				this->settings = settings;
 				this->visualisationEngine = visualisationEngine;
 				this->lowLevelEngine = lowLevelEngine;
+				this->last_lc_time = 0.0f;
 
 				memoryType = settings->deviceType == ITMLibSettings::DEVICE_CUDA ? MEMORYDEVICE_CUDA : MEMORYDEVICE_CPU;
 			}
