@@ -8,7 +8,7 @@ cv::viz::Viz3d ITMMainEngine::viz_window_ = cv::viz::Viz3d("ITM Tracking Pose");
 cv::Affine3f ITMMainEngine::viz_itm_pose_ = cv::Affine3f();
 
 ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib *calib, Vector2i imgSize_rgb, Vector2i imgSize_d)
-  : viz_key_event(cv::viz::KeyboardEvent::Action::KEY_DOWN, "A", cv::viz::KeyboardEvent::ALT, 1), pc_viewer("Cloud visualizer"), pcl_cloud_pointer(&pcl_cloud)
+  : viz_key_event(cv::viz::KeyboardEvent::Action::KEY_DOWN, "A", cv::viz::KeyboardEvent::ALT, 1), pc_viewer("Cloud visualizer"), pcl_cloud_pointer(new pcl::PointCloud<pcl::PointXYZRGB>)
 {
 	// create all the things required for marching cubes and mesh extraction
 	// - uses additional memory (lots!)
@@ -396,7 +396,7 @@ void ITMMainEngine::turnOffMainProcessing() { mainProcessingActive = false; }
 // PCL Visualization
 void ITMMainEngine::visualizePcl(const Vector4f* pcl, const int cloudSize) {
 
-  pcl_cloud.clear();
+  pcl_cloud_pointer->clear();
 
   pcl::PointXYZRGB pc_point;
   Vector4f point;
@@ -415,7 +415,7 @@ void ITMMainEngine::visualizePcl(const Vector4f* pcl, const int cloudSize) {
       pc_point.g = 0;
       pc_point.b = 0;
 
-      pcl_cloud.push_back(pc_point);
+      pcl_cloud_pointer->push_back(pc_point);
     }
   }
 

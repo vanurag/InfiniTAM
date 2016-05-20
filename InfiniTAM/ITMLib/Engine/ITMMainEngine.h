@@ -114,7 +114,6 @@ namespace ITMLib
 			// PCL
       bool pcl_render_stop = false;
       pcl::visualization::PCLVisualizer pc_viewer;
-      pcl::PointCloud<pcl::PointXYZRGB> pcl_cloud;
       pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_cloud_pointer;
       void visualizePcl(const Vector4f* pcl, const int cloudSize);
       void pcl_render_loop();
