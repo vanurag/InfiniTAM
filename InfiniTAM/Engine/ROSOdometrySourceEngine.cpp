@@ -168,6 +168,7 @@ void ROSOdometrySourceEngine::getMeasurement(ITMOdometryMeasurement *odom)
     ROS_INFO("Using ODOM data...");
     odom->R = cached_odom->R;
     odom->t = cached_odom->t;
+    odom->cov = cached_odom->cov;
     delete cached_odom;
     cached_odom = NULL;
   }

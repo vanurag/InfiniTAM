@@ -29,6 +29,7 @@ Engine/ITMCompositeTracker.h
 Engine/ITMDenseMapper.h
 Engine/ITMDepthTracker.h
 Engine/ITMLoopClosureDetection.h
+Engine/ITMPoseGraphEngine.h
 Engine/ITMWeightedICPTracker.h
 Engine/ITMIMUCalibrator.h
 Engine/ITMIMUTracker.h
@@ -231,6 +232,6 @@ else()
 endif()
 
 target_link_libraries(ITMLib ${libpointmatcher_LIBRARIES})
-target_link_libraries(ITMLib ${PCL_LIBRARIES})
+target_link_libraries(ITMLib ${PCL_LIBRARIES} gtsam)
 target_link_libraries(ITMLib ORUtils)
 target_link_libraries(ITMLib Utils)

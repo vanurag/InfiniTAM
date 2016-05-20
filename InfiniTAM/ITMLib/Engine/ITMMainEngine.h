@@ -83,6 +83,7 @@ namespace ITMLib
 			ITMTrackingController *trackingController;
 
 			ITMTracker *tracker;
+			ITMPoseGraphEngine<gtsam::Pose3> *poseGraphEngine;
 			ITMLoopClosureDetection *loopClosureDetector;
 			ITMIMUCalibrator *imuCalibrator;
 

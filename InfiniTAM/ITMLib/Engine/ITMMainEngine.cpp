@@ -65,6 +65,15 @@ ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib 
 
 	imuCalibrator = new ITMIMUCalibrator_DRZ(calib->trafo_rgb_to_imu);
 	tracker = ITMTrackerFactory<ITMVoxel, ITMVoxelIndex>::Instance().Make(trackedImageSize, settings, lowLevelEngine, imuCalibrator, scene);
+	poseGraphEngine = new ITMPoseGraphEngine<gtsam::Pose3>();
+	gtsam::Rot3 prior_rotation_d(Eigen::Matrix3d::Identity());
+  gtsam::Point3 prior_translation_d(0, 0, 0);
+  Eigen::VectorXd priorSigmas(6);
+  priorSigmas << 0.1, 0.1, 0.1, 0.1, 0.1, 0.1;
+  Eigen::MatrixXd priorCovariance = Eigen::MatrixXd::Identity(6, 6);
+  gtsam::noiseModel::Diagonal::shared_ptr priorNoiseModel = gtsam::noiseModel::Diagonal::Sigmas(priorSigmas);
+//  gtsam::SharedNoiseModel priorNoiseModel = gtsam::noiseModel::Gaussian::Information(priorCovariance);
+  poseGraphEngine->addPrior(gtsam::Pose3(prior_rotation_d, prior_translation_d), priorNoiseModel);
 	switch (settings->deviceType)
   {
   case ITMLibSettings::DEVICE_CPU:
@@ -212,6 +221,14 @@ void ITMMainEngine::ProcessFrame(ITMUChar4Image *rgbImage, ITMShortImage *rawDep
 
   // tracking
   trackingController->Track(trackingState, view, renderState_live);
+
+  // Send Odometry to Pose Graph
+  gtsam::Rot3 rotation_d(trackingState->pose_d->GetR().toEigen().cast<double>());
+  gtsam::Point3 translation_d(trackingState->pose_d->GetT().x, trackingState->pose_d->GetT().y, trackingState->pose_d->GetT().z);
+  gtsam::SharedNoiseModel noiseModel = gtsam::noiseModel::Gaussian::Information(((ITMViewOdometry*)view)->odom->cov.toEigen());
+//  std::cout << "noise check: " << ((ITMViewOdometry*)view)->odom->cov.toEigen() << std::endl;
+  poseGraphEngine->addOdometry(gtsam::Pose3(rotation_d, translation_d), noiseModel);
+  poseGraphEngine->propogate();
 
   // publish ITM tracker pose
   PublishROSPoseMsg();

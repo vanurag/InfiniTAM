@@ -60,6 +60,7 @@ namespace ITMLib
       {
         this->R = measurement->R;
         this->t = measurement->t;
+        this->cov = measurement->cov;
       }
 
       Matrix4f GetM() {
