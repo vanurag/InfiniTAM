@@ -10,8 +10,8 @@ using namespace ITMLib::Engine;
 
 ITMDepthTracker::ITMDepthTracker(Vector2i imgSize, TrackerIterationType *trackingRegime, int noHierarchyLevels, int noICPRunTillLevel, float distThresh,
 	float terminationThreshold, ITMLibSettings::DepthTrackerType tracker_type, bool visualize_icp, const ITMLowLevelEngine *lowLevelEngine, MemoryDeviceType memoryType)
-    : pc_viewer("ICP visualizer"), scene_cloud_pointer(&scene_cloud),
-      current_view_cloud_pointer(&current_view_cloud)
+    : pc_viewer("ICP visualizer"), scene_cloud_pointer(new pcl::PointCloud<pcl::PointXYZRGB>),
+      current_view_cloud_pointer(new pcl::PointCloud<pcl::PointXYZRGB>)
 {
 	viewHierarchy = new ITMImageHierarchy<ITMTemplatedHierarchyLevel<ITMFloatImage> >(imgSize, trackingRegime, noHierarchyLevels, memoryType, true);
 	sceneHierarchy = new ITMImageHierarchy<ITMSceneHierarchyLevel>(imgSize, trackingRegime, noHierarchyLevels, memoryType, true);
@@ -345,10 +345,10 @@ const Eigen::MatrixXf ITMDepthTracker::ITMVectorToEigenMatrix(
 
 // Float4Image to PCL point cloud
 void ITMDepthTracker::Float4ImagetoPclPointCloud(
-    const ITMFloat4Image* im, pcl::PointCloud<pcl::PointXYZRGB>& cloud, Vector3i color,
+    const ITMFloat4Image* im, pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, Vector3i color,
     int memory_type) {
 
-  cloud.clear();
+  cloud->clear();
   const Vector4f* v = im->GetData(MemoryDeviceType(memory_type));
   Vector4f point;
   pcl::PointXYZRGB pc_point;
@@ -368,17 +368,17 @@ void ITMDepthTracker::Float4ImagetoPclPointCloud(
     pc_point.g = color[1];
     pc_point.b = color[2];
 
-    cloud.push_back(pc_point);
+    cloud->push_back(pc_point);
   }
 }
 
 
 // FloatImage to PCL point cloud
 void ITMDepthTracker::FloatImagetoPclPointCloud(
-    const ITMFloatImage* im, pcl::PointCloud<pcl::PointXYZRGB>& cloud,
+    const ITMFloatImage* im, pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
     const Vector4f intrinsics, Vector3i color, int memory_type, std::vector<Matrix4f*>& tf_chain) {
 
-  cloud.clear();
+  cloud->clear();
   const float* v = im->GetData(MemoryDeviceType(memory_type));
   float point;
   pcl::PointXYZRGB pc_point;
@@ -410,7 +410,7 @@ void ITMDepthTracker::FloatImagetoPclPointCloud(
       pc_point.g = color[1];
       pc_point.b = color[2];
 
-      cloud.push_back(pc_point);
+      cloud->push_back(pc_point);
     }
   }
 }
@@ -418,10 +418,10 @@ void ITMDepthTracker::FloatImagetoPclPointCloud(
 
 // Draw ICP point matches
 void ITMDepthTracker::DrawPointMatches(
-    pcl::PointCloud<pcl::PointXYZRGB>& cloud, Vector4f* matches, Vector3i color) {
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, Vector4f* matches, Vector3i color) {
 
-  std::cout << "scan cloud size: " << cloud.size() << " " << viewHierarchyLevel->depth->noDims.height * viewHierarchyLevel->depth->noDims.width << std::endl;
-  for (int i = 0; i < cloud.size(); i+=10) {
+  std::cout << "scan cloud size: " << cloud->size() << " " << viewHierarchyLevel->depth->noDims.height * viewHierarchyLevel->depth->noDims.width << std::endl;
+  for (int i = 0; i < cloud->size(); i+=10) {
     if (matches[i].w != 0.0) {
       pcl::PointXYZ m;
       m.x = matches[i].x;
@@ -429,10 +429,10 @@ void ITMDepthTracker::DrawPointMatches(
       m.z = matches[i].z;
       std::string l_string("line");
       l_string += std::to_string(i);
-      if (!pcl::isFinite(cloud[i]) || !pcl::isFinite(m)) std::cout << "NOT FINITE POINT!!!!!!!!!!!" << std::endl;
-      if (cloud[i].x == m.x && cloud[i].y == m.y && cloud[i].z == m.z) std::cout << "ZERO LENGTH LINE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
-      if (cloud[i].x != m.x || cloud[i].y != m.y || cloud[i].z != m.z) {
-        pc_viewer.addLine(cloud[i], m, color.r, color.g, color.b, l_string);
+      if (!pcl::isFinite(cloud->points[i]) || !pcl::isFinite(m)) std::cout << "NOT FINITE POINT!!!!!!!!!!!" << std::endl;
+      if (cloud->points[i].x == m.x && cloud->points[i].y == m.y && cloud->points[i].z == m.z) std::cout << "ZERO LENGTH LINE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
+      if (cloud->points[i].x != m.x || cloud->points[i].y != m.y || cloud->points[i].z != m.z) {
+        pc_viewer.addLine(cloud->points[i], m, color.r, color.g, color.b, l_string);
       }
     }
   }
@@ -445,11 +445,11 @@ void ITMDepthTracker::visualizeTracker(
     int memory_type, std::vector<Matrix4f*>& tf_chain, bool converged) {
 
   // scene
-  Float4ImagetoPclPointCloud(scene, scene_cloud, Vector3i(255, 0, 0), memory_type);
+  Float4ImagetoPclPointCloud(scene, scene_cloud_pointer, Vector3i(255, 0, 0), memory_type);
   pc_viewer.updatePointCloud(scene_cloud_pointer, "scene cloud");
 
   // current view
-  FloatImagetoPclPointCloud(current_view, current_view_cloud, intrinsics,
+  FloatImagetoPclPointCloud(current_view, current_view_cloud_pointer, intrinsics,
                             Vector3i(0, 0, 255), memory_type, tf_chain);
   pc_viewer.updatePointCloud(current_view_cloud_pointer, "current scan");
 
@@ -478,16 +478,16 @@ void ITMDepthTracker::visualizeTracker(
 
 //  pc_viewer.removeAllPointClouds();
   // scene
-  Float4ImagetoPclPointCloud(scene, scene_cloud, Vector3i(255, 0, 0), memory_type);
+  Float4ImagetoPclPointCloud(scene, scene_cloud_pointer, Vector3i(255, 0, 0), memory_type);
   pc_viewer.updatePointCloud(scene_cloud_pointer, "scene cloud");
 
   // current view
-  FloatImagetoPclPointCloud(current_view, current_view_cloud, intrinsics,
+  FloatImagetoPclPointCloud(current_view, current_view_cloud_pointer, intrinsics,
                             Vector3i(0, 0, 255), memory_type, tf_chain);
   pc_viewer.updatePointCloud(current_view_cloud_pointer, "current scan");
 
   // matches
-  DrawPointMatches(current_view_cloud, matches, Vector3i(255, 255, 255));
+  DrawPointMatches(current_view_cloud_pointer, matches, Vector3i(255, 255, 255));
 
   pcl_render_stop = false;
   boost::thread t(boost::bind(&ITMDepthTracker::pcl_render_loop, this));
