@@ -69,7 +69,6 @@ namespace ITMLib
       bool viz_icp = false; // Whether or not to run visualization routine
       bool pcl_render_stop = false;
       pcl::visualization::PCLVisualizer pc_viewer;
-      pcl::PointCloud<pcl::PointXYZRGB> scene_cloud, inactive_scene_cloud;
       pcl::PointCloud<pcl::PointXYZRGB>::Ptr scene_cloud_pointer, inactive_scene_cloud_pointer;
       void pcl_render_loop();
       //GNU Plot
@@ -107,17 +106,17 @@ namespace ITMLib
 
       // 3D point vector to PCL point cloud
       void Float4ImagetoPclPointCloud(
-          const ITMFloat4Image* im, pcl::PointCloud<pcl::PointXYZRGB>& cloud, Vector3i color,
+          const ITMFloat4Image* im, pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, Vector3i color,
           int memory_type);
 
       // Float4Image to PCL point cloud after TF chain applied
       void Float4ImagetoPclPointCloud(
-          const ITMFloat4Image* im, pcl::PointCloud<pcl::PointXYZRGB>& cloud,
+          const ITMFloat4Image* im, pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
           Vector3i color, int memory_type, std::vector<Matrix4f*>& tf_chain);
 
       // Draw ICP point matches
       void DrawPointMatches(
-          pcl::PointCloud<pcl::PointXYZRGB>& cloud, Vector4f* matches, Vector3i color);
+          pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, Vector4f* matches, Vector3i color);
 
       // Tracker Matches Visualization
       void visualizeTracker(

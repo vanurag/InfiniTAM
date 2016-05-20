@@ -32,7 +32,7 @@ ITMLibSettings::ITMLibSettings(void)
 	//deviceType = DEVICE_CPU;
 
 	/// enables or disables swapping. HERE BE DRAGONS: It should work, but requires more testing
-	useSwapping = false;
+	useSwapping = true;
 
 	// Time after which a voxel, if not updated, turns inactive
 	deltaTime = 2.0;
