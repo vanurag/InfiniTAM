@@ -64,7 +64,7 @@ namespace ITMLib
 			void pcl_render_loop();
 			//GNU Plot
 			Gnuplot gp;
-			std::vector<double> gp_outlier_dist;
+			std::vector<std::pair<float, float> > gp_outlier_dist;
 
 			void PrepareForEvaluation();
 			void SetEvaluationParams(int levelId);

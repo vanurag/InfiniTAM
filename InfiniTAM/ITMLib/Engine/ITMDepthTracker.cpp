@@ -310,17 +310,17 @@ void ITMDepthTracker::TrackCamera(ITMTrackingState *trackingState, const ITMView
     Eigen::VectorXd new_state(6);
     new_state << new_pos.cast<double>(), new_att.cast<double>();
     Eigen::Matrix<double,6,6> odom_cov = ((ITMViewOdometry*)view)->odom->cov.toEigen();
-    double dist = (new_state-init_state).transpose()*odom_cov.inverse()*(new_state-init_state);
+    double dist = sqrt((new_state-init_state).transpose()*odom_cov.inverse()*(new_state-init_state));
     std::cout << "Outlier distance: " << dist << std::endl;
-    if (dist > 0.003) { // outlier
+    if (dist > 25.0) { // outlier
       trackingState->pose_d->SetM(initPose);
-      gp_outlier_dist.push_back(0.0);
+      gp_outlier_dist.push_back(std::make_pair(sdkGetTimerValue(&(trackingState->tracking_timer)), 0.0));
     } else {
-      gp_outlier_dist.push_back(dist);
+      gp_outlier_dist.push_back(std::make_pair(sdkGetTimerValue(&(trackingState->tracking_timer)), dist));
     }
     // Un-comment to plot outlier distances
-  //  gp << "plot '-' with lines title 'outlier distance'\n";
-  //  gp.send1d(gp_outlier_dist);
+    gp << "plot '-' with lines title 'outlier distance'\n";
+    gp.send1d(gp_outlier_dist);
 	}
 }
 
