@@ -102,6 +102,12 @@ namespace ITMLib
         viz_viewer_pose = viz_viewer_pose.translate(cv::Vec3f(0.0, 0.0, -100.0));
         viz_window_.setViewerPose(viz_viewer_pose);
       }
+			// PCL
+      bool pcl_render_stop = false;
+      pcl::visualization::PCLVisualizer pc_viewer;
+      pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_cloud_pointer;
+      void visualizePcl(const Vector4f* pcl, const int cloudSize);
+      void pcl_render_loop();
 
 		public:
 			enum GetImageType
