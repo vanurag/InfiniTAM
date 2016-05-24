@@ -403,21 +403,21 @@ try
 	} else if (arg2 == std::string("realsense") || arg2 == std::string("realsense_ros") ||
 	           arg2 == std::string("realsense_rosbag")) { // R200
 	  internalSettings->sceneParams.viewFrustum_min = 0.5f;
-	  internalSettings->sceneParams.viewFrustum_max = 2.0f; // 4.0f
+	  internalSettings->sceneParams.viewFrustum_max = 4.0f; // 4.0f
 	} else if (arg2 == std::string("realsense+imu") || arg2 == std::string("realsense_ros+imu") ||
 	           arg2 == std::string("realsense_rosbag+imu")) { // R200
     internalSettings->sceneParams.viewFrustum_min = 0.5f;
-    internalSettings->sceneParams.viewFrustum_max = 2.0f; // 4.0f
+    internalSettings->sceneParams.viewFrustum_max = 4.0f; // 4.0f
     internalSettings->setTrackerType(ITMLibSettings::TRACKER_IMU);
 	} else if (arg2 == std::string("realsense+odom") || arg2 == std::string("realsense+odom_color") || arg2 == std::string("realsense_ros+odom") || arg2 == std::string("realsense_ros+odom_color") ||
 	           arg2 == std::string("realsense_rosbag+odom") || arg2 == std::string("realsense_rosbag+odom_color")) { // R200
     internalSettings->sceneParams.viewFrustum_min = 0.5f;
-    internalSettings->sceneParams.viewFrustum_max = 2.0f; // 4.0f
+    internalSettings->sceneParams.viewFrustum_max = 4.0f; // 4.0f
     internalSettings->setTrackerType(ITMLibSettings::TRACKER_ODOMETRY);
 	} else if (arg2 == std::string("realsense+strict_odom") || arg2 == std::string("realsense_ros+strict_odom") ||
 	           arg2 == std::string("realsense_rosbag+strict_odom")) { // R200
     internalSettings->sceneParams.viewFrustum_min = 0.5f;
-    internalSettings->sceneParams.viewFrustum_max = 2.0f; // 4.0f
+    internalSettings->sceneParams.viewFrustum_max = 4.0f; // 4.0f
     internalSettings->setTrackerType(ITMLibSettings::TRACKER_STRICT_ODOMETRY);
 	} else if (arg2 == std::string("vi-sensor")) {
 	  internalSettings->sceneParams.viewFrustum_min = 0.0f;

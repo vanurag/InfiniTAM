@@ -48,7 +48,8 @@ void IITMVisualisationEngine::DepthToUchar4(ITMUChar4Image *dst, ITMFloatImage *
 		if (sourceVal > 0.0f)
 		{
 		  if (sourceVal >= view_frustum[0] && sourceVal <= view_frustum[1]) {
-        sourceVal = (sourceVal - lims[0]) * scale;
+//        sourceVal = (sourceVal - lims[0]) * scale;
+        sourceVal = (sourceVal - view_frustum[0]) / (view_frustum[1] - view_frustum[0]);
 
         destUC4[idx].r = (uchar)(base(sourceVal - 0.5f) * 255.0f);
         destUC4[idx].g = (uchar)(base(sourceVal) * 255.0f);
