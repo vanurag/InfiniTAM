@@ -8,7 +8,7 @@ cv::viz::Viz3d ITMMainEngine::viz_window_ = cv::viz::Viz3d("ITM Tracking Pose");
 cv::Affine3f ITMMainEngine::viz_itm_pose_ = cv::Affine3f();
 
 ITMMainEngine::ITMMainEngine(const ITMLibSettings *settings, const ITMRGBDCalib *calib, Vector2i imgSize_rgb, Vector2i imgSize_d)
-  : viz_key_event(cv::viz::KeyboardEvent::Action::KEY_DOWN, "A", cv::viz::KeyboardEvent::ALT, 1)
+  : viz_key_event(cv::viz::KeyboardEvent::Action::KEY_DOWN, "A", cv::viz::KeyboardEvent::ALT, 1), pc_viewer("Cloud visualizer"), pcl_cloud_pointer(new pcl::PointCloud<pcl::PointXYZRGB>)
 {
 	// create all the things required for marching cubes and mesh extraction
 	// - uses additional memory (lots!)
@@ -314,3 +314,51 @@ void ITMMainEngine::turnOnIntegration() { fusionActive = true; }
 void ITMMainEngine::turnOffIntegration() { fusionActive = false; }
 void ITMMainEngine::turnOnMainProcessing() { mainProcessingActive = true; }
 void ITMMainEngine::turnOffMainProcessing() { mainProcessingActive = false; }
+
+
+// PCL Visualization
+void ITMMainEngine::visualizePcl(const Vector4f* pcl, const int cloudSize) {
+
+  pcl_cloud_pointer->clear();
+
+  pcl::PointXYZRGB pc_point;
+  Vector4f point;
+  for (int i = 0; i < cloudSize; ++i){
+#ifndef COMPILE_WITHOUT_CUDA
+    ITMSafeCall(cudaMemcpy(&point, &pcl[i], sizeof(Vector4f), cudaMemcpyDeviceToHost));
+#else
+    point = pcl[i];
+#endif
+    if (point.w > 0) {
+      pc_point.x = point.x;
+      pc_point.y = point.y;
+      pc_point.z = point.z;
+
+      pc_point.r = 255;
+      pc_point.g = 0;
+      pc_point.b = 0;
+
+      pcl_cloud_pointer->push_back(pc_point);
+    }
+  }
+
+  pc_viewer.updatePointCloud(pcl_cloud_pointer, "cloud");
+
+  pcl_render_stop = false;
+  boost::thread t(boost::bind(&ITMMainEngine::pcl_render_loop, this));
+  if (std::cin.get() == '\n') {
+    std::cout << "Pressed ENTER" << std::endl;
+    pcl_render_stop = true;
+    std::cout << "waiting to join...." << std::endl;
+    t.join();
+  }
+}
+
+void ITMMainEngine::pcl_render_loop() {
+  std::cout << "stop flag: " << pcl_render_stop << std::endl;
+  while (!pcl_render_stop) {
+    std::cout << "SPINNING......." << std::endl;
+    pc_viewer.spinOnce (100);
+  }
+  pc_viewer.removeAllShapes();
+}
