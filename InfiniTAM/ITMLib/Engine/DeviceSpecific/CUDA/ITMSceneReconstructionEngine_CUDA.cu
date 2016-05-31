@@ -4,6 +4,8 @@
 #include "ITMCUDAUtils.h"
 #include "../../DeviceAgnostic/ITMSceneReconstructionEngine.h"
 #include "../../../Objects/ITMRenderState_VH.h"
+//#include "/usr/local/cuda-7.5/include/cudaProfiler.h"
+//#include "/usr/local/cuda-7.5/include/cuda_profiler_api.h"
 
 struct AllocationTempData {
 	int noAllocatedVoxelEntries;
@@ -35,10 +37,14 @@ __global__ void reAllocateSwappedOutVoxelBlocks_device(int *voxelAllocationList,
 
 __global__ void setToType3(uchar *entriesVisibleType, int *visibleEntryIDs, int noVisibleEntries);
 
-template<class TVoxel, bool useSwapping>
-__global__ void buildVisibleList_device(TVoxel *localVBA, ITMHashEntry *hashTable, ITMHashSwapState *swapStates, int noTotalEntries,
+template<class TVoxel>
+__global__ void buildActiveList_device(int *voxelAllocationList, TVoxel *localVBA, ITMHashEntry *hashTable,
+		int *visibleEntryIDs, uchar *entriesVisibleType, const float current_time, const float delta_time);
+
+template<bool useSwapping>
+__global__ void buildVisibleList_device(ITMHashEntry *hashTable, ITMHashSwapState *swapStates, int noTotalEntries,
 	int *visibleEntryIDs, AllocationTempData *allocData, uchar *entriesVisibleType,
-	Matrix4f M_d, Vector4f projParams_d, Vector2i depthImgSize, float voxelSize, const float current_time, const float delta_time);
+	Matrix4f M_d, Vector4f projParams_d, Vector2i depthImgSize, float voxelSize);
 
 // host methods
 
@@ -125,6 +131,10 @@ void ITMSceneReconstructionEngine_CUDA<TVoxel, ITMVoxelBlockHash>::AllocateScene
 	dim3 cudaBlockSizeAL(256, 1);
 	dim3 gridSizeAL((int)ceil((float)noTotalEntries / (float)cudaBlockSizeAL.x));
 
+	dim3 cudaBlockSizeAS(SDF_BLOCK_SIZE2, 1);
+	std::cout << "num allocated blocks: " << SDF_LOCAL_BLOCK_NUM - scene->localVBA.lastFreeBlockId - 1 << std::endl;
+	dim3 gridSizeAS(SDF_LOCAL_BLOCK_NUM);// - scene->localVBA.lastFreeBlockId - 1);// / (float)cudaBlockSizeAS.x));
+
 	dim3 cudaBlockSizeVS(256, 1);
 	dim3 gridSizeVS((int)ceil((float)renderState_vh->noVisibleEntries / (float)cudaBlockSizeVS.x));
 
@@ -153,12 +163,20 @@ void ITMSceneReconstructionEngine_CUDA<TVoxel, ITMVoxelBlockHash>::AllocateScene
 			blockCoords_device);
 	}
 
-	if (useSwapping)
-		buildVisibleList_device<TVoxel, true> << <gridSizeAL, cudaBlockSizeAL >> >(localVBA, hashTable, swapStates, noTotalEntries, visibleEntryIDs,
-			(AllocationTempData*)allocationTempData_device, entriesVisibleType, M_d, projParams_d, depthImgSize, voxelSize, sdkGetTimerValue(&(this->scene_timer))/1000.0, delta_time);
-	else
-		buildVisibleList_device<TVoxel, false> << <gridSizeAL, cudaBlockSizeAL >> >(localVBA, hashTable, swapStates, noTotalEntries, visibleEntryIDs,
-			(AllocationTempData*)allocationTempData_device, entriesVisibleType, M_d, projParams_d, depthImgSize, voxelSize, sdkGetTimerValue(&(this->scene_timer))/1000.0, delta_time);
+//	dim3 cudaBlockSizeAS(SDF_BLOCK_SIZE2, 1);
+//	ITMSafeCall(cudaMemcpy(tempData, allocationTempData_device, sizeof(AllocationTempData), cudaMemcpyDeviceToHost));
+//	std::cout << "num allocated blocks: " << SDF_LOCAL_BLOCK_NUM - tempData->noAllocatedVoxelEntries - 1 << std::endl;
+//	dim3 gridSizeAS(SDF_LOCAL_BLOCK_NUM - tempData->noAllocatedVoxelEntries - 1);// / (float)cudaBlockSizeAS.x));
+
+	if (useSwapping) {
+		buildActiveList_device<TVoxel> << <gridSizeAS, cudaBlockSizeAS >> >(voxelAllocationList, localVBA, hashTable,
+				visibleEntryIDs, entriesVisibleType, sdkGetTimerValue(&(this->scene_timer))/1000.0, delta_time);
+		buildVisibleList_device<true> << <gridSizeAL, cudaBlockSizeAL >> >(hashTable, swapStates, noTotalEntries, visibleEntryIDs,
+			(AllocationTempData*)allocationTempData_device, entriesVisibleType, M_d, projParams_d, depthImgSize, voxelSize);
+	} else {
+		buildVisibleList_device<false> << <gridSizeAL, cudaBlockSizeAL >> >(hashTable, swapStates, noTotalEntries, visibleEntryIDs,
+			(AllocationTempData*)allocationTempData_device, entriesVisibleType, M_d, projParams_d, depthImgSize, voxelSize);
+	}
 
 	if (useSwapping)
 	{
@@ -433,10 +451,69 @@ __global__ void reAllocateSwappedOutVoxelBlocks_device(int *voxelAllocationList,
 	}
 }
 
-template<class TVoxel, bool useSwapping>
-__global__ void buildVisibleList_device(TVoxel *localVBA, ITMHashEntry *hashTable, ITMHashSwapState *swapStates, int noTotalEntries,
+template<class TVoxel>
+__global__ void buildActiveList_device(int *voxelAllocationList, TVoxel *localVBA, ITMHashEntry *hashTable,
+		int *visibleEntryIDs, uchar *entriesVisibleType, const float current_time, const float delta_time)
+{
+	int targetIdx = threadIdx.x + blockIdx.x * blockDim.x;
+//	int voxBlockIdx = voxelAllocationList[SDF_LOCAL_BLOCK_NUM - 1 - blockIdx.x];
+	int voxBlockIdx = blockIdx.x;
+	int entryId = visibleEntryIDs[voxBlockIdx];
+	int voxArrayIdx = threadIdx.x;
+//	if (voxBlockIdx > noTotalEntries - 1) return;
+
+	__shared__ int voxelBlock[SDF_BLOCK_SIZE3];
+	__shared__ int sumOfVoxelArrays[SDF_BLOCK_SIZE2];
+	__shared__ int sumOfsumOfVoxelArrays[SDF_BLOCK_SIZE];
+	__shared__ int finalSum;
+
+	unsigned char hashVisibleType = entriesVisibleType[entryId];
+	const ITMHashEntry & hashEntry = hashTable[entryId];
+
+	if (hashVisibleType == 3)
+	{
+#pragma unroll
+		for (int i = 0; i < SDF_BLOCK_SIZE; ++i) {
+			voxelBlock[voxArrayIdx * SDF_BLOCK_SIZE + i] = localVBA[hashEntry.ptr * (SDF_BLOCK_SIZE3) + voxArrayIdx * SDF_BLOCK_SIZE].last_update_time > current_time - delta_time;
+		}
+
+		__syncthreads();
+		bool isInactive;
+#pragma unroll
+		sumOfVoxelArrays[voxArrayIdx] = 0;
+		for (int i = 0; i < SDF_BLOCK_SIZE; ++i) {
+			sumOfVoxelArrays[voxArrayIdx] += voxelBlock[voxArrayIdx * SDF_BLOCK_SIZE + i];
+		}
+
+		__syncthreads();
+		if (threadIdx.x % SDF_BLOCK_SIZE == 0) {
+			sumOfsumOfVoxelArrays[threadIdx.x/SDF_BLOCK_SIZE] = 0;
+#pragma unroll
+			for (int i = 0; i < SDF_BLOCK_SIZE; ++i) {
+				sumOfsumOfVoxelArrays[threadIdx.x/SDF_BLOCK_SIZE] += sumOfVoxelArrays[threadIdx.x + i];
+			}
+
+			__syncthreads();
+			if (threadIdx.x == 0) {
+				finalSum = 0;
+#pragma unroll
+				for (int i = 0; i < SDF_BLOCK_SIZE; ++i) {
+					finalSum += sumOfsumOfVoxelArrays[i];
+				}
+				isInactive = (finalSum == 0);
+				if (isInactive) hashVisibleType = 4;
+				entriesVisibleType[entryId] = hashVisibleType;
+			}
+		}
+	}
+
+//	entriesVisibleType[entryId] = 0;
+}
+
+template<bool useSwapping>
+__global__ void buildVisibleList_device(ITMHashEntry *hashTable, ITMHashSwapState *swapStates, int noTotalEntries,
 	int *visibleEntryIDs, AllocationTempData *allocData, uchar *entriesVisibleType, 
-	Matrix4f M_d, Vector4f projParams_d, Vector2i depthImgSize, float voxelSize, const float current_time, const float delta_time)
+	Matrix4f M_d, Vector4f projParams_d, Vector2i depthImgSize, float voxelSize)
 {
 	int targetIdx = threadIdx.x + blockIdx.x * blockDim.x;
 	if (targetIdx > noTotalEntries - 1) return;
@@ -448,19 +525,19 @@ __global__ void buildVisibleList_device(TVoxel *localVBA, ITMHashEntry *hashTabl
 	unsigned char hashVisibleType = entriesVisibleType[targetIdx];
 	const ITMHashEntry & hashEntry = hashTable[targetIdx];
 
-	if (hashVisibleType == 3)
+	if (hashVisibleType == 4)
 	{
-		bool isVisibleEnlarged, isVisible, isInactive;
+		bool isVisibleEnlarged, isVisible;
 
 		if (useSwapping)
 		{
 			checkBlockVisibility<true>(isVisible, isVisibleEnlarged, hashEntry.pos, M_d, projParams_d, voxelSize, depthImgSize);
-			TVoxel *localVoxelBlock = &(localVBA[hashEntry.ptr * (SDF_BLOCK_SIZE3)]);
-			checkBlockLastUpdateTime<TVoxel>(isInactive, localVoxelBlock, current_time, delta_time);
-			if (!isVisible && isInactive) hashVisibleType = 0;
+			if (!isVisible) hashVisibleType = 0; else hashVisibleType = 3;
+//			if (!isVisibleEnlarged) hashVisibleType = 0;
 		} else {
 			checkBlockVisibility<false>(isVisible, isVisibleEnlarged, hashEntry.pos, M_d, projParams_d, voxelSize, depthImgSize);
-			if (!isVisible) hashVisibleType = 0;
+			if (!isVisible) hashVisibleType = 0; else hashVisibleType = 3;
+//			if (!isVisibleEnlarged) hashVisibleType = 0;
 		}
 		entriesVisibleType[targetIdx] = hashVisibleType;
 	}

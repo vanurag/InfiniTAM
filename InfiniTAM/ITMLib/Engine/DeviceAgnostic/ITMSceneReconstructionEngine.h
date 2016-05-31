@@ -294,6 +294,17 @@ _CPU_AND_GPU_CODE_ inline void checkBlockLastUpdateTime(THREADPTR(bool) &isInact
       return;
     }
   }
-  isInactive = true;  // all voxels in the blcok are inactive
+  isInactive = true;  // all voxels in the block are inactive
+  return;
+}
+
+template<class TVoxel>
+_CPU_AND_GPU_CODE_ inline void checkVoxelLastUpdateTime(THREADPTR(bool) &isInactive, const DEVICEPTR(TVoxel) *voxel, const CONSTPTR(float) &current_time, const CONSTPTR(float) delta_time) {
+
+  if (voxel->last_update_time > current_time - delta_time) {  // active voxel
+    isInactive = false;
+  } else {
+    isInactive = true;
+  }
   return;
 }
