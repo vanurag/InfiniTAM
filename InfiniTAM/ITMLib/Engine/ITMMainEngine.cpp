@@ -439,4 +439,3 @@ void ITMMainEngine::pcl_render_loop() {
   }
   pc_viewer.removeAllShapes();
 }
-
